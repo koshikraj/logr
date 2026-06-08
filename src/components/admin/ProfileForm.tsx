@@ -98,9 +98,60 @@ export function ProfileForm({ profile }: { profile: ProfileDTO }) {
             id="f-socials"
             name="socials"
             rows={3}
-            defaultValue={profile.socials.map((s) => `${s.label} ${s.href}`).join("\n")}
+            defaultValue={profile.socials
+              .map((s) => {
+                const cleanLabel = s.label.trim().toLowerCase()
+                  .replace(/^(?:https?:\/\/)?(?:www\.)?/i, "")
+                  .replace(/^mailto:/i, "")
+                  .replace(/\/$/, "");
+                const cleanHref = s.href.trim().toLowerCase()
+                  .replace(/^(?:https?:\/\/)?(?:www\.)?/i, "")
+                  .replace(/^mailto:/i, "")
+                  .replace(/\/$/, "");
+                if (cleanLabel === cleanHref) {
+                  return s.label;
+                }
+                return `${s.label} ${s.href}`;
+              })
+              .join("\n")}
           />
           <span className="field__hint">one per line · &lt;label&gt; &lt;url&gt;</span>
+        </div>
+
+        <div className="field">
+          <label className="field__label" htmlFor="f-activeOrbit">active_orbit</label>
+          <textarea
+            id="f-activeOrbit"
+            name="activeOrbit"
+            rows={2}
+            defaultValue={profile.activeOrbit || ""}
+            placeholder="e.g. Seeking Summer '26 Internships&#10;ISYA Space Research"
+          />
+          <span className="field__hint">one focus area per line</span>
+        </div>
+
+        <div className="field">
+          <label className="field__label" htmlFor="f-dsaMetrics">dsa_metrics</label>
+          <textarea
+            id="f-dsaMetrics"
+            name="dsaMetrics"
+            rows={2}
+            defaultValue={profile.dsaMetrics || ""}
+            placeholder="e.g. Java: Stable&#10;Python: Stable"
+          />
+          <span className="field__hint">one metric per line · &lt;language&gt;: &lt;status&gt;</span>
+        </div>
+
+        <div className="field">
+          <label className="field__label" htmlFor="f-sysArchitecture">sys_architecture</label>
+          <input
+            id="f-sysArchitecture"
+            name="sysArchitecture"
+            type="text"
+            defaultValue={profile.sysArchitecture || ""}
+            placeholder="e.g. Docker, PyTorch, Flutter, Python"
+          />
+          <span className="field__hint">comma-separated tech stack</span>
         </div>
 
         <div className="modal__foot" style={{ marginTop: 36 }}>

@@ -30,6 +30,9 @@ model Profile {
   avatarUrl String?
   socials   String // JSON: [{ label, href }]
   theme     String // JSON: { palette, fonts, rounded, accentOverride, postStyle, dotStyle, photoHover, dark }
+  activeOrbit     String?
+  dsaMetrics      String?
+  sysArchitecture String?
 
   events       Event[]
   chatMessages ChatMessage[]

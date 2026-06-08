@@ -37,17 +37,38 @@ export async function googleSignInAction() {
   await signIn("google", { redirectTo: "/welcome" });
 }
 
+
 // ---------- PROFILE ----------
 function parseSocials(raw: string) {
-  // One per line: "Label https://url"
+  // One per line: "Label url"
   return raw
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const m = line.match(/^(.*?)\s+(https?:\/\/\S+)$/);
-      if (m) return { label: m[1].trim(), href: m[2].trim() };
-      return { label: line, href: line };
+      const m = line.match(/^(.*?)\s+(\S+)$/);
+      if (m) {
+        const label = m[1].trim();
+        let href = m[2].trim();
+        if (!/^(?:https?|mailto|tel):/i.test(href)) {
+          if (/@\S+\.\S+/.test(href)) {
+            href = `mailto:${href}`;
+          } else {
+            href = `https://${href}`;
+          }
+        }
+        return { label, href };
+      }
+      
+      let href = line;
+      if (!/^(?:https?|mailto|tel):/i.test(href)) {
+        if (/@\S+\.\S+/.test(href)) {
+          href = `mailto:${href}`;
+        } else {
+          href = `https://${href}`;
+        }
+      }
+      return { label: line, href };
     });
 }
 
@@ -92,12 +113,17 @@ export async function createProfileAction(
       name: input.name.trim() || username,
       handle: `@${username}`,
       bio: input.bio.trim(),
-      status: "",
-      location: "",
+      status: "Establishing link...",
+      location: "Earth",
       about: null,
       avatarUrl: input.avatarUrl || null,
       socials: "[]",
       theme: JSON.stringify(DEFAULT_THEME),
+      
+      // NEW: Inject default command center data for new users!
+      activeOrbit: "Exploring the tech frontier\nBuilding scalable solutions",
+      dsaMetrics: "TypeScript: Active\nReact: Active",
+      sysArchitecture: "TypeScript, React, Node.js",
     },
   });
   return { ok: true, username };
@@ -117,6 +143,9 @@ export async function updateProfileAction(formData: FormData) {
       about: String(formData.get("about") ?? "") || null,
       avatarUrl: String(formData.get("avatarUrl") ?? "") || null,
       socials: JSON.stringify(socials),
+      activeOrbit: String(formData.get("activeOrbit") ?? "") || null,
+      dsaMetrics: String(formData.get("dsaMetrics") ?? "") || null,
+      sysArchitecture: String(formData.get("sysArchitecture") ?? "") || null,
     },
   });
   await revalidateForProfile(profileId);

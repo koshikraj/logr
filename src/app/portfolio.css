@@ -778,3 +778,248 @@
 .logr .tw-more { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--user-accent); }
 .logr .tw-source { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--muted); margin-left: auto; }
 .logr .tw-source:hover { color: var(--ink); }
+
+/* --- Command Center Layout --- */
+.command-center-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 100%;
+  margin: 0 auto;
+  align-items: start;
+}
+
+.sidebar {
+  display: none;
+  position: sticky;
+  top: 40px;
+  height: fit-content;
+  flex-direction: column;
+  gap: 24px;
+  opacity: 0.82;
+  transition: opacity 200ms ease;
+  padding-top: 40px;
+}
+
+.sidebar:hover {
+  opacity: 1;
+}
+
+.sidebar-left {
+  padding-left: 32px;
+}
+
+.sidebar-right {
+  padding-right: 32px;
+}
+
+.telemetry-widget {
+  border: 0.5px solid var(--rule-strong);
+  padding: 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ink) 2%, var(--paper));
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  transition: transform 320ms cubic-bezier(.2,.8,.2,1),
+              box-shadow 320ms ease,
+              border-radius 320ms ease,
+              border-color 320ms ease,
+              border-style 320ms ease,
+              border-width 320ms ease,
+              background-color 320ms ease,
+              padding 320ms ease;
+}
+
+.telemetry-widget h3,
+.widget-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 0;
+  margin-bottom: 10px;
+  text-transform: lowercase;
+  letter-spacing: 0.05em;
+  border-bottom: 0.5px dashed var(--rule);
+  padding-bottom: 6px;
+}
+
+.telemetry-widget ul,
+.widget-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.telemetry-widget li,
+.widget-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.telemetry-widget__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.telemetry-widget__row span:first-child {
+  color: var(--muted);
+}
+
+.telemetry-widget__row span:last-child {
+  color: var(--user-accent);
+  font-weight: 500;
+}
+
+.telemetry-widget__pills,
+.telemetry-pill-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.telemetry-widget__pill,
+.telemetry-pill {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  border: 0.5px solid var(--rule);
+  color: var(--ink);
+}
+
+/* Year Jump Link List */
+.sidebar-toc {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebar-toc a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--muted);
+  transition: color 150ms ease, padding-left 150ms ease;
+  font-size: 12px;
+}
+
+.sidebar-toc a:hover {
+  color: var(--user-accent);
+  padding-left: 4px;
+}
+
+.sidebar-toc__line {
+  flex: 1;
+  height: 0.5px;
+  border-bottom: 0.5px dotted var(--rule);
+}
+
+/* Desktop layout: show sidebars and set 3-column grid */
+@media (min-width: 1200px) {
+  .command-center-grid {
+    grid-template-columns: 280px minmax(auto, 800px) 280px;
+    gap: 24px;
+    max-width: 1440px;
+  }
+  
+  .sidebar {
+    display: flex;
+  }
+}
+
+/* --- Layout-Specific Telemetry Widget Adaptations --- */
+
+/* 1. Polaroid Layout: Tilted snapshot aesthetic */
+.logr[data-layout="polaroid"] .sidebar .telemetry-widget {
+  border: 0;
+  border-radius: 2px;
+  background: #fffdf8;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 18px 34px -16px rgba(0,0,0,0.38);
+}
+
+.logr[data-mode="dark"][data-layout="polaroid"] .sidebar .telemetry-widget {
+  background: #2a2620;
+}
+
+.logr[data-layout="polaroid"] .sidebar-left .telemetry-widget:nth-of-type(1) {
+  transform: rotate(-1.5deg);
+}
+.logr[data-layout="polaroid"] .sidebar-left .telemetry-widget:nth-of-type(2) {
+  transform: rotate(1.2deg);
+}
+.logr[data-layout="polaroid"] .sidebar-left .telemetry-widget:nth-of-type(3) {
+  transform: rotate(-1deg);
+}
+.logr[data-layout="polaroid"] .sidebar-right .telemetry-widget:nth-of-type(1) {
+  transform: rotate(1deg);
+}
+.logr[data-layout="polaroid"] .sidebar-right .telemetry-widget:nth-of-type(2) {
+  transform: rotate(-1.3deg);
+}
+.logr[data-layout="polaroid"] .sidebar-right .telemetry-widget:nth-of-type(3) {
+  transform: rotate(0.8deg);
+}
+
+.logr[data-layout="polaroid"] .sidebar .telemetry-widget:hover {
+  transform: rotate(0deg) translateY(-4px) scale(1.02);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.08), 0 24px 44px -16px rgba(0,0,0,0.45);
+  z-index: 2;
+}
+
+/* 2. Terminal Layout: Dashed borders, square, flat background */
+.logr[data-layout="terminal"] .sidebar .telemetry-widget {
+  border-style: dashed;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* 3. Card Layout: Elevated cards with smooth lift on hover */
+.logr[data-layout="card"] .sidebar .telemetry-widget {
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 16px 36px -22px rgba(0,0,0,0.30);
+}
+.logr[data-layout="card"] .sidebar .telemetry-widget:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--user-accent) 40%, var(--rule));
+  box-shadow: 0 4px 8px rgba(0,0,0,0.04), 0 28px 56px -26px rgba(0,0,0,0.38);
+}
+
+/* 4. Journal Layout: Soft-square corners */
+.logr[data-layout="journal"] .sidebar .telemetry-widget {
+  border-radius: 5px;
+}
+
+/* 5. Magazine Layout: Editorial borders, transparent background, uppercase headers */
+.logr[data-layout="magazine"] .sidebar .telemetry-widget {
+  border-top: 1.8px solid var(--ink);
+  border-bottom: 1.8px solid var(--ink);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 18px 0;
+  box-shadow: none;
+}
+.logr[data-layout="magazine"] .sidebar .widget-title {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  font-weight: bold;
+}
+
+/* 6. Feed Layout: Compact corners */
+.logr[data-layout="feed"] .sidebar .telemetry-widget {
+  border-radius: 6px;
+}

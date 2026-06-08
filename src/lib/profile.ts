@@ -47,6 +47,9 @@ export type ProfileDTO = {
   avatarUrl: string | null;
   socials: Social[];
   theme: Theme;
+  activeOrbit: string | null;
+  dsaMetrics: string | null;
+  sysArchitecture: string | null;
   events: EventDTO[];
 };
 
@@ -82,6 +85,9 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     avatarUrl: row.avatarUrl,
     socials: parseJSON<Social[]>(row.socials, []),
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
+    activeOrbit: row.activeOrbit,
+    dsaMetrics: row.dsaMetrics,
+    sysArchitecture: row.sysArchitecture,
     events: row.events.map((e) => ({
       id: e.id,
       dateOn: e.dateOn,
