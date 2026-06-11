@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_THEME, type Theme } from "@/lib/theme";
+import { healSocials } from "@/lib/socials";
 
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** Derive the display string + year from an ISO date (the single source).
@@ -80,7 +81,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     location: row.location,
     about: row.about,
     avatarUrl: row.avatarUrl,
-    socials: parseJSON<Social[]>(row.socials, []),
+    socials: healSocials(parseJSON<Social[]>(row.socials, [])),
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
     events: row.events.map((e) => ({
       id: e.id,

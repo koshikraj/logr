@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/Toast";
 import { updateProfileAction } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
 import type { ProfileDTO } from "@/lib/profile";
+import { serializeSocials } from "@/lib/socials";
 
 export function ProfileForm({ profile }: { profile: ProfileDTO }) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
@@ -98,9 +99,9 @@ export function ProfileForm({ profile }: { profile: ProfileDTO }) {
             id="f-socials"
             name="socials"
             rows={3}
-            defaultValue={profile.socials.map((s) => `${s.label} ${s.href}`).join("\n")}
+            defaultValue={serializeSocials(profile.socials)}
           />
-          <span className="field__hint">one per line · &lt;label&gt; &lt;url&gt;</span>
+          <span className="field__hint">one link per line · paste a URL and we&apos;ll detect the platform · or &quot;Label url&quot; for a custom name</span>
         </div>
 
         <div className="modal__foot" style={{ marginTop: 36 }}>
