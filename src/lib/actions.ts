@@ -9,6 +9,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { isChatEnabled, CHAT_MODEL } from "@/lib/chat";
 import { buildNarratePrompt, parseNarrated } from "@/lib/narrate";
 import { parseVideoUrl, parseTweetUrl } from "@/lib/video";
+import { parseSocials } from "@/lib/socials";
 import { requireProfileId, requireSignedIn, getUserId } from "@/lib/session";
 import { signIn, signOut } from "@/auth";
 
@@ -35,20 +36,6 @@ export async function startSignupAction(formData: FormData) {
 /** Plain "continue with Google" (login page). */
 export async function googleSignInAction() {
   await signIn("google", { redirectTo: "/welcome" });
-}
-
-// ---------- PROFILE ----------
-function parseSocials(raw: string) {
-  // One per line: "Label https://url"
-  return raw
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const m = line.match(/^(.*?)\s+(https?:\/\/\S+)$/);
-      if (m) return { label: m[1].trim(), href: m[2].trim() };
-      return { label: line, href: line };
-    });
 }
 
 // ---------- ONBOARDING ----------
