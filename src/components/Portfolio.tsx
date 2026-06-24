@@ -463,6 +463,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
                   <TypingLabel text="ask me anything" />
                 </button>
               )}
+              {chatEnabled && <Link href={`/${profile.username}/ask`} className="bar__askpage">ask page</Link>}
               <button type="button" onClick={() => setShareOpen(true)}>share</button>
               {loggedIn && <Link href="/dashboard">dashboard</Link>}
             </nav>

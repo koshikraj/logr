@@ -623,8 +623,12 @@
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted);
 }
 .ask__head .accent { color: var(--user-accent); }
+.ask__head > span:first-child { margin-right: auto; }
 .ask__head button { font-family: var(--serif); font-size: 18px; color: var(--muted); line-height: 1; padding: 0 4px; }
 .ask__head button:hover { color: var(--ink); }
+/* "open as full page" — sits between the title and the close button */
+.ask__expand { font-family: var(--mono); font-size: 14px; color: var(--muted); line-height: 1; padding: 0 6px; text-decoration: none; }
+.ask__expand:hover { color: var(--user-accent); }
 .ask__msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .ask__empty { color: var(--muted); font-family: var(--serif); font-size: 15px; line-height: 1.5; }
 .ask__suggest { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
@@ -666,6 +670,37 @@
 .ask__form button:hover:not(:disabled) { opacity: 0.92; }
 .ask__form button:disabled { opacity: 0.4; }
 @media (max-width: 540px) { .ask__scrim { padding: 12px; } .ask__panel { height: calc(100dvh - 24px); } }
+
+/* ── standalone /[username]/ask page ──────────────────────────────────────
+   shares the conversation markup (.ask__msgs / .ask__form / .ask__suggest)
+   with the modal; only the surrounding full-page frame is new. */
+.ask-page {
+  max-width: 720px; margin: 0 auto; padding: 0 24px;
+  min-height: 100dvh; display: flex; flex-direction: column;
+}
+.ask-page__hero { padding: 30px 0 18px; }
+.ask-page__handle { font-family: var(--mono); font-size: 11px; letter-spacing: 0.07em; color: var(--muted); }
+.ask-page__handle .accent { color: var(--user-accent); }
+.ask-page__title {
+  font-family: var(--serif); font-weight: 600; font-size: clamp(28px, 5vw, 42px);
+  letter-spacing: -0.025em; line-height: 1.05; color: var(--ink); margin-top: 12px;
+}
+.ask-page__sub {
+  font-family: var(--serif); font-size: 15.5px; line-height: 1.55; color: var(--muted);
+  margin-top: 12px; max-width: 56ch;
+}
+.ask-page__panel {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  margin: 6px 0 24px; background: var(--paper);
+  border: 0.5px solid var(--rule-strong); border-radius: 16px; overflow: hidden;
+}
+/* roomier conversation + larger starter prompts on the full page */
+.ask-page__panel .ask__msgs { padding: 22px; gap: 14px; }
+.ask-page__panel .ask__empty { font-size: 16px; }
+.ask-page__panel .ask__suggest button { font-size: 12px; padding: 10px 16px; }
+.ask-page__panel .ask__form { padding: 14px; }
+.ask-page .foot { margin-top: auto; }
+@media (max-width: 540px) { .ask-page { padding: 0 16px; } }
 
 /* ============================================================
    SHARE — modal with the human URL, the agent llm.txt URL + prompt
