@@ -13,11 +13,14 @@
   --faint: #95918a;
   --rule: rgba(26, 26, 26, 0.12);
   --rule-strong: rgba(26, 26, 26, 0.28);
+  --inset: rgba(26, 26, 26, 0.025);
   --serif: "Geist", system-ui, -apple-system, sans-serif;
   --sans: "Geist", system-ui, -apple-system, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
 
-  min-height: 100dvh;
+  /* app shell: fixed-height, the two panes scroll independently */
+  height: 100dvh;
+  display: flex; flex-direction: column;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
@@ -33,15 +36,69 @@
 .dash h1, .dash h2, .dash h3, .dash h4 { margin: 0; font-weight: 400; }
 .dash ::selection { background: var(--user-accent); color: #fff; }
 
-.dash .page { max-width: 880px; margin: 0 auto; padding: 0 32px 120px; }
+@keyframes dash-pulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 
-/* bar */
+/* top bar — logo (left) + status/buttons (right) aligned uniform with onboarding */
 .dash .bar {
-  display: flex; align-items: center; justify-content: space-between; padding: 24px 32px;
-  border-bottom: 0.5px solid var(--rule); position: sticky; top: 0; z-index: 30;
-  background: var(--paper); backdrop-filter: blur(8px); max-width: 880px; margin: 0 auto;
+  flex-shrink: 0; z-index: 50;
+  padding: 0;   /* override the public-page .bar horizontal padding */
+  border-bottom: 0.5px solid var(--rule);
+  background: var(--paper);
 }
-.dash .bar__brand { display: inline-flex; align-items: baseline; gap: 12px; font-family: var(--serif); font-size: 22px; letter-spacing: -0.045em; line-height: 1; }
+.dash .bar__inner {
+  max-width: none; margin: 0;   /* override the public-page .bar__inner cap */
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  padding: 14px 32px;
+}
+.dash .bar__saved { display: inline-flex; align-items: center; gap: 7px; margin-right: 8px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap; }
+.dash .bar__saved__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--user-accent); animation: dash-pulse 2.4s ease-in-out infinite; }
+
+/* two-pane split — full width, fixed height, each pane scrolls on its own.
+   the editor takes the larger share; the preview is lighter + scaled down. */
+.dash-split {
+  flex: 1; min-height: 0; overflow: hidden;
+  width: 100%;
+  display: grid; grid-template-columns: minmax(0, 1.3fr) 0.5px minmax(0, 1fr);
+}
+.dash-split__rule { background: var(--rule); }
+
+/* left: editor */
+.dash-edit { overflow-y: auto; min-width: 0; }
+.dash .page {
+  max-width: 620px; margin: 0 auto;
+  padding: 40px clamp(24px, 3.4vw, 56px) 64px;
+  display: flex; flex-direction: column; gap: 36px;
+}
+
+/* right: live preview */
+.dash-preview { overflow: hidden; min-width: 0; display: flex; flex-direction: column; background: linear-gradient(180deg, var(--paper) 0%, color-mix(in srgb, var(--user-accent) 2%, var(--paper)) 100%); }
+.dash-preview__bar {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px clamp(18px, 2.4vw, 32px); border-bottom: 0.5px solid var(--rule);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--ink);
+}
+.dash-preview__url .accent { color: var(--user-accent); }
+.dash-preview__live { display: inline-flex; align-items: center; gap: 8px; color: var(--user-accent); text-transform: uppercase; }
+.dash-preview__live__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: dash-pulse 1.4s ease-in-out infinite; }
+.dash-preview__frame { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+/* scale the whole preview down ~30% (every component, in proportion). zoom
+   already rescales % resolution, so a plain block fills the pane at 70%. */
+.dash-preview .preview-zoom { zoom: 0.7; }
+.dash-preview__frame .logr { min-height: 0; background: transparent; }
+/* preview is narrow → force the portfolio's single-column layout (no sidebar) */
+.dash-preview .shell { grid-template-columns: 1fr; }
+.dash-preview .recent-card { display: none; }
+.dash-preview .col { grid-column: 1; }
+.dash-preview .logr .page { max-width: 860px; padding-left: clamp(18px, 2.4vw, 40px); padding-right: clamp(18px, 2.4vw, 40px); }
+
+/* narrow screens: drop the preview, editor goes full width */
+@media (max-width: 1024px) {
+  .dash-split { grid-template-columns: 1fr; }
+  .dash-split__rule, .dash-preview { display: none; }
+  .dash .page { max-width: 620px; }
+}
+.dash .bar__brand { display: inline-flex; align-items: baseline; gap: 12px; font-family: var(--serif); font-size: 18px; letter-spacing: -0.04em; line-height: 1; }
 .dash .bar__brand .colon { color: var(--user-accent); }
 .dash .chip {
   display: inline-flex; align-items: center; padding: 4px 10px; font-family: var(--mono); font-size: 10.5px;
@@ -55,36 +112,35 @@
 }
 .dash .bar__util a:hover, .dash .bar__util button:hover { color: var(--paper); background: var(--ink); border-color: var(--ink); }
 
-/* hero */
-.dash .hero { display: flex; align-items: center; gap: 18px; padding: 56px 0 24px; }
-.dash .hero__avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; border: 0.5px solid var(--rule-strong); flex-shrink: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; }
+/* hero — compact editor header */
+.dash .hero { display: flex; align-items: center; gap: 16px; padding: 0; }
+.dash .hero__avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; border: 0.5px solid var(--rule-strong); flex-shrink: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; }
 .dash .hero__avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
-.dash .hero__avatar__initial { font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--muted); }
-.dash .hero__copy { display: flex; flex-direction: column; gap: 4px; }
-.dash .hero__name { font-family: var(--serif); font-size: clamp(32px, 4.4vw, 44px); line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
+.dash .hero__avatar__initial { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--muted); }
+.dash .hero__copy { display: flex; flex-direction: column; gap: 2px; }
+.dash .hero__name { font-family: var(--serif); font-size: 26px; line-height: 1; letter-spacing: -0.03em; color: var(--ink); }
 .dash .hero__name .colon { color: var(--user-accent); }
-.dash .hero__sub { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted); line-height: 1.3; }
+.dash .hero__sub { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted); line-height: 1.3; }
 
 /* tabs */
-.dash .tabs { display: inline-flex; align-items: stretch; border: 0.5px solid var(--rule-strong); padding: 4px; margin: 24px 0 32px; }
-.dash .tab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 28px 9px 16px; font-family: var(--serif); font-size: 15.5px; color: var(--muted); letter-spacing: -0.005em; cursor: pointer; position: relative; transition: color 180ms ease, background-color 220ms ease; }
+.dash .tabs { display: inline-flex; align-items: stretch; border: 0.5px solid var(--rule-strong); padding: 4px; margin: -8px 0 0; align-self: flex-start; }
+.dash .tab { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; font-family: var(--serif); font-size: 15px; color: var(--muted); letter-spacing: -0.005em; cursor: pointer; transition: color 180ms ease, background-color 220ms ease; }
 .dash .tab:hover { color: var(--ink); }
 .dash .tab[aria-current="true"] { color: var(--ink); background: rgba(26, 26, 26, 0.04); }
-.dash .tab[aria-current="true"]::after { content: ":"; color: var(--user-accent); position: absolute; right: 12px; top: 9px; font-family: var(--serif); font-size: 15.5px; }
-.dash .tab__glyph { font-family: var(--mono); font-size: 11.5px; color: var(--faint); letter-spacing: 0.04em; }
+.dash .tab__glyph { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.04em; }
 .dash .tab[aria-current="true"] .tab__glyph { color: var(--user-accent); }
 
-/* card */
-.dash .card { border: 0.5px solid var(--rule); background: var(--paper); padding: 32px 36px 36px; margin-bottom: 24px; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 14px 36px -22px rgba(0,0,0,0.18); }
-.dash .card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 20px; border-bottom: 0.5px solid var(--rule); margin-bottom: 28px; }
-.dash .card__head__title { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; color: var(--muted); text-wrap: balance; }
+/* card → flat section (onboarding aesthetic, no box) */
+.dash .card { border: 0; background: transparent; padding: 0; margin: 0; border-radius: 0; box-shadow: none; }
+.dash .card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 10px; border-bottom: 0.5px solid var(--rule); margin-bottom: 22px; }
+.dash .card__head__title { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); text-wrap: balance; }
 .dash .card__head__title .accent { color: var(--user-accent); }
 
 /* field */
-.dash .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
-.dash .field__label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--muted); }
+.dash .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+.dash .field__label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .dash .field input[type="text"], .dash .field input[type="url"], .dash .field input[type="number"], .dash .field input[type="date"], .dash .field textarea, .dash .field select {
-  font-family: var(--sans); font-size: 15px; color: var(--ink); background: transparent; border: 0.5px solid var(--rule-strong);
+  font-family: var(--sans); font-size: 15px; color: var(--ink); background: var(--inset); border: 0.5px solid var(--rule-strong);
   padding: 11px 14px; width: 100%; outline: none; transition: border-color 180ms ease, box-shadow 180ms ease; line-height: 1.5; border-radius: 7px;
 }
 .dash .field input:focus, .dash .field textarea:focus, .dash .field select:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--user-accent) 14%, transparent); }

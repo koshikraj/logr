@@ -15,6 +15,8 @@
   --faint: #95918a;
   --rule: rgba(26, 26, 26, 0.12);
   --rule-strong: rgba(26, 26, 26, 0.28);
+  /* card surface — a lift of the theme paper (lighter, keeps the palette tint) */
+  --card-bg: color-mix(in srgb, #fff 60%, var(--paper));
   --serif: "Geist", system-ui, -apple-system, sans-serif;
   --sans: "Geist", system-ui, -apple-system, sans-serif;
   --mono: "Geist Mono", ui-monospace, monospace;
@@ -96,7 +98,7 @@
 /* ---------- profile card — same width as the timeline (mirrors the OG card) ---------- */
 .profile { position: relative; margin: 6px 0 20px; }
 .profile__card {
-  background: #fff;
+  background: var(--card-bg);
   border-radius: 12px;
   overflow: hidden;
   /* soft floating drop-shadow, mirroring the OG card */
@@ -171,7 +173,7 @@
   grid-column: 1;
   position: sticky; top: 70px; align-self: start;
   margin-top: 6px;
-  background: #fff; border-radius: 12px;
+  background: var(--card-bg); border-radius: 12px;
   box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.12);
   padding: 22px 20px 24px;
 }
@@ -203,7 +205,9 @@
    top / left / width are set inline from JS so it lands in the card's exact place. */
 .profile-mini {
   position: fixed; z-index: 40;
-  background: #fff; border-radius: 12px;
+  /* docks flush under the bar: square top, rounded bottom, so scrolled content
+     tucks fully beneath it (no band peeking between the bar and the strip) */
+  background: var(--card-bg); border-radius: 0 0 12px 12px;
   box-shadow: 0 14px 36px -18px rgba(0, 0, 0, 0.26), 0 5px 14px -10px rgba(0, 0, 0, 0.12);
   pointer-events: none;          /* hidden state passes clicks through */
   will-change: transform, opacity;
@@ -226,13 +230,13 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
 
-/* dark (ink) palette: the white cards become an elevated dark surface. Text
-   already themes via --ink/--muted; only the hardcoded #fff fills need fixing.
-   --rule is light in dark mode, so a hairline border crisps the edge. */
+/* dark (ink) palette: the card surface becomes an elevated dark lift instead of
+   a near-white one. Text already themes via --ink/--muted. --rule is light in
+   dark mode, so a hairline border crisps the edge. */
+.logr[data-mode="dark"] { --card-bg: color-mix(in srgb, var(--ink) 8%, var(--paper)); }
 .logr[data-mode="dark"] .profile__card,
 .logr[data-mode="dark"] .recent-card,
 .logr[data-mode="dark"] .profile-mini {
-  background: color-mix(in srgb, var(--ink) 8%, var(--paper));
   border: 0.5px solid var(--rule);
 }
 .logr[data-mode="dark"] .profile__polaroid,
@@ -285,7 +289,9 @@
 .year__label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; color: var(--muted); background: var(--paper); padding-right: 12px; }
 .year__line { flex: 1; height: 0.5px; background: var(--rule); }
 
-.entry { position: relative; padding-bottom: 36px; padding-left: 4px; scroll-margin-top: 80px; }
+/* clear the sticky top bar + the docked strip so a jumped-to event lands below them */
+.entry { position: relative; padding-bottom: 36px; padding-left: 4px; scroll-margin-top: 124px; }
+.year { scroll-margin-top: 116px; }
 .entry:last-of-type { padding-bottom: 0; }
 .entry__dot {
   position: absolute; left: -28px; top: 12px; width: 7px; height: 7px; border-radius: 50%;
