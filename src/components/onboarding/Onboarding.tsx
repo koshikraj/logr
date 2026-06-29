@@ -547,7 +547,9 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
             </span>
           </div>
           <div className="onb__preview__frame" ref={previewFrameRef}>
-            <Portfolio profile={preview} chatEnabled={false} />
+            <div className="preview-zoom">
+              <Portfolio profile={preview} chatEnabled={false} previewMode />
+            </div>
             {reading && (
               <div
                 className="onb__preview__sk"

@@ -96,7 +96,7 @@
 .onb__shell {
   flex: 1; overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 0.5px minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1.3fr) 0.5px minmax(0, 1fr);
 }
 .onb__shell__divider { background: var(--rule); }
 
@@ -108,7 +108,7 @@
 .onb__form {
   flex: 1; overflow-y: auto;
   padding: 40px 56px 32px;
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
   width: 100%;
   display: flex;
@@ -405,7 +405,15 @@
   width: 6px; height: 6px; border-radius: 50%; background: currentColor;
   animation: onb-pulse 1.4s ease-in-out infinite;
 }
-.onb__preview__frame { flex: 1; position: relative; overflow: hidden; }
+.onb__preview__frame { flex: 1; position: relative; overflow-y: auto; overflow-x: hidden; }
+/* scale the preview down ~30%, uniform with the dashboard */
+.onb__preview .preview-zoom { zoom: 0.7; }
+.onb__preview__frame .logr { min-height: 0; background: transparent; }
+/* uniform with the dashboard preview: single-column portfolio, no sidebar */
+.onb__preview .shell { grid-template-columns: 1fr; }
+.onb__preview .recent-card { display: none; }
+.onb__preview .col { grid-column: 1; }
+.onb__preview .logr .page { max-width: 860px; padding-left: clamp(18px, 2.4vw, 40px); padding-right: clamp(18px, 2.4vw, 40px); }
 
 /* ============================================================
    ACTION BAR — pinned to bottom of left column only

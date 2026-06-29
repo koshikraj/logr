@@ -5,20 +5,42 @@ import { useToast } from "@/components/ui/Toast";
 import { updateProfileAction } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
 import type { ProfileDTO } from "@/lib/profile";
-import { serializeSocials } from "@/lib/socials";
+import { serializeSocials, parseSocials } from "@/lib/socials";
 
-export function ProfileForm({ profile }: { profile: ProfileDTO }) {
+export function ProfileForm({
+  profile,
+  onDraftChange,
+}: {
+  profile: ProfileDTO;
+  onDraftChange?: (p: Partial<ProfileDTO>) => void;
+}) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const toast = useToast();
+
+  // report the current (unsaved) field values to the live preview
+  function report(avatar = avatarUrl) {
+    const form = formRef.current;
+    if (!form || !onDraftChange) return;
+    const fd = new FormData(form);
+    const s = (k: string) => String(fd.get(k) ?? "");
+    onDraftChange({
+      name: s("name"), handle: s("handle"), bio: s("bio"),
+      status: s("status"), location: s("location"), about: s("about"),
+      socials: parseSocials(s("socials")), avatarUrl: avatar,
+    });
+  }
 
   async function pickAvatar(file: File | undefined) {
     if (!file) return;
     setBusy(true);
     try {
-      setAvatarUrl(await uploadImage(file));
+      const url = await uploadImage(file);
+      setAvatarUrl(url);
+      report(url);
     } catch (e) {
       toast(e instanceof Error ? e.message : "Upload failed", "error");
     } finally {
@@ -30,6 +52,8 @@ export function ProfileForm({ profile }: { profile: ProfileDTO }) {
     <section role="tabpanel">
       <form
         className="card"
+        ref={formRef}
+        onInput={() => report()}
         action={(fd) => {
           fd.set("avatarUrl", avatarUrl);
           start(async () => {

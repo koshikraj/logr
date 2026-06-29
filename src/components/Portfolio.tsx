@@ -335,7 +335,7 @@ const SORTS: { v: SortKey; label: string }[] = [
 ];
 
 // ---------- ROOT ----------
-export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile: ProfileDTO; chatEnabled?: boolean; loggedIn?: boolean }) {
+export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode }: { profile: ProfileDTO; chatEnabled?: boolean; loggedIn?: boolean; previewMode?: boolean }) {
   // The owner's saved theme (from the DB) is authoritative. The floating
   // picker only sets an in-session preview override (derived, no effect), so
   // it never overrides the saved default on the next load.
@@ -356,6 +356,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
   const barRef = useRef<HTMLElement>(null);
   const heroProgress = useMotionValue(0);
   useEffect(() => {
+    if (previewMode) return;
     const el = heroRef.current;
     if (!el) return;
     let raf = 0;
@@ -380,12 +381,13 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
   // position only changes on resize/layout, so this isn't tied to scroll.
   const [miniBox, setMiniBox] = useState({ left: 0, width: 0, top: 56 });
   useEffect(() => {
+    if (previewMode) return;
     const measure = () => {
       const hero = heroRef.current;
       if (!hero) return;
       const r = hero.getBoundingClientRect();
       const barH = barRef.current?.getBoundingClientRect().height ?? 52;
-      setMiniBox({ left: Math.round(r.left), width: Math.round(r.width), top: Math.round(barH + 8) });
+      setMiniBox({ left: Math.round(r.left), width: Math.round(r.width), top: Math.round(barH) });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -412,6 +414,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
   // whose box crosses the center line wins (stable as it grows); otherwise the
   // one nearest the center. rAF-throttled.
   useEffect(() => {
+    if (previewMode) return;
     const root = document.querySelector<HTMLElement>(".logr");
     if (!root) return;
     let raf = 0;
@@ -514,9 +517,10 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="logr" data-layout={layout} data-mode={PALETTES[palette]?.dark ? "dark" : "light"} style={vars}>
+      <div className="logr" data-layout={layout} data-mode={PALETTES[palette]?.dark ? "dark" : "light"} style={vars} data-preview={previewMode ? "true" : undefined}>
         {/* docked strip — replaces the profile card under the bar, tracking the
             year/title the reader is currently on (updates with the scroll-spy) */}
+        {!previewMode && (
         <motion.header
           className="profile-mini"
           data-shown={collapsed}
@@ -536,7 +540,9 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
             <span className="profile-mini__title">{activeEntry?.title ?? profile.name}</span>
           </motion.div>
         </motion.header>
-        {/* bar — full-width sticky, line spans the viewport */}
+        )}
+        {/* bar — full-width sticky, line spans the viewport (hidden in preview) */}
+        {!previewMode && (
         <header className="bar" ref={barRef}>
           <div className="bar__inner">
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
@@ -558,6 +564,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
             </nav>
           </div>
         </header>
+        )}
         <div className="page">
           {/* shell: sticky recent rail (left) + main column (right) */}
           <div className="shell">
@@ -744,11 +751,11 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
           </div>
         </div>
 
-        <Picker palette={palette} layout={layout} onPalette={pickPalette} onLayout={pickLayout} />
-        {chatEnabled && (
+        {!previewMode && <Picker palette={palette} layout={layout} onPalette={pickPalette} onLayout={pickLayout} />}
+        {!previewMode && chatEnabled && (
           <ChatWidget username={profile.username} name={profile.name} open={chatOpen} onClose={() => setChatOpen(false)} />
         )}
-        <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />
+        {!previewMode && <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />}
       </div>
     </MotionConfig>
   );

@@ -319,7 +319,7 @@ function EventRow({
   );
 }
 
-export function EventsManager({ events }: { events: EditableEvent[] }) {
+export function EventsManager({ events, onItemsChange }: { events: EditableEvent[]; onItemsChange?: (items: EditableEvent[]) => void }) {
   const router = useRouter();
   const toast = useToast();
   const [dialog, setDialog] = useState<EventInput | null>(null);
@@ -336,6 +336,8 @@ export function EventsManager({ events }: { events: EditableEvent[] }) {
     setPrevSig(sig);
     setItems(events);
   }
+  // keep the live preview in sync with the current (drag/CRUD) order + content
+  useEffect(() => { onItemsChange?.(items); }, [items, onItemsChange]);
 
   const nextPosition = items.length ? Math.min(...items.map((e) => e.position)) - 1 : 0;
   const featuredCount = items.filter((e) => e.featured).length;
