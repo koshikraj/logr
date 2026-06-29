@@ -105,6 +105,7 @@ Derived directly from the prototype's `HIGHLIGHTS`, `TAG_META`, and profile data
 - [ ] User dashboard — manage highlights, profile, theme settings
 - [ ] Onboarding — guided first highlight creation
 - [ ] Story-to-timeline — paste a story, AI structures it into highlights *(early cut of Phase 4)*
+- [ ] User data ingestion — import LinkedIn, resume, docs or profile sources and auto-create highlights
 - [ ] Email — welcome, view-count notifications
 - [ ] Analytics — view counts per profile, most-viewed highlights
 - [ ] SEO — meta tags, `og:image`, structured data per profile

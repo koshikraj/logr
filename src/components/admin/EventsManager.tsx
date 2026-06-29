@@ -355,12 +355,39 @@ export function EventsManager({ events }: { events: EditableEvent[] }) {
     <section role="tabpanel">
       <div className="card">
         <div className="hl-head">
-          <span className="hl-count"><span className="accent">{items.length}</span> events · <span className="accent">{featuredCount}</span> in highlights · drag to reorder</span>
-          <span className="hl-head__actions">
-            <button type="button" className="btn btn--small btn--ghost" onClick={() => setImporting(true)}>↑ import</button>
-            <button type="button" className="btn btn--small btn--ghost" onClick={() => setNarrate(true)}>✎ narrate</button>
-            <button type="button" className="btn btn--small" onClick={() => setDialog(emptyDraft(nextPosition))}>+ add event</button>
-          </span>
+          <div className="hl-head__meta">
+            <div className="hl-stats">
+              <span className="hl-stat"><span className="accent">{items.length}</span> events</span>
+              <span className="hl-stat-sep" aria-hidden="true" />
+              <span className="hl-stat"><span className="accent">{featuredCount}</span> in highlights</span>
+            </div>
+            <div className="hl-head__hints">
+              <span className="hl-head__guide">add a moment manually, import a resume, or narrate your story in prose.</span>
+              <span className="hl-head__hint">drag rows to reorder</span>
+            </div>
+          </div>
+          <div className="hl-head__actions">
+            <button type="button" className="btn btn--small" onClick={() => setImporting(true)}>
+              <svg className="btn__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                <path d="M8 11V3M8 3L5.5 5.5M8 3l2.5 2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M3 13h10" strokeLinecap="round" />
+              </svg>
+              import
+            </button>
+            <button type="button" className="btn btn--small" onClick={() => setNarrate(true)}>
+              <svg className="btn__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                <path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              narrate
+            </button>
+            <span className="hl-head__actions-sep" aria-hidden="true" />
+            <button type="button" className="btn btn--small btn--primary" onClick={() => setDialog(emptyDraft(nextPosition))}>
+              <svg className="btn__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                <path d="M8 3.5v9M3.5 8h9" strokeLinecap="round" />
+              </svg>
+              add event
+            </button>
+          </div>
         </div>
 
         <Reorder.Group as="div" axis="y" values={items} onReorder={setItems} className="hl-list">
