@@ -13,9 +13,9 @@
   --faint: #95918a;
   --rule: rgba(26, 26, 26, 0.12);
   --rule-strong: rgba(26, 26, 26, 0.28);
-  --serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  --sans: "Inter", system-ui, -apple-system, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Geist", system-ui, -apple-system, sans-serif;
+  --sans: "Geist", system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
 
   min-height: 100dvh;
   background: var(--paper);

@@ -42,9 +42,11 @@ export const LAYOUTS: Record<string, LayoutMeta> = {
 export type Layout = keyof typeof LAYOUTS;
 
 export const FONTS = {
-  serif: '"Source Serif 4", "Source Serif Pro", Georgia, serif',
-  sans: '"Inter", system-ui, -apple-system, sans-serif',
-  mono: '"JetBrains Mono", ui-monospace, monospace',
+  // Geist for text, Geist Mono for monospace. The `serif` key is kept for
+  // backward-compat with all `--serif` consumers; it now resolves to Geist.
+  serif: '"Geist", system-ui, -apple-system, sans-serif',
+  sans: '"Geist", system-ui, -apple-system, sans-serif',
+  mono: '"Geist Mono", ui-monospace, monospace',
 };
 
 export type Theme = {

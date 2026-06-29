@@ -8,9 +8,9 @@
   --muted: #6b6862; --faint: #95918a;
   --rule: rgba(26,26,26,0.12); --rule-strong: rgba(26,26,26,0.28);
   --inset: rgba(26,26,26,0.025);
-  --serif: "Source Serif 4", Georgia, serif;
-  --sans:  "Inter", system-ui, sans-serif;
-  --mono:  "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Geist", system-ui, -apple-system, sans-serif;
+  --sans:  "Geist", system-ui, -apple-system, sans-serif;
+  --mono:  "Geist Mono", ui-monospace, monospace;
 
   display: flex; flex-direction: column; height: 100dvh;
   background: var(--paper); color: var(--ink); font-family: var(--sans);

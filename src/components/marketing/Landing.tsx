@@ -6,21 +6,26 @@ import { HumanVoiceDemo, MachineVoiceChat } from "./DualDemos";
 import { Mark } from "@/components/Mark";
 
 // The logr marketing landing. Static brand copy; koshik is the example logr.
-export function Landing() {
+// `signedIn` tailors the nav CTA: owners get the dashboard, visitors get started.
+export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <div className="mkt">
       <RevealObserver />
-      <div className="page">
-        {/* bar */}
-        <header className="bar">
+      {/* bar — full-width sticky, line spans the viewport */}
+      <header className="bar">
+        <div className="bar__inner">
           <Link className="bar__brand" href="/" aria-label="logr"><Mark />logr</Link>
           <nav className="bar__util" aria-label="utilities">
-            <Link href="/koshik">see one</Link>
-            <Link href="/dashboard">dashboard</Link>
+            {signedIn ? (
+              <Link href="/dashboard">dashboard</Link>
+            ) : (
+              <Link href="/login">get started</Link>
+            )}
             <a className="cta" href="#claim">claim a handle</a>
           </nav>
-        </header>
-
+        </div>
+      </header>
+      <div className="page">
         {/* hello */}
         <section className="hello" aria-label="a note from the maker" data-reveal>
           <Link className="hello__avatar" href="/koshik" aria-label="koshik's logr">
@@ -218,7 +223,11 @@ export function Landing() {
               <h4>product</h4>
               <a href="#claim">claim a handle</a>
               <Link href="/koshik">see an example</Link>
-              <Link href="/dashboard">dashboard</Link>
+              {signedIn ? (
+                <Link href="/dashboard">dashboard</Link>
+              ) : (
+                <Link href="/login">get started</Link>
+              )}
             </nav>
             <nav className="foot__col" aria-label="brand">
               <h4>brand</h4>

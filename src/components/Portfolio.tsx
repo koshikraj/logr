@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { motion, AnimatePresence, MotionConfig, useMotionValue, useTransform, useMotionValueEvent } from "framer-motion";
 import type { ProfileDTO, EventDTO, MediaItem } from "@/lib/profile";
 import {
   PALETTES,
@@ -24,6 +24,11 @@ import { TweetEmbed } from "@/components/TweetEmbed";
 
 const EASE = [0.2, 0.8, 0.2, 1] as [number, number, number, number];
 const VIEWPORT = { once: true, amount: 0.2, margin: "0px 0px -6% 0px" } as const;
+
+// Right-rail "recent" preview mirrors the OG card: dot size/opacity by recency
+// (extra entries fall back to the smallest). See opengraph-image.tsx.
+const RC_DOT_SIZES = [11, 9, 7, 5, 4, 4, 4] as const;
+const RC_DOT_OPACITIES = [1, 0.92, 0.7, 0.5, 0.4, 0.35, 0.3] as const;
 
 function firstLetter(title: string): string {
   const m = title.match(/[a-z0-9]/i);
@@ -343,6 +348,57 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
   const [activeId, setActiveId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortKey>("newest");
 
+  // scroll-collapse: as the profile card scrolls out, it's replaced by a compact
+  // strip docked just below the top bar, in the card's exact place, showing the
+  // avatar + the year/title currently being read. Progress is how much of the card
+  // has scrolled above the top (0 → 1, clamped) so the strip stays pinned after.
+  const heroRef = useRef<HTMLElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  const heroProgress = useMotionValue(0);
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const r = el.getBoundingClientRect();
+      const h = r.height || 1;
+      heroProgress.set(Math.min(1, Math.max(0, -r.top / h)));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [heroProgress]);
+  // measure where the profile card sits (left/width) and how tall the bar is, so
+  // the strip can dock in the card's exact place just below the bar. Horizontal
+  // position only changes on resize/layout, so this isn't tied to scroll.
+  const [miniBox, setMiniBox] = useState({ left: 0, width: 0, top: 56 });
+  useEffect(() => {
+    const measure = () => {
+      const hero = heroRef.current;
+      if (!hero) return;
+      const r = hero.getBoundingClientRect();
+      const barH = barRef.current?.getBoundingClientRect().height ?? 52;
+      setMiniBox({ left: Math.round(r.left), width: Math.round(r.width), top: Math.round(barH + 8) });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const t = setTimeout(measure, 300); // re-measure after fonts/layout settle
+    return () => { window.removeEventListener("resize", measure); clearTimeout(t); };
+  }, []);
+  // slide down from under the bar + fade + grow from a touch small
+  const miniY = useTransform(heroProgress, [0.4, 0.82], ["-100%", "0%"]);
+  const miniOpacity = useTransform(heroProgress, [0.4, 0.82], [0, 1]);
+  const miniScale = useTransform(heroProgress, [0.4, 0.82], [0.92, 1]);
+  const [collapsed, setCollapsed] = useState(false);
+  useMotionValueEvent(heroProgress, "change", (v) => setCollapsed(v > 0.5));
+
   const palette = preview.palette ?? profile.theme.palette;
   const layout = preview.layout ?? profile.theme.layout;
   // layouts that show all content: the active entry is spotlit (scale/dim)
@@ -398,6 +454,19 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
     [profile.events]
   );
 
+  // newest 7, for the OG-card "recent" rail in the profile header
+  const recentEvents = useMemo(
+    () => [...profile.events].sort((a, b) => dateKey(b).localeCompare(dateKey(a))).slice(0, 7),
+    [profile.events]
+  );
+
+  // the entry the scroll-spy currently highlights — drives the docked strip's
+  // year + title; falls back to the newest entry before the spy kicks in.
+  const activeEntry = useMemo(
+    () => profile.events.find((e) => e.id === activeId) ?? recentEvents[0] ?? null,
+    [activeId, profile.events, recentEvents]
+  );
+
   const hasFeatured = useMemo(() => profile.events.some((e) => e.featured), [profile.events]);
 
   // filter tabs: highlights (featured) + all + each distinct tag.
@@ -446,9 +515,30 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
   return (
     <MotionConfig reducedMotion="user">
       <div className="logr" data-layout={layout} data-mode={PALETTES[palette]?.dark ? "dark" : "light"} style={vars}>
-        <div className="page">
-          {/* bar */}
-          <header className="bar">
+        {/* docked strip — replaces the profile card under the bar, tracking the
+            year/title the reader is currently on (updates with the scroll-spy) */}
+        <motion.header
+          className="profile-mini"
+          data-shown={collapsed}
+          aria-hidden={!collapsed}
+          style={{ top: miniBox.top, left: miniBox.left, width: miniBox.width, y: miniY, opacity: miniOpacity }}
+        >
+          <motion.div className="profile-mini__inner" style={{ scale: miniScale }}>
+            <span className="profile-mini__avatar">
+              {profile.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profile.avatarUrl} alt={profile.name} />
+              ) : (
+                <span className="profile-mini__initial">{firstLetter(profile.name)}</span>
+              )}
+            </span>
+            {activeEntry && <span className="profile-mini__year">{activeEntry.date}</span>}
+            <span className="profile-mini__title">{activeEntry?.title ?? profile.name}</span>
+          </motion.div>
+        </motion.header>
+        {/* bar — full-width sticky, line spans the viewport */}
+        <header className="bar" ref={barRef}>
+          <div className="bar__inner">
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
             <nav className="bar__util" aria-label="utilities">
               {chatEnabled && (
@@ -466,59 +556,118 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
               <button type="button" onClick={() => setShareOpen(true)}>share</button>
               {loggedIn && <Link href="/dashboard">dashboard</Link>}
             </nav>
-          </header>
-
-          {/* profile */}
-          <section className="profile">
-            <span className="profile__avatar" aria-hidden={!profile.avatarUrl}>
-              {profile.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatarUrl} alt={profile.name} />
-              ) : (
-                <span className="profile__avatar__initial">{firstLetter(profile.name)}</span>
-              )}
-            </span>
-            <p className="profile__handle">
-              logr.life<span className="accent">/</span>{profile.username}
-            </p>
-            <h1 className="profile__name">{profile.name}<span className="profile__caret" aria-hidden="true" /></h1>
-            {profile.bio && <p className="profile__bio">{profile.bio.replace(/\n/g, " ")}</p>}
-            <dl className="profile__meta">
-              {sinceYear && (<><dt>since</dt><dd>{sinceYear}</dd></>)}
-              {profile.location && (<><dt>place</dt><dd>{profile.location}</dd></>)}
-              {profile.socials.length > 0 && (
-                <>
-                  <dt>elsewhere</dt>
-                  <dd className="profile__socials">
-                    {profile.socials.map((s) => {
-                      const platform = detectPlatform(s.href);
-                      const icon = SOCIAL_ICONS[platform] ?? SOCIAL_ICONS[s.label.toLowerCase()];
-                      const label = s.label || platform;
-                      return (
-                        <a
-                          key={s.href}
-                          href={s.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={icon ? "profile__social" : undefined}
-                          aria-label={label}
-                          title={label}
-                        >
-                          {icon ?? label.toLowerCase()}
+          </div>
+        </header>
+        <div className="page">
+          {/* shell: sticky recent rail (left) + main column (right) */}
+          <div className="shell">
+            {/* recent — its own card, sticky in the left gutter */}
+            <aside className="recent-card" aria-label="recent entries">
+              <p className="recent-card__label">recent</p>
+              {recentEvents.length > 0 ? (
+                <ol className="recent-card__list">
+                  {recentEvents.map((e, i) => {
+                    const last = i === recentEvents.length - 1;
+                    const size = RC_DOT_SIZES[i] ?? 4;
+                    return (
+                      <li key={e.id}>
+                        <a className="rc" href={`#e-${e.id}`}>
+                          <span className="rc__rail">
+                            <span
+                              className={`rc__dot${i === 0 ? " rc__dot--now" : ""}`}
+                              style={{ width: size, height: size, opacity: RC_DOT_OPACITIES[i] ?? 0.3 }}
+                            />
+                            {!last && <span className="rc__line" />}
+                          </span>
+                          <span className="rc__text">
+                            <span className="rc__date">{e.date}</span>
+                            <span className="rc__title">
+                              {e.icon && (isImageIcon(e.icon) ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img className="rc__ico" src={e.icon} alt="" />
+                              ) : (
+                                <span className="rc__ico rc__ico--emoji">{e.icon}</span>
+                              ))}
+                              <span className="rc__t">{e.title}</span>
+                            </span>
+                          </span>
                         </a>
-                      );
-                    })}
-                  </dd>
-                </>
+                      </li>
+                    );
+                  })}
+                </ol>
+              ) : (
+                <p className="recent-card__empty">no entries yet</p>
               )}
-            </dl>
-            {profile.status && (
-              <div className="profile__now">
-                <span className="now__label">now /</span>
-                <span className="now__body">{profile.status}</span>
-              </div>
-            )}
-          </section>
+            </aside>
+
+            {/* main column */}
+            <div className="col">
+              {/* profile — same width as the timeline */}
+              <section className="profile" ref={heroRef}>
+                <div className="profile__card">
+                  <div className="profile__main">
+                <p className="profile__handle">
+                  logr.life<span className="accent">/</span>{profile.username}
+                </p>
+
+                {/* polaroid + name, inline */}
+                <div className="profile__id">
+                  <span className="profile__polaroid" aria-hidden={!profile.avatarUrl}>
+                    {profile.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={profile.avatarUrl} alt={profile.name} />
+                    ) : (
+                      <span className="profile__polaroid__initial">{firstLetter(profile.name)}</span>
+                    )}
+                  </span>
+                  <h1 className="profile__name">{profile.name}<span className="profile__caret" aria-hidden="true" /></h1>
+                </div>
+
+                {profile.bio && <p className="profile__bio">{profile.bio.replace(/\n/g, " ")}</p>}
+
+                <dl className="profile__meta">
+                  {sinceYear && (<><dt>since</dt><dd>{sinceYear}</dd></>)}
+                  {profile.location && (<><dt>place</dt><dd>{profile.location}</dd></>)}
+                  {profile.socials.length > 0 && (
+                    <>
+                      <dt>elsewhere</dt>
+                      <dd className="profile__socials">
+                        {profile.socials.map((s) => {
+                          const platform = detectPlatform(s.href);
+                          const icon = SOCIAL_ICONS[platform] ?? SOCIAL_ICONS[s.label.toLowerCase()];
+                          const label = s.label || platform;
+                          return (
+                            <a
+                              key={s.href}
+                              href={s.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={icon ? "profile__social" : undefined}
+                              aria-label={label}
+                              title={label}
+                            >
+                              {icon ?? label.toLowerCase()}
+                            </a>
+                          );
+                        })}
+                      </dd>
+                    </>
+                  )}
+                </dl>
+
+                {/* footer: now / status */}
+                {profile.status && (
+                  <div className="profile__foot">
+                    <div className="profile__now">
+                      <span className="now__label">now /</span>
+                      <span className="now__body">{profile.status}</span>
+                    </div>
+                  </div>
+                )}
+                  </div>
+                </div>
+              </section>
 
           {/* tag filter */}
           {tags.length > 2 && (
@@ -591,6 +740,8 @@ export default function Portfolio({ profile, chatEnabled, loggedIn }: { profile:
             <span className="brand"><Mark />logr — log your life.</span>
             <span>read by humans <span className="accent">·</span> ingested by machines</span>
           </footer>
+            </div>
+          </div>
         </div>
 
         <Picker palette={palette} layout={layout} onPalette={pickPalette} onLayout={pickLayout} />

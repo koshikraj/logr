@@ -15,11 +15,13 @@
   --faint: #95918a;
   --rule: rgba(26, 26, 26, 0.12);
   --rule-strong: rgba(26, 26, 26, 0.28);
-  --serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  --sans: "Inter", system-ui, -apple-system, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Geist", system-ui, -apple-system, sans-serif;
+  --sans: "Geist", system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
 
   min-height: 100dvh;
+  /* clip the ~scrollbar-width overspill from the full-bleed profile's 100vw math */
+  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
@@ -40,14 +42,21 @@
 .logr ::selection { background: var(--user-accent); color: #fff; }
 
 /* ---------- page + bar ---------- */
-.page { max-width: 680px; margin: 0 auto; padding: 40px 32px 96px; }
+.page { max-width: 680px; margin: 0 auto; padding: 26px 32px 96px; }
 
+/* full-width sticky bar — the line spans the whole viewport; content is centered
+   at a uniform width shared with the landing page */
 .bar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 0 16px; border-bottom: 0.5px solid var(--rule);
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: 0; z-index: 50;
+  border-bottom: 0.5px solid var(--rule);
   background: color-mix(in srgb, var(--paper) 82%, transparent);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px);
+  padding: 0 clamp(20px, 4vw, 40px);
+}
+.bar__inner {
+  max-width: 960px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 0;
 }
 .bar__brand { font-family: var(--serif); font-size: 22px; letter-spacing: -0.045em; line-height: 1; color: var(--ink); }
 .bar__brand .colon { color: var(--user-accent); }
@@ -72,41 +81,66 @@
 
 /* ---------- profile ---------- */
 /* a compact, self-contained, shareable profile card — separated from the timeline */
-.profile {
-  position: relative;
-  margin: 28px 0 8px;
-  padding: 22px 26px 20px;
-  display: grid; gap: 11px;
-  border: 0.5px solid var(--rule);
+/* widen the portfolio column so the left rail + main column fit side by side */
+.logr .page { max-width: 988px; }
+
+/* shell: sticky recent rail (left) + main column (right) */
+.shell {
+  display: grid;
+  grid-template-columns: 216px minmax(0, 1fr);
+  column-gap: 28px;
+  align-items: start;
+}
+.col { grid-column: 2; min-width: 0; }
+
+/* ---------- profile card — same width as the timeline (mirrors the OG card) ---------- */
+.profile { position: relative; margin: 6px 0 20px; }
+.profile__card {
+  background: #fff;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--ink) 2.5%, var(--paper));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 20px 44px -30px rgba(0, 0, 0, 0.26);
+  overflow: hidden;
+  /* soft floating drop-shadow, mirroring the OG card */
+  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.12);
 }
-.profile__avatar {
-  position: absolute; top: 22px; right: 24px; width: 56px; height: 56px;
-  border-radius: 50%; overflow: hidden; border: 0.5px solid var(--rule-strong); background: var(--paper);
-  display: flex; align-items: center; justify-content: center;
+.profile__main {
+  min-width: 0;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: clamp(16px, 2vw, 26px) clamp(18px, 2.2vw, 28px) clamp(16px, 2vw, 24px) clamp(18px, 2.4vw, 30px);
 }
-.profile__avatar img { display: block; width: 100%; height: 100%; object-fit: cover; filter: saturate(0.92); transition: filter 320ms ease; }
-.profile__avatar:hover img { filter: saturate(1); }
-.profile__avatar__initial { font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--muted); }
-@media (max-width: 540px) { .profile__avatar { width: 48px; height: 48px; top: 20px; right: 20px; } }
-.profile__handle { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--muted); }
+.profile__handle { font-family: var(--sans); font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
 .profile__handle .accent { color: var(--user-accent); }
-.profile__name {
-  font-family: var(--serif); font-size: clamp(27px, 4vw, 40px); line-height: 1.04;
-  letter-spacing: -0.035em; color: var(--ink); margin-top: -1px; padding-right: 72px; max-width: 100%;
+
+/* polaroid avatar + name, inline */
+.profile__id { display: flex; align-items: flex-end; gap: 18px; min-width: 0; }
+.profile__polaroid {
+  flex-shrink: 0;
+  width: 70px; height: 80px;
+  background: #fff;
+  padding: 5px 5px 15px;
+  box-shadow: 2px 5px 14px rgba(0, 0, 0, 0.18);
+  transform: rotate(-3deg);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 320ms cubic-bezier(.2, .8, .2, 1);
 }
-@media (max-width: 540px) { .profile__name { padding-right: 64px; font-size: clamp(24px, 8vw, 32px); } }
-.profile__name .colon { color: var(--user-accent); margin-left: 0.04em; }
+.profile__polaroid:hover { transform: rotate(0deg); }
+.profile__polaroid img { width: 60px; height: 60px; object-fit: cover; display: block; filter: saturate(0.92); transition: filter 320ms ease; }
+.profile__polaroid:hover img { filter: saturate(1); }
+.profile__polaroid__initial { font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--muted); }
+
+.profile__name {
+  flex: 1; min-width: 0;
+  font-family: var(--serif); font-size: clamp(30px, 3.8vw, 50px); line-height: 1.02;
+  letter-spacing: -0.035em; color: var(--ink);
+}
+.profile__caret { display: inline-block; width: 5px; height: 0.72em; background: var(--user-accent); margin-left: 8px; vertical-align: -0.04em; }
+
 .profile__bio {
-  font-family: var(--serif); font-style: italic; font-size: clamp(15px, 1.5vw, 17px);
-  line-height: 1.42; color: var(--ink); max-width: 44ch; margin-top: 2px;
+  font-family: var(--serif);  font-size: clamp(15px, 1.5vw, 19px);
+  line-height: 1.44; color: var(--ink); max-width: 46ch;
 }
 .profile__meta {
-  display: grid; grid-template-columns: max-content 1fr; column-gap: 20px; row-gap: 3px;
-  font-family: var(--mono); font-size: 11.5px; color: var(--muted); letter-spacing: 0.03em;
-  margin-top: 4px; max-width: 480px;
+  display: grid; grid-template-columns: max-content 1fr; column-gap: 20px; row-gap: 5px;
+  font-family: var(--sans); font-size: 13px; color: var(--muted); letter-spacing: 0; margin-top: 2px;
 }
 .profile__meta dt { color: var(--faint); }
 .profile__meta dd { margin: 0; color: var(--ink); }
@@ -118,12 +152,93 @@
 .profile__socials { display: inline-flex; align-items: center; gap: 14px; }
 .profile__meta dd a.profile__social { border: 0; padding: 0; color: var(--muted); display: inline-flex; transition: color 160ms ease, transform 160ms ease; }
 .profile__meta dd a.profile__social:hover { color: var(--user-accent); transform: translateY(-1px); }
-.profile__social svg { width: 17px; height: 17px; display: block; }
+.profile__social svg { width: 18px; height: 18px; display: block; }
 
-/* ---------- now line (inside the profile card) ---------- */
-.profile__now { margin-top: 6px; padding-top: 13px; border-top: 0.5px solid var(--rule); display: flex; gap: 12px; align-items: baseline; }
-.now__label { font-family: var(--mono); font-size: 10.5px; color: var(--user-accent); letter-spacing: 0.1em; flex-shrink: 0; }
-.now__body { font-family: var(--serif); font-size: 15.5px; line-height: 1.45; color: var(--ink); }
+/* card footer: now / status */
+.profile__foot {
+  margin-top: 4px; padding-top: 14px; border-top: 0.5px solid var(--rule);
+  display: flex; align-items: flex-end; gap: 20px;
+}
+.profile__foot__spacer { flex: 1; }
+.profile__now { flex: 1; display: flex; gap: 14px; align-items: baseline; min-width: 0; }
+.now__label { font-family: var(--sans); font-weight: 500; font-size: 12px; color: var(--user-accent); letter-spacing: 0.04em; flex-shrink: 0; }
+.now__body { font-family: var(--serif); font-size: clamp(15px, 1.6vw, 19px); line-height: 1.4; color: var(--ink); }
+.profile__brand { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; color: var(--muted); }
+.profile__brand > span { font-family: var(--serif); font-size: 18px; letter-spacing: -0.045em; line-height: 1; }
+
+/* ---------- recent card — decoupled, sticky in the left gutter ---------- */
+.recent-card {
+  grid-column: 1;
+  position: sticky; top: 70px; align-self: start;
+  margin-top: 6px;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 18px 44px -20px rgba(0, 0, 0, 0.28), 0 6px 16px -10px rgba(0, 0, 0, 0.12);
+  padding: 22px 20px 24px;
+}
+.recent-card__label { font-family: var(--sans); font-size: 11px; color: var(--faint); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 18px; }
+.recent-card__empty { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--faint); }
+.recent-card__list { list-style: none; margin: 0; padding: 0; }
+.rc { display: flex; gap: 14px; text-decoration: none; color: inherit; }
+.rc__rail { display: flex; flex-direction: column; align-items: center; width: 14px; flex-shrink: 0; }
+.rc__dot { border-radius: 50%; background: var(--ink); margin-top: 4px; flex-shrink: 0; }
+.rc__dot--now { background: var(--user-accent); opacity: 1 !important; }
+.rc__line { width: 1px; flex: 1; min-height: 22px; margin-top: 4px; background: var(--rule); }
+.rc__text { display: flex; flex-direction: column; gap: 3px; padding-bottom: 20px; min-width: 0; }
+.rc > .rc__text:last-child, li:last-child .rc__text { padding-bottom: 0; }
+.rc__date { font-family: var(--sans); font-size: 11px; color: var(--faint); letter-spacing: 0; }
+.rc__title { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 15px; color: var(--ink); line-height: 1.3; transition: color 160ms ease; }
+.rc:hover .rc__title { color: var(--user-accent); }
+.rc__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.rc__ico { width: 16px; height: 16px; border-radius: 3px; object-fit: cover; flex-shrink: 0; }
+.rc__ico--emoji { font-size: 14px; line-height: 1; }
+
+/* narrow screens: no room for the sidebar — hide it (the timeline shows everything) */
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+  .recent-card { display: none; }
+  .col { grid-column: 1; }   /* else col lands in an implicit auto-width track → overflow */
+}
+
+/* ---------- docked strip — replaces the profile card under the bar on scroll ----------
+   top / left / width are set inline from JS so it lands in the card's exact place. */
+.profile-mini {
+  position: fixed; z-index: 40;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 14px 36px -18px rgba(0, 0, 0, 0.26), 0 5px 14px -10px rgba(0, 0, 0, 0.12);
+  pointer-events: none;          /* hidden state passes clicks through */
+  will-change: transform, opacity;
+}
+.profile-mini[data-shown="true"] { pointer-events: auto; }
+.profile-mini__inner { display: flex; align-items: center; gap: 12px; padding: 9px 14px; min-width: 0; }
+.profile-mini__avatar {
+  width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+.profile-mini__avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-mini__initial { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--muted); }
+.profile-mini__year {
+  font-family: var(--sans); font-weight: 500; font-size: 13px; color: var(--user-accent);
+  letter-spacing: 0.02em; flex-shrink: 0; font-variant-numeric: tabular-nums;
+}
+.profile-mini__title {
+  font-family: var(--serif); font-size: 15px; color: var(--ink); line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+
+/* dark (ink) palette: the white cards become an elevated dark surface. Text
+   already themes via --ink/--muted; only the hardcoded #fff fills need fixing.
+   --rule is light in dark mode, so a hairline border crisps the edge. */
+.logr[data-mode="dark"] .profile__card,
+.logr[data-mode="dark"] .recent-card,
+.logr[data-mode="dark"] .profile-mini {
+  background: color-mix(in srgb, var(--ink) 8%, var(--paper));
+  border: 0.5px solid var(--rule);
+}
+.logr[data-mode="dark"] .profile__polaroid,
+.logr[data-mode="dark"] .profile-mini__avatar {
+  background: color-mix(in srgb, var(--ink) 15%, var(--paper));
+}
 
 /* ---------- sort control ---------- */
 .sort { display: flex; align-items: baseline; gap: 14px; margin-top: 16px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; }
@@ -299,11 +414,15 @@
 
 @media (max-width: 540px) {
   .page { padding: 28px 20px 64px; }
-  .profile { padding-top: 40px; padding-bottom: 40px; }
   .timeline { padding-left: 24px; }
   .entry--now .entry__dot { left: -26px; } .entry--recent .entry__dot { left: -25px; }
   .entry--mid .entry__dot { left: -24px; } .entry--past .entry__dot { left: -23px; } .entry--far .entry__dot { left: -22.5px; }
   .year { margin-left: -24px; }
+  /* docked strip: tighter so the date + title fit a phone width */
+  .profile-mini__inner { gap: 10px; padding: 8px 12px; }
+  .profile-mini__avatar { width: 27px; height: 27px; }
+  .profile-mini__year { font-size: 12px; }
+  .profile-mini__title { font-size: 14px; }
 }
 
 /* ============================================================
@@ -349,13 +468,9 @@
 
 /* ---------- terminal: mono, ascii rail ---------- */
 .logr[data-layout="terminal"] { font-family: var(--mono); font-size: 14.5px; }
-.logr[data-layout="terminal"] .profile__name, .logr[data-layout="terminal"] .profile__bio,
+/* profile card keeps its own look across layouts; only the timeline goes mono */
 .logr[data-layout="terminal"] .entry__title, .logr[data-layout="terminal"] .entry__body,
 .logr[data-layout="terminal"] .colophon h2, .logr[data-layout="terminal"] .colophon p { font-family: var(--mono); letter-spacing: 0; }
-.logr[data-layout="terminal"] .profile__name { font-size: clamp(36px, 5vw, 56px); font-style: normal; letter-spacing: -0.02em; }
-.logr[data-layout="terminal"] .profile__name::before { content: "$ whoami\A"; white-space: pre; display: block; font-family: var(--mono); font-size: 13px; color: var(--muted); margin-bottom: 8px; letter-spacing: 0; }
-.logr[data-layout="terminal"] .profile__bio { font-style: normal; font-size: 14.5px; }
-.logr[data-layout="terminal"] .profile__bio::before { content: "# "; color: var(--user-accent); }
 .logr[data-layout="terminal"] .timeline::before { background: transparent; border-left: 1px dashed var(--rule-strong); width: 0; left: 4px; }
 .logr[data-layout="terminal"] .entry__dot { width: 8px !important; height: 8px !important; border-radius: 0 !important; background: var(--ink) !important; left: -28px !important; opacity: 0.85 !important; }
 .logr[data-layout="terminal"] .entry--now .entry__dot { background: var(--user-accent) !important; opacity: 1 !important; }
@@ -444,62 +559,8 @@
 .logr[data-layout="polaroid"] .entry__link { order: 0; }
 .logr[data-layout="polaroid"] .year { margin-left: 0; justify-content: center; }
 
-/* ============================================================
-   PER-LAYOUT PROFILE VARIATIONS — the top shifts with the layout
-   ============================================================ */
-
-/* feed: tighter, smaller card */
-.logr[data-layout="feed"] .profile { padding: 18px 22px 15px; }
-.logr[data-layout="feed"] .profile__name { font-size: clamp(23px, 3.4vw, 32px); padding-right: 64px; }
-.logr[data-layout="feed"] .profile__avatar { width: 48px; height: 48px; top: 18px; right: 22px; }
-
-/* card: match the elevated entry cards */
-.logr[data-layout="card"] .profile { border-radius: 14px; }
-.logr[data-layout="card"] .profile__avatar { border-radius: 12px; }
-.logr[data-layout="card"] .profile__avatar img { border-radius: 12px; }
-
-/* centered: avatar above, everything centered */
-.logr[data-layout="centered"] .profile { justify-items: center; text-align: center; padding-top: 26px; }
-.logr[data-layout="centered"] .profile__avatar { position: static; margin: 0 auto 2px; }
-.logr[data-layout="centered"] .profile__name { padding-right: 0; }
-.logr[data-layout="centered"] .profile__bio { max-width: 46ch; margin-left: auto; margin-right: auto; }
-.logr[data-layout="centered"] .profile__meta { margin-left: auto; margin-right: auto; }
-.logr[data-layout="centered"] .profile__now { justify-content: center; }
-
-/* journal: calmer, soft-square card + avatar */
-.logr[data-layout="journal"] .profile { border-radius: 5px; }
-.logr[data-layout="journal"] .profile__avatar { border-radius: 4px; }
-.logr[data-layout="journal"] .profile__avatar img { border-radius: 4px; }
-
-/* magazine: bolder masthead card */
-.logr[data-layout="magazine"] .profile { padding: 28px 30px 24px; }
-.logr[data-layout="magazine"] .profile__name { font-size: clamp(36px, 6vw, 58px); padding-right: 86px; }
-.logr[data-layout="magazine"] .profile__handle { text-transform: uppercase; letter-spacing: 0.2em; font-size: 10px; }
-.logr[data-layout="magazine"] .profile__avatar { width: 66px; height: 66px; }
-
-/* terminal: an ascii box — dashed, square, flat */
-.logr[data-layout="terminal"] .profile { border-style: dashed; border-radius: 0; background: transparent; box-shadow: none; }
-.logr[data-layout="terminal"] .profile__avatar { border-radius: 0; }
-.logr[data-layout="terminal"] .profile__avatar img { border-radius: 0; }
-.logr[data-layout="terminal"] .profile__handle::before { content: "$ "; color: var(--user-accent); }
-
-/* polaroid: the whole card tilts like a pinned snapshot */
-.logr[data-layout="polaroid"] .profile {
-  border: 0; border-radius: 2px; background: #fffdf8; transform: rotate(-1.2deg);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 20px 38px -18px rgba(0,0,0,0.42);
-  transition: transform 320ms cubic-bezier(.2,.8,.2,1);
-}
-.logr[data-mode="dark"][data-layout="polaroid"] .profile { background: #2a2620; }
-.logr[data-layout="polaroid"] .profile:hover { transform: rotate(0deg); }
-.logr[data-layout="polaroid"] .profile__name { padding-right: 82px; }
-.logr[data-layout="polaroid"] .profile__avatar {
-  width: 62px; height: 72px; border-radius: 2px; border: 0; background: #fffdf8; padding: 5px 5px 14px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.06), 0 14px 26px -14px rgba(0,0,0,0.4);
-  transform: rotate(3deg); transition: transform 300ms cubic-bezier(.2,.8,.2,1);
-}
-.logr[data-mode="dark"][data-layout="polaroid"] .profile__avatar { background: #2a2620; }
-.logr[data-layout="polaroid"] .profile__avatar:hover { transform: rotate(0deg); }
-.logr[data-layout="polaroid"] .profile__avatar img { border-radius: 1px; }
+/* The profile card mirrors the OG image and stays consistent across every
+   layout — only the timeline below reshapes per [data-layout]. */
 
 /* ============================================================
    FLOATING PICKER — brand colon mark + palette/layout panel
@@ -573,7 +634,7 @@
 .lightbox__nav--next { right: 18px; top: 50%; transform: translateY(-50%); }
 .lightbox__count {
   position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
-  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.06em;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.85); background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.16);
   padding: 5px 12px; border-radius: 999px;
 }

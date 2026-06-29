@@ -10,9 +10,9 @@
   --faint: #95918a;
   --rule: rgba(26, 26, 26, 0.12);
   --rule-strong: rgba(26, 26, 26, 0.28);
-  --serif: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  --sans: "Inter", system-ui, -apple-system, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, monospace;
+  --serif: "Geist", system-ui, -apple-system, sans-serif;
+  --sans: "Geist", system-ui, -apple-system, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
 
   background: var(--paper);
   color: var(--ink);
@@ -30,10 +30,12 @@
 .mkt em { font-style: italic; }
 .mkt ::selection { background: var(--user-accent); color: #fff; }
 
-.mkt .page { max-width: 920px; margin: 0 auto; padding: 40px 32px 96px; }
+.mkt .page { max-width: 920px; margin: 0 auto; padding: 26px 32px 96px; }
 
 /* bar */
-.mkt .bar { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 16px; border-bottom: 0.5px solid var(--rule); position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 82%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+/* full-width sticky bar — line spans the viewport; content centered at the uniform width */
+.mkt .bar { position: sticky; top: 0; z-index: 50; border-bottom: 0.5px solid var(--rule); background: color-mix(in srgb, var(--paper) 82%, transparent); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); padding: 0 clamp(20px, 4vw, 40px); }
+.mkt .bar__inner { max-width: 960px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 13px 0; }
 .mkt .bar__brand { font-family: var(--serif); font-size: 22px; letter-spacing: -0.045em; line-height: 1; color: var(--ink); }
 .mkt .bar__brand .colon { color: var(--user-accent); }
 .mkt .bar__util { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--ink); letter-spacing: 0.05em; }
