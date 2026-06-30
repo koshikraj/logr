@@ -501,13 +501,16 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
         filter === "all" ? true : filter === "highlights" ? h.featured : h.tags.includes(filter)
       );
     const out: Array<
-      | { type: "year"; year: number }
+      | { type: "year"; year: number; key: string }
       | { type: "entry"; h: EventDTO; recency: string }
     > = [];
     let last: number | null = null;
     visible.forEach(({ h, recency }) => {
       if (h.year !== last) {
-        out.push({ type: "year", year: h.year });
+        // key by the entry that opens the group, not the year alone: in curated
+        // order a year can recur, so `y-${year}` would collide and React would
+        // strand stale year markers when re-keying on a sort switch.
+        out.push({ type: "year", year: h.year, key: `y-${h.year}-${h.id}` });
         last = h.year;
       }
       out.push({ type: "entry", h, recency });
@@ -715,7 +718,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
           <main className="timeline" id="log">
             {rows.map((row) =>
               row.type === "year" ? (
-                <div className="year" key={`y-${row.year}`}>
+                <div className="year" key={row.key}>
                   <span className="year__label">{row.year}</span>
                   <span className="year__line" />
                 </div>
