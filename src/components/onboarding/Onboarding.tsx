@@ -238,7 +238,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
     about: null,
     avatarUrl: image || null,
     socials: [],
-    theme: { palette, layout, accentOverride: null },
+    theme: { palette, layout, accentOverride: null, defaultView: "newest" },
     events: events.map((e, i) => ({
       id: `p${i}`,
       dateOn: e.dateOn,

@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { updateThemeAction } from "@/lib/actions";
-import { PALETTES, LAYOUTS, resolvePalette, type Theme } from "@/lib/theme";
+import { PALETTES, LAYOUTS, DEFAULT_VIEWS, resolvePalette, type Theme } from "@/lib/theme";
 import { LAYOUT_ICONS } from "@/components/layout-icons";
 
 const ACCENTS = [
@@ -101,6 +101,27 @@ export function ThemeEditor({
                 <span className="opt__copy">
                   <span className="opt__name">{l.name}</span>
                   <span className="opt__note">{l.note}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* default view — which event order the timeline opens on */}
+        <div className="field">
+          <span className="field__label">default view — how visitors first see your log</span>
+          <div className="opt-grid opt-grid--lay">
+            {DEFAULT_VIEWS.map((v) => (
+              <button
+                key={v.v}
+                type="button"
+                className="opt opt--lay"
+                aria-current={(theme.defaultView ?? "newest") === v.v}
+                onClick={() => set("defaultView", v.v)}
+              >
+                <span className="opt__copy">
+                  <span className="opt__name">{v.label}</span>
+                  <span className="opt__note">{v.note}</span>
                 </span>
               </button>
             ))}

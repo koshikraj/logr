@@ -11,6 +11,7 @@ import {
   themeCssVars,
   recencyClass,
   type Theme,
+  type DefaultView,
 } from "@/lib/theme";
 import { isImageIcon } from "@/lib/icon";
 import { detectPlatform } from "@/lib/socials";
@@ -327,7 +328,7 @@ function Picker({
 function dateKey(e: EventDTO): string {
   return e.dateOn ?? `${String(e.year).padStart(4, "0")}-00-00`;
 }
-type SortKey = "newest" | "oldest" | "curated";
+type SortKey = DefaultView;
 const SORTS: { v: SortKey; label: string }[] = [
   { v: "newest", label: "newest" },
   { v: "oldest", label: "oldest" },
@@ -346,7 +347,8 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
   const [chatOpen, setChatOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [sort, setSort] = useState<SortKey>("newest");
+  // open on the owner's preferred order; falls back to "newest" by default.
+  const [sort, setSort] = useState<SortKey>(profile.theme.defaultView ?? "newest");
 
   // scroll-collapse: as the profile card scrolls out, it's replaced by a compact
   // strip docked just below the top bar, in the card's exact place, showing the
@@ -449,7 +451,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
   const pickPalette = (p: string) => setPreview((o) => ({ ...o, palette: p }));
   const pickLayout = (l: string) => setPreview((o) => ({ ...o, layout: l }));
 
-  const theme: Theme = { palette, layout, accentOverride: profile.theme.accentOverride };
+  const theme: Theme = { palette, layout, accentOverride: profile.theme.accentOverride, defaultView: profile.theme.defaultView };
   const vars = themeCssVars(theme) as CSSProperties;
 
   const sinceYear = useMemo(
