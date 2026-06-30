@@ -49,16 +49,27 @@ export const FONTS = {
   mono: '"Geist Mono", ui-monospace, monospace',
 };
 
+// which event order the public timeline opens on by default — the owner's
+// preference. "newest"/"oldest" sort by date; "curated" uses their drag order.
+export type DefaultView = "newest" | "oldest" | "curated";
+export const DEFAULT_VIEWS: { v: DefaultView; label: string; note: string }[] = [
+  { v: "newest", label: "newest", note: "most recent first" },
+  { v: "oldest", label: "oldest", note: "earliest first" },
+  { v: "curated", label: "curated", note: "your drag order" },
+];
+
 export type Theme = {
   palette: string;
   layout: string;
   accentOverride: string | null; // personal --user-accent override
+  defaultView: DefaultView; // which sort the timeline opens on
 };
 
 export const DEFAULT_THEME: Theme = {
   palette: "paper",
   layout: "timeline",
   accentOverride: null,
+  defaultView: "newest",
 };
 
 // Accent swatches offered for the personal accent (palette accents).
