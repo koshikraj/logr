@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { updateProfileAction, checkHandleAction } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
@@ -23,6 +24,7 @@ export function ProfileForm({
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const toast = useToast();
 
   // handle availability debounce (same flow as onboarding)
@@ -83,6 +85,7 @@ export function ProfileForm({
             if (res.ok) {
               setSavedUsername(res.username);
               setHandle(res.username);
+              router.refresh(); // re-render the dashboard with the new username (open ↗ link, etc.)
               toast("Profile saved");
             } else {
               toast(res.error, "error");
