@@ -27,10 +27,14 @@ export function ProfileForm({
   const router = useRouter();
   const toast = useToast();
 
-  // handle availability debounce (same flow as onboarding)
+  // handle availability check, debounced. `checkActive` (derived at render)
+  // gates both the status display and the submit guard, so stale state from a
+  // previous query is ignored once the field is empty or back to the saved value.
+  const pendingHandle = handle.trim().toLowerCase().replace(/^@/, "");
+  const checkActive = !!pendingHandle && pendingHandle !== savedUsername;
   useEffect(() => {
     const h = handle.trim().toLowerCase().replace(/^@/, "");
-    if (!h || h === savedUsername) { setHState(""); setHError(null); return; }
+    if (!h || h === savedUsername) return;
     const t = setTimeout(async () => {
       setHState("checking");
       try {
@@ -129,7 +133,7 @@ export function ProfileForm({
               value={handle}
               onChange={(e) => setHandle(e.target.value.toLowerCase())}
             />
-            {hstate ? (
+            {checkActive && hstate ? (
               <span className={`field__status field__status--${hstate}`}>
                 {hstate === "checking" ? (
                   <><span className="field__status__dot" /> checking…</>
@@ -184,7 +188,7 @@ export function ProfileForm({
           <button
             type="submit"
             className="btn btn--primary"
-            disabled={pending || hstate === "checking" || hstate === "taken" || hstate === "invalid"}
+            disabled={pending || (checkActive && (hstate === "checking" || hstate === "taken" || hstate === "invalid"))}
           >
             {pending ? "saving…" : "save profile →"}
           </button>

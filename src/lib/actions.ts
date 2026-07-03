@@ -220,6 +220,10 @@ export type ReviewEvent = {
   tags: string[];
   featured: boolean;
   body: string;
+  // optional — absent from AI extraction, settable in the review editor
+  icon?: string | null;
+  linkLabel?: string | null;
+  linkHref?: string | null;
   media: MediaInput[];
 };
 
@@ -333,9 +337,9 @@ export async function insertEventsAction(events: ReviewEvent[]) {
           tags: e.tags.filter((t) => TAG_OPTIONS_SET.has(t)),
           featured: !!e.featured,
           body: e.body ?? "",
-          icon: null,
-          linkLabel: null,
-          linkHref: null,
+          icon: e.icon?.trim() || null,
+          linkLabel: e.linkLabel?.trim() || null,
+          linkHref: e.linkHref?.trim() || null,
           position: pos++,
           media: {
             create: (e.media ?? []).slice(0, 8).map((m, i) => ({
