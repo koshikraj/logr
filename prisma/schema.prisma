@@ -20,9 +20,8 @@ model Profile {
   id        String   @id @default(cuid())
   userId    String?  @unique // the owning account (null for the legacy single-user profile)
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  username  String   @unique
+  username  String   @unique // also the public "@handle" — editable in the dashboard
   name      String
-  handle    String
   bio       String
   status    String // current "building X" line
   location  String

@@ -77,7 +77,6 @@ export async function createProfileAction(
       userId,
       username,
       name: input.name.trim() || username,
-      handle: `@${username}`,
       bio: input.bio.trim(),
       status: "",
       location: "",
@@ -90,14 +89,29 @@ export async function createProfileAction(
   return { ok: true, username };
 }
 
-export async function updateProfileAction(formData: FormData) {
+export async function updateProfileAction(
+  formData: FormData
+): Promise<{ ok: true; username: string } | { ok: false; error: string }> {
   const profileId = await requireProfileId();
+  const current = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true } });
+  if (!current) return { ok: false, error: "Profile not found" };
+
+  // the "handle" field edits the username (= the public URL slug)
+  const username = String(formData.get("handle") ?? "").trim().toLowerCase().replace(/^@/, "");
+  if (username !== current.username) {
+    const v = validateHandle(username);
+    if (!v.ok) return { ok: false, error: v.error };
+    if (await prisma.profile.findUnique({ where: { username }, select: { id: true } })) {
+      return { ok: false, error: "That handle is taken" };
+    }
+  }
+
   const socials = parseSocials(String(formData.get("socials") ?? ""));
   await prisma.profile.update({
     where: { id: profileId },
     data: {
+      username,
       name: String(formData.get("name") ?? ""),
-      handle: String(formData.get("handle") ?? ""),
       bio: String(formData.get("bio") ?? ""),
       status: String(formData.get("status") ?? ""),
       location: String(formData.get("location") ?? ""),
@@ -106,7 +120,9 @@ export async function updateProfileAction(formData: FormData) {
       socials: JSON.stringify(socials),
     },
   });
+  if (username !== current.username) revalidatePath(`/${current.username}`); // old URL
   await revalidateForProfile(profileId);
+  return { ok: true, username };
 }
 
 export async function updateThemeAction(theme: Partial<Theme>) {

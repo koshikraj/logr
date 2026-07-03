@@ -22,7 +22,7 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
 
   lines.push("## Profile");
   lines.push(`- Name: ${profile.name}`);
-  lines.push(`- Handle: ${profile.handle}`);
+  lines.push(`- Handle: @${profile.username}`);
   if (profile.status) lines.push(`- Currently: ${profile.status}`);
   if (profile.location) lines.push(`- Location: ${profile.location}`);
   lines.push(`- Portfolio: ${url}`);

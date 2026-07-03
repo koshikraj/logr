@@ -38,7 +38,6 @@ async function main() {
     data: {
       username: "koshik",
       name: "Koshik Raj",
-      handle: "@rajkoshik",
       bio: "Deep into crypto since 2018, with a background in information security.\nAlways a builder at heart — full of caffeine.",
       status: "Building Sage — a co-pilot for every crypto move",
       location: "Bengaluru, India",
