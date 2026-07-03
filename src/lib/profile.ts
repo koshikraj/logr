@@ -38,9 +38,8 @@ export type EventDTO = {
 
 export type ProfileDTO = {
   id: string;
-  username: string;
+  username: string; // unique URL slug, doubles as the public "@handle"
   name: string;
-  handle: string;
   bio: string;
   status: string;
   location: string;
@@ -75,7 +74,6 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     id: row.id,
     username: row.username,
     name: row.name,
-    handle: row.handle,
     bio: row.bio,
     status: row.status,
     location: row.location,

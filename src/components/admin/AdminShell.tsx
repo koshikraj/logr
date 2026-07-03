@@ -55,7 +55,7 @@ export function AdminShell({
 
   // live drafts that feed the preview without waiting for a save
   const [draft, setDraft] = useState<Partial<ProfileDTO>>({
-    name: profile.name, handle: profile.handle, bio: profile.bio, status: profile.status,
+    name: profile.name, username: profile.username, bio: profile.bio, status: profile.status,
     location: profile.location, about: profile.about, socials: profile.socials, avatarUrl: profile.avatarUrl,
   });
   const [items, setItems] = useState<EditableEvent[]>(events);

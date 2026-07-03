@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useToast } from "@/components/ui/Toast";
-import { updateProfileAction } from "@/lib/actions";
+import { updateProfileAction, checkHandleAction } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
 import type { ProfileDTO } from "@/lib/profile";
 import { serializeSocials, parseSocials } from "@/lib/socials";
@@ -15,11 +15,33 @@ export function ProfileForm({
   onDraftChange?: (p: Partial<ProfileDTO>) => void;
 }) {
   const [avatarUrl, setAvatarUrl] = useState(profile.avatarUrl ?? "");
+  const [handle, setHandle] = useState(profile.username);
+  const [savedUsername, setSavedUsername] = useState(profile.username);
+  const [hstate, setHState] = useState<"" | "checking" | "ok" | "taken" | "invalid">("");
+  const [herror, setHError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const toast = useToast();
+
+  // handle availability debounce (same flow as onboarding)
+  useEffect(() => {
+    const h = handle.trim().toLowerCase().replace(/^@/, "");
+    if (!h || h === savedUsername) { setHState(""); setHError(null); return; }
+    const t = setTimeout(async () => {
+      setHState("checking");
+      try {
+        const r = await checkHandleAction(h);
+        setHState(r.available ? "ok" : r.error === "taken" ? "taken" : "invalid");
+        setHError(r.available ? null : r.error ?? null);
+      } catch {
+        setHState("invalid");
+        setHError("could not check");
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [handle, savedUsername]);
 
   // report the current (unsaved) field values to the live preview
   function report(avatar = avatarUrl) {
@@ -28,7 +50,7 @@ export function ProfileForm({
     const fd = new FormData(form);
     const s = (k: string) => String(fd.get(k) ?? "");
     onDraftChange({
-      name: s("name"), handle: s("handle"), bio: s("bio"),
+      name: s("name"), username: s("handle").trim().toLowerCase().replace(/^@/, "") || profile.username, bio: s("bio"),
       status: s("status"), location: s("location"), about: s("about"),
       socials: parseSocials(s("socials")), avatarUrl: avatar,
     });
@@ -57,8 +79,14 @@ export function ProfileForm({
         action={(fd) => {
           fd.set("avatarUrl", avatarUrl);
           start(async () => {
-            await updateProfileAction(fd);
-            toast("Profile saved");
+            const res = await updateProfileAction(fd);
+            if (res.ok) {
+              setSavedUsername(res.username);
+              setHandle(res.username);
+              toast("Profile saved");
+            } else {
+              toast(res.error, "error");
+            }
           });
         }}
       >
@@ -91,7 +119,28 @@ export function ProfileForm({
           </div>
           <div className="field">
             <label className="field__label" htmlFor="f-handle">handle</label>
-            <input id="f-handle" name="handle" type="text" defaultValue={profile.handle} />
+            <input
+              id="f-handle"
+              name="handle"
+              type="text"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value.toLowerCase())}
+            />
+            {hstate ? (
+              <span className={`field__status field__status--${hstate}`}>
+                {hstate === "checking" ? (
+                  <><span className="field__status__dot" /> checking…</>
+                ) : hstate === "ok" ? (
+                  <>✓ available</>
+                ) : hstate === "taken" ? (
+                  <>✕ taken</>
+                ) : (
+                  <>✕ {herror ?? "invalid"}</>
+                )}
+              </span>
+            ) : (
+              <span className="field__hint">your page lives at logr.life/&lt;handle&gt; — changing it changes your URL.</span>
+            )}
           </div>
         </div>
 
@@ -129,7 +178,11 @@ export function ProfileForm({
         </div>
 
         <div className="modal__foot" style={{ marginTop: 36 }}>
-          <button type="submit" className="btn btn--primary" disabled={pending}>
+          <button
+            type="submit"
+            className="btn btn--primary"
+            disabled={pending || hstate === "checking" || hstate === "taken" || hstate === "invalid"}
+          >
             {pending ? "saving…" : "save profile →"}
           </button>
         </div>

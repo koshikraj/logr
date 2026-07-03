@@ -231,7 +231,6 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
     id: "preview",
     username: handle || "you",
     name: name || "Your name",
-    handle: `@${handle || "you"}`,
     bio: bio || "a line about you.",
     status: "",
     location: "",
