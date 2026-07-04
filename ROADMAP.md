@@ -2,6 +2,16 @@
 
 Status reflects what's actually in the repo. Where the implementation diverged from the original plan, the item is marked done with a note on what shipped instead.
 
+## Product priorities — up next
+
+In priority order:
+
+1. **Pinned events** — let the owner pin selected events to a strip at the top of the public timeline, presented like the "recent" rail component.
+2. **MCP endpoint** — a Model Context Protocol server so AI agents can read a user's log and, after authenticating as the owner, update it (add/edit events programmatically).
+3. **Comments** — signed-in users can comment on another profile's events.
+4. **Mentions** — tag other logr users on events (groundwork for cross-profile verified collaborations, [#10](https://github.com/koshikraj/logr/issues/10)).
+5. **Custom domains** — bring-your-own domain (`koshik.me` → same page) with logr branding removal.
+
 ## Phase 1 — Single user, personal portfolio ✅
 
 *Goal: your own portfolio live at `/yourname` on the product domain.*
