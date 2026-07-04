@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Reorder, useDragControls } from "framer-motion";
+import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import {
   saveEventAction,
@@ -41,41 +42,30 @@ function EventModal({ initial, username, onClose, onSaved }: { initial: EventInp
   const [draft, setDraft] = useState<EventInput>(initial);
   const [pending, start] = useTransition();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
-  }, [onClose]);
-
   function submit() {
     start(async () => { await saveEventAction(draft); onSaved(); });
   }
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="modal__overlay" onClick={onClose} />
-      <div className="emodal">
-        <div className="emodal__head">
-          <div>
-            <h2 className="modal__title">edit event<span className="colon">.</span></h2>
-            <p className="emodal__sub">title, date, and a tag is all it takes — add detail only if the moment needs it.</p>
-          </div>
-          <button type="button" className="emodal__close" onClick={onClose} aria-label="close">×</button>
+    <Dialog onClose={onClose} variant="wide" label="edit event">
+      <div className="emodal__head">
+        <div>
+          <h2 className="modal__title">edit event<span className="colon">.</span></h2>
+          <p className="emodal__sub">title, date, and a tag is all it takes — add detail only if the moment needs it.</p>
         </div>
-
-        <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} />
-
-        <div className="emodal__foot">
-          <span className="emodal__esc">esc to close</span>
-          <button type="button" className="btn btn--ghost" onClick={onClose}>cancel</button>
-          <button type="button" className="btn btn--primary" onClick={submit} disabled={pending || !draft.title.trim() || !draft.dateOn}>
-            {pending ? "saving…" : "save event →"}
-          </button>
-        </div>
+        <button type="button" className="emodal__close" onClick={onClose} aria-label="close">×</button>
       </div>
-    </div>
+
+      <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} />
+
+      <div className="emodal__foot">
+        <span className="emodal__esc">esc to close</span>
+        <button type="button" className="btn btn--ghost" onClick={onClose}>cancel</button>
+        <button type="button" className="btn btn--primary" onClick={submit} disabled={pending || !draft.title.trim() || !draft.dateOn}>
+          {pending ? "saving…" : "save event →"}
+        </button>
+      </div>
+    </Dialog>
   );
 }
 
@@ -247,19 +237,16 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
       )}
 
       {confirmDelete && (
-        <div className="modal" role="dialog" aria-modal="true">
-          <div className="modal__overlay" onClick={() => setConfirmDelete(null)} />
-          <div className="modal__card" style={{ maxWidth: 420 }}>
-            <h2 className="modal__title">delete event<span className="colon">?</span></h2>
-            <p className="modal__sub">“{confirmDelete.title}” will be permanently removed. this can&apos;t be undone.</p>
-            <div className="modal__foot">
-              <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(null)}>cancel</button>
-              <button type="button" className="btn btn--primary" disabled={pending} onClick={() => doDelete(confirmDelete)}>
-                {pending ? "deleting…" : "delete →"}
-              </button>
-            </div>
+        <Dialog onClose={() => setConfirmDelete(null)} label="delete event" className="modal__card--sm">
+          <h2 className="modal__title">delete event<span className="colon">?</span></h2>
+          <p className="modal__sub">“{confirmDelete.title}” will be permanently removed. this can&apos;t be undone.</p>
+          <div className="modal__foot">
+            <button type="button" className="btn btn--ghost" onClick={() => setConfirmDelete(null)}>cancel</button>
+            <button type="button" className="btn btn--primary" disabled={pending} onClick={() => doDelete(confirmDelete)}>
+              {pending ? "deleting…" : "delete →"}
+            </button>
           </div>
-        </div>
+        </Dialog>
       )}
     </section>
   );

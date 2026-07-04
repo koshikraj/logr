@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import {
   saveEventAction,
@@ -78,14 +79,6 @@ export function AddEventsDialog({
   const toast = useToast();
   const router = useRouter();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
-  }, [onClose]);
-
   const patchItem = (i: number, patch: Partial<Item>) =>
     setItems((arr) => (arr ? arr.map((it, j) => (j === i ? { ...it, ...patch } : it)) : arr));
 
@@ -143,9 +136,7 @@ export function AddEventsDialog({
   const editingItem = reviewing && editing !== null ? items[editing] : null;
 
   return (
-    <div className="modal" role="dialog" aria-modal="true">
-      <div className="modal__overlay" onClick={onClose} />
-      <div className="emodal">
+    <Dialog onClose={onClose} variant="wide" label={reviewing ? "review events" : "add events"}>
         <div className="emodal__head">
           <div>
             <h2 className="modal__title">
@@ -321,7 +312,6 @@ export function AddEventsDialog({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Dialog>
   );
 }

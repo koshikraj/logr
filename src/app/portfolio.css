@@ -749,6 +749,22 @@
   background: var(--paper); border: 0.5px solid var(--rule-strong); border-radius: 16px;
   box-shadow: 0 40px 90px -30px rgba(0,0,0,0.5); animation: ask-in 180ms cubic-bezier(.2,.8,.2,1);
 }
+/* phones: present as a bottom sheet, matching the dashboard dialogs */
+@keyframes share-sheet-in { from { transform: translateY(100%); } to { transform: none; } }
+@media (max-width: 600px) {
+  .share__scrim { padding: 0; align-items: flex-end; }
+  .share {
+    width: 100%; max-height: 92dvh; border-radius: 16px 16px 0 0;
+    border-left: 0; border-right: 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: share-sheet-in 280ms cubic-bezier(0.32, 0.72, 0.28, 1);
+  }
+  .share::before {
+    content: ""; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 4px; border-radius: 2px; background: var(--rule-strong);
+  }
+  .share__head { padding-top: 18px; }
+}
 .share__head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 18px; border-bottom: 0.5px solid var(--rule);
