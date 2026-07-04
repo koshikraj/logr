@@ -13,7 +13,7 @@ import {
   type ReviewEvent,
 } from "@/lib/actions";
 import { TAG_META } from "@/lib/theme";
-import { EventEditor, fmtISO, todayISO } from "./EventEditor";
+import { EventEditor, PvEntry, fmtISO, todayISO } from "./EventEditor";
 
 export type AddMode = "write" | "narrate" | "file" | "url";
 
@@ -279,24 +279,39 @@ export function AddEventsDialog({
           </>
         )}
 
-        {/* ---------- stage 2: review checklist ---------- */}
+        {/* ---------- stage 2: review checklist · stacked timeline preview ---------- */}
         {reviewing && !editingItem && (
           <>
-            <div className="emodal__single">
-              <div className="rev">
-                {items.map((it, i) => (
-                  <div key={i} className={`rev__row${it.include ? "" : " is-off"}`}>
-                    <label className="check rev__check">
-                      <input type="checkbox" checked={it.include} onChange={(e) => patchItem(i, { include: e.target.checked })} />
-                      <span className="check__box" />
-                    </label>
-                    <span className="rev__date">{it.dateOn ? fmtISO(it.dateOn, it.fullDate) : "no date"}</span>
-                    <span className="rev__title">{it.title || "untitled"}</span>
-                    <span className="rev__tags">{it.tags.map((t) => TAG_META[t]?.label ?? t).join(", ")}</span>
-                    <button type="button" className="rev__edit" onClick={() => setEditing(i)}>edit</button>
-                  </div>
-                ))}
+            <div className="emodal__body">
+              <div className="emodal__form">
+                <div className="rev">
+                  {items.map((it, i) => (
+                    <div key={i} className={`rev__row${it.include ? "" : " is-off"}`}>
+                      <label className="check rev__check">
+                        <input type="checkbox" checked={it.include} onChange={(e) => patchItem(i, { include: e.target.checked })} />
+                        <span className="check__box" />
+                      </label>
+                      <span className="rev__date">{it.dateOn ? fmtISO(it.dateOn, it.fullDate) : "no date"}</span>
+                      <span className="rev__title">{it.title || "untitled"}</span>
+                      <span className="rev__tags">{it.tags.map((t) => TAG_META[t]?.label ?? t).join(", ")}</span>
+                      <button type="button" className="rev__edit" onClick={() => setEditing(i)}>edit</button>
+                    </div>
+                  ))}
+                </div>
               </div>
+
+              <div className="emodal__divider" aria-hidden="true" />
+
+              <aside className="emodal__preview">
+                <div className="emodal__preview-head">
+                  <span className="emodal__preview-cap"><span aria-hidden="true" />live preview</span>
+                  <span className="emodal__preview-domain">logr.life/{username}</span>
+                </div>
+                <div className="pv-entry-wrap pv-entry-wrap--stack">
+                  {items.filter((it) => it.include).map((it, i) => <PvEntry key={i} e={it} />)}
+                  {includedCount === 0 && <p className="pv-empty">nothing selected — check an event to preview it.</p>}
+                </div>
+              </aside>
             </div>
             <div className="emodal__foot">
               <button type="button" className="btn btn--ghost" onClick={() => { setItems(null); setEditing(null); }}>← back</button>

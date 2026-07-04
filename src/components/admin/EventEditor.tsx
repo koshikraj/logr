@@ -23,6 +23,45 @@ const trunc = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…
 
 type DetailKey = "body" | "icon" | "link" | "media";
 
+/** One draft event rendered as a public timeline entry — the live preview
+ *  article. Shared by the editor's preview pane and the review checklist. */
+export function PvEntry({ e }: { e: EventInput }) {
+  const iconIsImage = isImageIcon(e.icon);
+  const tagLabels = e.tags.map((t) => TAG_META[t]?.label ?? t).join(", ");
+  return (
+    <article className="pv-entry">
+      <span className="pv-entry__rail" aria-hidden="true" />
+      <span className="pv-entry__dot" aria-hidden="true" />
+      <div className="pv-entry__meta">
+        {e.dateOn ? fmtISO(e.dateOn, e.fullDate) : "pick a date"} <span className="accent">· {tagLabels || "untagged"}</span>
+      </div>
+      <h3 className="pv-entry__title">
+        <span className="pv-entry__icon" aria-hidden="true">
+          {iconIsImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={e.icon ?? ""} alt="" />
+          ) : (e.icon || letter(e.title))}
+        </span>
+        <span>{e.title.trim() || "built something good."}</span>
+      </h3>
+      {!!e.body.trim() && <p className="pv-entry__body">{e.body}</p>}
+      {e.media.length > 0 && (
+        <div className="pv-entry__media">
+          {e.media.map((m, i) => (
+            <span key={i} className="pv-entry__thumb">
+              {m.kind === "image" || m.poster ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.kind === "image" ? m.url : (m.poster as string)} alt="" />
+              ) : (m.kind === "tweet" ? "𝕏" : m.kind === "video" ? "▶" : "↗")}
+            </span>
+          ))}
+        </div>
+      )}
+      {!!e.linkLabel?.trim() && <span className="pv-entry__link">{e.linkLabel} ↗</span>}
+    </article>
+  );
+}
+
 /** Expandable optional-detail row: status dot + label + one-line summary + caret. */
 function DetailRow({
   label, filled, open, summary, onToggle, children,
@@ -114,7 +153,6 @@ export function EventEditor({
     } catch (e) { toast(e instanceof Error ? e.message : "Couldn't add link", "error"); } finally { setBusy(false); }
   }
 
-  const tagLabels = draft.tags.map((t) => TAG_META[t]?.label ?? t).join(", ");
   const iconIsImage = isImageIcon(draft.icon);
   const summaries: Record<DetailKey, string> = {
     body: draft.body.trim() ? trunc(draft.body.trim(), 52) : "add a sentence or two",
@@ -275,36 +313,7 @@ export function EventEditor({
         </div>
 
         <div className="pv-entry-wrap">
-          <article className="pv-entry">
-            <span className="pv-entry__rail" aria-hidden="true" />
-            <span className="pv-entry__dot" aria-hidden="true" />
-            <div className="pv-entry__meta">
-              {draft.dateOn ? fmtISO(draft.dateOn, draft.fullDate) : "pick a date"} <span className="accent">· {tagLabels || "untagged"}</span>
-            </div>
-            <h3 className="pv-entry__title">
-              <span className="pv-entry__icon" aria-hidden="true">
-                {iconIsImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={draft.icon ?? ""} alt="" />
-                ) : (draft.icon || letter(draft.title))}
-              </span>
-              <span>{draft.title.trim() || "built something good."}</span>
-            </h3>
-            {!!draft.body.trim() && <p className="pv-entry__body">{draft.body}</p>}
-            {draft.media.length > 0 && (
-              <div className="pv-entry__media">
-                {draft.media.map((m, i) => (
-                  <span key={i} className="pv-entry__thumb">
-                    {m.kind === "image" || m.poster ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={m.kind === "image" ? m.url : (m.poster as string)} alt="" />
-                    ) : (m.kind === "tweet" ? "𝕏" : m.kind === "video" ? "▶" : "↗")}
-                  </span>
-                ))}
-              </div>
-            )}
-            {!!draft.linkLabel?.trim() && <span className="pv-entry__link">{draft.linkLabel} ↗</span>}
-          </article>
+          <PvEntry e={draft} />
 
           {/* faded next-entry skeleton for timeline context */}
           <div className="pv-ghost" aria-hidden="true">

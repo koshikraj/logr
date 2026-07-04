@@ -356,6 +356,11 @@
 .dash .pv-entry__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .dash .pv-entry__link { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--user-accent); border-bottom: 0.5px solid var(--rule-strong); padding-bottom: 1px; }
 
+/* review stage: all included events stacked as a mini-timeline, scrollable */
+.dash .pv-entry-wrap--stack { display: flex; flex-direction: column; gap: 30px; }
+.dash .pv-entry-wrap--stack .pv-entry:last-child .pv-entry__rail { bottom: 0; }
+.dash .pv-empty { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--faint); }
+
 .dash .pv-ghost { position: relative; margin-top: 26px; padding-left: 22px; opacity: 0.35; display: flex; flex-direction: column; gap: 7px; }
 .dash .pv-ghost__dot { position: absolute; left: -3px; top: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--ink); opacity: 0.5; }
 .dash .pv-ghost__line { height: 10px; background: var(--rule); }
