@@ -58,11 +58,13 @@ export function AddEventsDialog({
   initialMode,
   nextPosition,
   username,
+  tagOptions,
   onClose,
 }: {
   initialMode: AddMode;
   nextPosition: number;
   username: string;
+  tagOptions: string[];
   onClose: () => void;
 }) {
   const [mode, setMode] = useState<AddMode>(initialMode);
@@ -173,7 +175,7 @@ export function AddEventsDialog({
         {/* ---------- stage 1: write manually ---------- */}
         {!reviewing && mode === "write" && (
           <>
-            <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} />
+            <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} tagOptions={tagOptions} />
             <div className="emodal__foot">
               <span className="emodal__esc">esc to close</span>
               <button type="button" className="btn btn--ghost" onClick={onClose}>cancel</button>
@@ -255,6 +257,7 @@ export function AddEventsDialog({
               draft={editingItem}
               onChange={(p) => patchItem(editing as number, p)}
               username={username}
+              tagOptions={tagOptions}
             />
             <div className="emodal__foot">
               <button type="button" className="btn btn--ghost" onClick={() => setEditing(null)}>← back to list</button>

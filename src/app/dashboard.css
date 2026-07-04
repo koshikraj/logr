@@ -314,6 +314,15 @@
 .dash .emodal__tag-search { width: 130px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--ink); background: transparent; border: 0.5px dashed var(--rule-strong); padding: 6px 10px; outline: none; transition: border-color 160ms ease; }
 .dash .emodal__tag-search:focus { border-color: var(--user-accent); }
 .dash .emodal__tag-hint { font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em; color: var(--faint); }
+.dash .emodal__tag-create {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--user-accent);
+  background: color-mix(in srgb, var(--user-accent) 6%, transparent);
+  border: 0.5px solid var(--user-accent); padding: 5px 11px; cursor: pointer;
+  transition: background-color 140ms ease;
+}
+.dash .emodal__tag-create:hover { background: color-mix(in srgb, var(--user-accent) 12%, transparent); }
+.dash .emodal__tag-create > span { color: var(--faint); border: 0.5px solid var(--rule-strong); font-size: 9px; padding: 1px 5px; }
 
 .dash .emodal__details-cap { display: flex; align-items: center; gap: 12px; padding-bottom: 4px; }
 .dash .emodal__details-cap > span:first-child { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }

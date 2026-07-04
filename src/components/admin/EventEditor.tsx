@@ -88,10 +88,13 @@ export function EventEditor({
   draft,
   onChange,
   username,
+  tagOptions = TAG_OPTIONS,
 }: {
   draft: EventInput;
   onChange: (patch: Partial<EventInput>) => void;
   username: string;
+  /** built-in tags + customs derived from the profile's existing events */
+  tagOptions?: string[];
 }) {
   const [open, setOpen] = useState<Record<DetailKey, boolean>>({ body: false, icon: false, link: false, media: false });
   const [tagQuery, setTagQuery] = useState("");
@@ -107,11 +110,28 @@ export function EventEditor({
   }
   const toggleRow = (k: DetailKey) => () => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
-  // tag search: dims non-matching chips, ↵ toggles the first match
+  // chips: the provided options plus anything already on this draft (e.g. a
+  // custom tag from an import), deduped, order preserved
+  const allTags = Array.from(new Set([...tagOptions, ...draft.tags]));
+
+  // tag search: dims non-matching chips, ↵ toggles the first match —
+  // or creates the tag when nothing matches
   const q = tagQuery.trim().toLowerCase();
-  const tagMatches = q ? TAG_OPTIONS.filter((t) => (TAG_META[t]?.label ?? t).toLowerCase().includes(q)) : [];
+  const tagMatches = q ? allTags.filter((t) => (TAG_META[t]?.label ?? t).toLowerCase().includes(q)) : [];
+  const newTag = q.replace(/\s+/g, " ").slice(0, 24);
+  const canCreate =
+    !!newTag && !allTags.some((t) => t === newTag || (TAG_META[t]?.label ?? t).toLowerCase() === newTag);
+  function createTag() {
+    if (!canCreate) return;
+    set("tags", [...draft.tags, newTag]);
+    setTagQuery("");
+  }
   function onTagKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") { e.preventDefault(); if (tagMatches[0]) { toggleTag(tagMatches[0]); setTagQuery(""); } }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (tagMatches[0]) { toggleTag(tagMatches[0]); setTagQuery(""); }
+      else createTag();
+    }
     if (e.key === "Escape") { e.stopPropagation(); setTagQuery(""); }
   }
 
@@ -204,7 +224,7 @@ export function EventEditor({
         <div className="field">
           <span className="field__label">tags</span>
           <div className="tag-pick">
-            {TAG_OPTIONS.map((t) => (
+            {allTags.map((t) => (
               <button
                 key={t}
                 type="button"
@@ -222,14 +242,16 @@ export function EventEditor({
               value={tagQuery}
               onChange={(e) => setTagQuery(e.target.value)}
               onKeyDown={onTagKey}
-              placeholder="+ search…"
+              placeholder="+ search or create…"
             />
           </div>
-          {!!q && (
-            <span className="emodal__tag-hint">
-              {tagMatches[0] ? <>↵ toggles “{TAG_META[tagMatches[0]]?.label ?? tagMatches[0]}”</> : "no matching tag"}
-            </span>
-          )}
+          {!!q && (tagMatches[0] ? (
+            <span className="emodal__tag-hint">↵ toggles “{TAG_META[tagMatches[0]]?.label ?? tagMatches[0]}”</span>
+          ) : canCreate ? (
+            <button type="button" className="emodal__tag-create" onClick={createTag}>
+              create “{newTag}” <span aria-hidden="true">↵</span>
+            </button>
+          ) : null)}
         </div>
 
         <div className="emodal__details-cap">

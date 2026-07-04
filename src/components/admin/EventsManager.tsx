@@ -13,7 +13,7 @@ import {
 } from "@/lib/actions";
 import { TAG_META } from "@/lib/theme";
 import { isImageIcon } from "@/lib/icon";
-import { EventEditor, letter } from "./EventEditor";
+import { EventEditor, letter, TAG_OPTIONS } from "./EventEditor";
 import { AddEventsDialog, type AddMode } from "./AddEventsDialog";
 import type { MediaItem } from "@/lib/profile";
 
@@ -38,7 +38,7 @@ function toDraft(e: EditableEvent): EventInput {
 }
 
 // ---------- EDIT MODAL (existing events; adding goes through AddEventsDialog) ----------
-function EventModal({ initial, username, onClose, onSaved }: { initial: EventInput; username: string; onClose: () => void; onSaved: () => void }) {
+function EventModal({ initial, username, tagOptions, onClose, onSaved }: { initial: EventInput; username: string; tagOptions: string[]; onClose: () => void; onSaved: () => void }) {
   const [draft, setDraft] = useState<EventInput>(initial);
   const [pending, start] = useTransition();
 
@@ -56,7 +56,7 @@ function EventModal({ initial, username, onClose, onSaved }: { initial: EventInp
         <button type="button" className="emodal__close" onClick={onClose} aria-label="close">×</button>
       </div>
 
-      <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} />
+      <EventEditor draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} username={username} tagOptions={tagOptions} />
 
       <div className="emodal__foot">
         <span className="emodal__esc">esc to close</span>
@@ -161,6 +161,9 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
 
   const nextPosition = items.length ? Math.min(...items.map((e) => e.position)) - 1 : 0;
   const featuredCount = items.filter((e) => e.featured).length;
+  // built-ins + customs found on this profile's events — a saved custom tag
+  // becomes a searchable chip for every event after that
+  const tagOptions = [...TAG_OPTIONS, ...Array.from(new Set(items.flatMap((e) => e.tags))).filter((t) => !TAG_OPTIONS.includes(t))];
 
   function commitOrder() {
     const order = items.map((i) => i.id);
@@ -223,6 +226,7 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
           initialMode={adding}
           nextPosition={nextPosition}
           username={username}
+          tagOptions={tagOptions}
           onClose={() => setAdding(null)}
         />
       )}
@@ -231,6 +235,7 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
         <EventModal
           initial={editing}
           username={username}
+          tagOptions={tagOptions}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); toast("Event updated"); router.refresh(); }}
         />

@@ -168,6 +168,19 @@ export type EventInput = {
   media: MediaInput[]; // images + videos (0–8)
 };
 
+/** Known tags pass through; customs are normalized (lowercase, collapsed
+ *  whitespace, length-capped) and deduped. Tags are free-form by design —
+ *  the display layer falls back to the raw string for unknown keys. */
+function sanitizeTags(tags: string[]): string[] {
+  return Array.from(
+    new Set(
+      (tags ?? [])
+        .map((t) => String(t).trim().toLowerCase().replace(/\s+/g, " ").slice(0, 24))
+        .filter(Boolean)
+    )
+  ).slice(0, 12);
+}
+
 export async function saveEventAction(input: EventInput) {
   const profileId = await requireProfileId();
 
@@ -175,7 +188,7 @@ export async function saveEventAction(input: EventInput) {
     dateOn: input.dateOn,
     fullDate: input.fullDate,
     title: input.title,
-    tags: input.tags,
+    tags: sanitizeTags(input.tags),
     featured: input.featured,
     body: input.body,
     icon: input.icon,
@@ -334,7 +347,7 @@ export async function insertEventsAction(events: ReviewEvent[]) {
           dateOn: e.dateOn,
           fullDate: !!e.fullDate,
           title: e.title.trim(),
-          tags: e.tags.filter((t) => TAG_OPTIONS_SET.has(t)),
+          tags: sanitizeTags(e.tags),
           featured: !!e.featured,
           body: e.body ?? "",
           icon: e.icon?.trim() || null,
@@ -358,7 +371,6 @@ export async function insertEventsAction(events: ReviewEvent[]) {
   await revalidateForProfile(profileId);
 }
 
-const TAG_OPTIONS_SET = new Set(["work", "milestone", "talk", "side_quest", "writing"]);
 
 /** Fetch Open Graph data for a pasted link, to build a link/article card. */
 export async function unfurlLinkAction(url: string): Promise<MediaInput> {
