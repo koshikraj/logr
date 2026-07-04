@@ -676,15 +676,13 @@
 .logr .ask-launch__btn > svg { display: block; flex-shrink: 0; color: var(--paper); }
 .logr .ask-launch.is-open .ask-launch__btn { opacity: 0; pointer-events: none; }
 
-/* rotating hint — stacked, the active one slides up into place */
-.logr .ask-launch__hint { position: relative; flex: 1; height: 1.35em; overflow: hidden; text-align: left; }
-.logr .ask-launch__hint__item {
-  position: absolute; inset: 0; display: flex; align-items: center;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  opacity: 0; transform: translateY(0.6em);
-  transition: opacity 340ms ease, transform 340ms ease;
-}
-.logr .ask-launch__hint__item[data-active] { opacity: 1; transform: none; }
+/* the hint types through the suggestions (typewriter, blinking caret) */
+.logr .ask-launch__hint { flex: 1; min-width: 0; overflow: hidden; text-align: left; white-space: nowrap; }
+.logr .type { position: relative; display: inline-block; max-width: 100%; }
+.logr .type__ghost { visibility: hidden; }
+.logr .type__live { position: absolute; left: 0; top: 0; white-space: nowrap; }
+.logr .type__caret { display: inline-block; width: 1px; height: 1.05em; background: var(--paper); margin-left: 1px; vertical-align: -0.15em; animation: type-blink 1.05s steps(1) infinite; }
+@keyframes type-blink { 50% { opacity: 0; } }
 
 /* the input bar — overlaid on the pill, crossfades in as the box widens */
 .logr .ask-launch__form {

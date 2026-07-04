@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { TypingLabel } from "@/components/TypingLabel";
 
-/** The top-bar "ask" affordance. Collapsed, it's an accent pill whose label
- *  rotates through the suggested questions. Clicked, it morphs in place into
- *  a wider input bar with the suggestions as a dropdown beneath. Submitting
- *  (typed or picked) hands the question to the chat window via onAsk. */
+/** The top-bar "ask" affordance. Collapsed, it's an accent pill that types
+ *  through the suggested questions. Clicked, it morphs in place into a wider
+ *  input bar with the suggestions as a dropdown beneath. Submitting (typed
+ *  or picked) hands the question to the chat window via onAsk. */
 export function AskLauncher({ name, onAsk }: { name: string; onAsk: (q: string) => void }) {
   const first = name.split(" ")[0].toLowerCase();
   const suggestions = [
@@ -14,17 +15,9 @@ export function AskLauncher({ name, onAsk }: { name: string; onAsk: (q: string) 
     "what's their background?",
   ];
   const [expanded, setExpanded] = useState(false);
-  const [hint, setHint] = useState(0);
   const [value, setValue] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // rotate the hint while collapsed
-  useEffect(() => {
-    if (expanded) return;
-    const t = setInterval(() => setHint((i) => (i + 1) % suggestions.length), 3600);
-    return () => clearInterval(t);
-  }, [expanded, suggestions.length]);
 
   // expanded: focus the input; collapse on outside click or Escape
   useEffect(() => {
@@ -73,9 +66,7 @@ export function AskLauncher({ name, onAsk }: { name: string; onAsk: (q: string) 
       >
         {robot}
         <span className="ask-launch__hint" aria-hidden="true">
-          {suggestions.map((s, i) => (
-            <span key={s} className="ask-launch__hint__item" data-active={i === hint || undefined}>{s}</span>
-          ))}
+          <TypingLabel phrases={suggestions} />
         </span>
       </button>
 
