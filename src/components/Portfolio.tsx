@@ -20,7 +20,7 @@ import { Mark } from "@/components/Mark";
 import { LAYOUT_ICONS } from "@/components/layout-icons";
 import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
-import { TypingLabel } from "@/components/TypingLabel";
+import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
 
 const EASE = [0.2, 0.8, 0.2, 1] as [number, number, number, number];
@@ -345,6 +345,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
     profile.events.some((e) => e.featured) ? "highlights" : "all"
   );
   const [chatOpen, setChatOpen] = useState(false);
+  const [pendingAsk, setPendingAsk] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   // open on the owner's preferred order; falls back to "newest" by default.
@@ -553,19 +554,29 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
             <nav className="bar__util" aria-label="utilities">
               {chatEnabled && (
-                <button className="bar__ask" onClick={() => setChatOpen((o) => !o)} aria-label={`ask about ${profile.name}`}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-                    <rect x="3" y="5.5" width="10" height="7.6" rx="2.2" />
-                    <circle cx="6.1" cy="9.3" r="0.95" fill="currentColor" stroke="none" />
-                    <circle cx="9.9" cy="9.3" r="0.95" fill="currentColor" stroke="none" />
-                    <line x1="8" y1="3" x2="8" y2="5.5" strokeLinecap="round" />
-                    <circle cx="8" cy="2.4" r="1" fill="currentColor" stroke="none" />
-                  </svg>
-                  <TypingLabel text="ask me anything" />
-                </button>
+                <AskLauncher
+                  name={profile.name}
+                  onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
+                />
               )}
-              <button type="button" onClick={() => setShareOpen(true)}>share</button>
-              {loggedIn && <Link href="/dashboard">dashboard</Link>}
+              <button type="button" onClick={() => setShareOpen(true)} aria-label="share">
+                <svg className="bar__util__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                  <path d="M8 10V2.5M8 2.5L5.5 5M8 2.5L10.5 5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3 8v4.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8" strokeLinecap="round" />
+                </svg>
+                <span className="bar__util__label">share</span>
+              </button>
+              {loggedIn && (
+                <Link href="/dashboard" aria-label="dashboard">
+                  <svg className="bar__util__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                    <rect x="2.5" y="2.5" width="4.6" height="4.6" rx="0.8" />
+                    <rect x="8.9" y="2.5" width="4.6" height="4.6" rx="0.8" />
+                    <rect x="2.5" y="8.9" width="4.6" height="4.6" rx="0.8" />
+                    <rect x="8.9" y="8.9" width="4.6" height="4.6" rx="0.8" />
+                  </svg>
+                  <span className="bar__util__label">dashboard</span>
+                </Link>
+              )}
             </nav>
           </div>
         </header>
@@ -758,7 +769,14 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
 
         {!previewMode && <Picker palette={palette} layout={layout} onPalette={pickPalette} onLayout={pickLayout} />}
         {!previewMode && chatEnabled && (
-          <ChatWidget username={profile.username} name={profile.name} open={chatOpen} onClose={() => setChatOpen(false)} />
+          <ChatWidget
+            username={profile.username}
+            name={profile.name}
+            open={chatOpen}
+            onClose={() => setChatOpen(false)}
+            ask={pendingAsk}
+            onAskHandled={() => setPendingAsk(null)}
+          />
         )}
         {!previewMode && <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />}
       </div>

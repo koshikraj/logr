@@ -9,11 +9,16 @@ export function ChatWidget({
   name,
   open,
   onClose,
+  ask,
+  onAskHandled,
 }: {
   username: string;
   name: string;
   open: boolean;
   onClose: () => void;
+  /** a question handed in from the launcher — sent automatically on open */
+  ask?: string | null;
+  onAskHandled?: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -54,9 +59,20 @@ export function ChatWidget({
     };
   }, [open, onClose]);
 
-  async function send(e?: React.FormEvent) {
-    e?.preventDefault();
-    const q = input.trim();
+  // a question handed in from the launcher: send it once, then let the
+  // parent clear it (the ref guards dev double-invoked effects)
+  const askedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || !ask) { askedRef.current = null; return; }
+    if (askedRef.current === ask) return;
+    askedRef.current = ask;
+    void send(ask);
+    onAskHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ask]);
+
+  async function send(raw: string) {
+    const q = raw.trim();
     if (!q || streaming) return;
     if (!sessionRef.current) sessionRef.current = crypto.randomUUID();
 
@@ -142,7 +158,7 @@ export function ChatWidget({
           )}
           {messages.length > 0 && <div ref={spacerRef} aria-hidden="true" style={{ flexShrink: 0 }} />}
         </div>
-        <form className="ask__form" onSubmit={send}>
+        <form className="ask__form" onSubmit={(e) => { e.preventDefault(); void send(input); }}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}

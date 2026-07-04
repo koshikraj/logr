@@ -71,14 +71,23 @@
 .bar__util a:hover, .bar__util button:hover { color: var(--ink); border-color: var(--ink); }
 .bar__util .accent { color: var(--user-accent); }
 
-/* secondary bar actions (share / llm.txt / about) as readable hairline pills */
+/* secondary bar actions (share / dashboard) as readable hairline pills —
+   direct children only, so the ask launcher's internals stay unstyled */
 .logr .bar__util { gap: 8px; }
-.logr .bar__util a, .logr .bar__util button:not(.bar__ask) {
+.logr .bar__util > a, .logr .bar__util > button {
+  display: inline-flex; align-items: center; gap: 6px;
   color: var(--ink); padding: 6px 13px; border: 0.5px solid var(--rule-strong);
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
 }
-.logr .bar__util a:hover, .logr .bar__util button:not(.bar__ask):hover {
+.logr .bar__util > a:hover, .logr .bar__util > button:hover {
   color: var(--paper); background: var(--ink); border-color: var(--ink);
+}
+.logr .bar__util__ico { display: none; }
+@media (max-width: 600px) {
+  /* phones: icon-only share/dashboard to leave room for the ask launcher */
+  .logr .bar__util__label { display: none; }
+  .logr .bar__util__ico { display: block; }
+  .logr .bar__util > a, .logr .bar__util > button { padding: 7px 9px; }
 }
 
 /* ---------- profile ---------- */
@@ -651,22 +660,76 @@
 /* ============================================================
    ASK — visitor chat widget (grounded in the log)
    ============================================================ */
-/* the ask trigger — the primary action, so it carries the brand accent;
-   same pill shape as the others. the label types in a loop. */
-.logr .bar__ask {
-  display: inline-flex; align-items: center; gap: 6px;
+/* the ask launcher — the primary action, so it carries the brand accent.
+   collapsed: a pill whose label rotates through the suggested questions.
+   open: the same box widens into an input bar; suggestions drop beneath. */
+.logr .ask-launch { position: relative; width: 212px; transition: width 300ms cubic-bezier(0.32, 0.72, 0.28, 1); }
+.logr .ask-launch.is-open { width: min(420px, calc(100vw - 200px)); }
+
+.logr .ask-launch__btn {
+  display: flex; align-items: center; gap: 6px; width: 100%;
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
   color: var(--paper); background: var(--user-accent); border: 0.5px solid var(--user-accent);
-  padding: 6px 13px; transition: opacity 160ms ease;
+  padding: 6px 13px; transition: opacity 180ms ease;
 }
-.logr .bar__ask:hover { opacity: 0.92; }
-.logr .bar__ask > svg { display: block; color: var(--paper); }
-/* typewriter label */
-.logr .type { position: relative; display: inline-block; }
-.logr .type__ghost { visibility: hidden; }
-.logr .type__live { position: absolute; left: 0; top: 0; white-space: nowrap; }
-.logr .type__caret { display: inline-block; width: 1px; height: 1.05em; background: var(--paper); margin-left: 1px; vertical-align: -0.15em; animation: type-blink 1.05s steps(1) infinite; }
-@keyframes type-blink { 50% { opacity: 0; } }
+.logr .ask-launch__btn:hover { opacity: 0.92; }
+.logr .ask-launch__btn > svg { display: block; flex-shrink: 0; color: var(--paper); }
+.logr .ask-launch.is-open .ask-launch__btn { opacity: 0; pointer-events: none; }
+
+/* rotating hint — stacked, the active one slides up into place */
+.logr .ask-launch__hint { position: relative; flex: 1; height: 1.35em; overflow: hidden; text-align: left; }
+.logr .ask-launch__hint__item {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transform: translateY(0.6em);
+  transition: opacity 340ms ease, transform 340ms ease;
+}
+.logr .ask-launch__hint__item[data-active] { opacity: 1; transform: none; }
+
+/* the input bar — overlaid on the pill, crossfades in as the box widens */
+.logr .ask-launch__form {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 8px;
+  padding: 0 5px 0 13px; background: var(--paper);
+  border: 0.5px solid var(--user-accent);
+  opacity: 0; pointer-events: none; transition: opacity 200ms ease 80ms;
+}
+.logr .ask-launch.is-open .ask-launch__form { opacity: 1; pointer-events: auto; }
+.logr .ask-launch__form > svg { display: block; flex-shrink: 0; color: var(--user-accent); }
+.logr .ask-launch__form input {
+  flex: 1; min-width: 0; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  color: var(--ink); background: transparent; border: 0; outline: none;
+}
+.logr .ask-launch__form input::placeholder { color: var(--faint); }
+.logr .ask-launch__form button {
+  flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+  color: var(--paper); background: var(--user-accent); font-size: 12px; line-height: 1;
+  transition: opacity 160ms ease;
+}
+.logr .ask-launch__form button:disabled { opacity: 0.35; }
+
+/* suggestions dropdown */
+.logr .ask-launch__drop {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 60;
+  display: flex; flex-direction: column;
+  background: var(--paper); border: 0.5px solid var(--rule-strong); border-radius: 10px;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.4); overflow: hidden;
+  opacity: 0; transform: translateY(-4px); pointer-events: none;
+  transition: opacity 220ms ease 110ms, transform 220ms ease 110ms;
+}
+.logr .ask-launch.is-open .ask-launch__drop { opacity: 1; transform: none; pointer-events: auto; }
+.logr .ask-launch__drop button {
+  text-align: left; font-family: var(--mono); font-size: 11px; letter-spacing: 0.02em; color: var(--ink);
+  padding: 10px 14px; border-bottom: 0.5px solid var(--rule);
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.logr .ask-launch__drop button:last-child { border-bottom: 0; }
+.logr .ask-launch__drop button:hover { background: color-mix(in srgb, var(--user-accent) 7%, transparent); color: var(--user-accent); }
+
+@media (max-width: 600px) {
+  .logr .ask-launch { width: 178px; }
+  .logr .ask-launch.is-open { width: calc(100vw - 170px); }
+  .logr .ask-launch__form input { font-size: 16px; } /* prevent iOS focus zoom */
+}
 
 /* centered modal window */
 .ask__scrim {
