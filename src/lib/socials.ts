@@ -21,6 +21,10 @@ const HOSTS: Record<string, string> = {
   "calendly.com": "calendly",
   "t.me": "telegram",
   "telegram.me": "telegram",
+  "wa.me": "whatsapp",
+  "whatsapp.com": "whatsapp",
+  "api.whatsapp.com": "whatsapp",
+  "chat.whatsapp.com": "whatsapp",
 };
 
 /** Derive a canonical platform label from a normalized href. */
