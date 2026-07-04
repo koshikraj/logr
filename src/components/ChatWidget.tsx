@@ -20,10 +20,27 @@ export function ChatWidget({
   const [streaming, setStreaming] = useState(false);
   const sessionRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastUserRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const prevCount = useRef(0);
 
+  // When a question is sent, pin it to the top of the window and reserve room
+  // below for the answer — then leave the scroll alone while it streams.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, open]);
+    const c = scrollRef.current;
+    const added = messages.length > prevCount.current;
+    prevCount.current = messages.length;
+    if (!c || !added) return;
+    const el = lastUserRef.current;
+    if (!el) return;
+    if (spacerRef.current) {
+      spacerRef.current.style.height = `${Math.max(0, c.clientHeight - el.offsetHeight - 100)}px`;
+    }
+    c.scrollTo({
+      top: c.scrollTop + el.getBoundingClientRect().top - c.getBoundingClientRect().top - 16,
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   useEffect(() => {
     if (!open) return;
@@ -98,7 +115,8 @@ export function ChatWidget({
           ) : (
             messages.map((m, i) => {
               if (m.role === "user") {
-                return <div key={i} className="ask__msg ask__msg--user">{m.content}</div>;
+                const isLastUser = i === messages.length - 2 || i === messages.length - 1;
+                return <div key={i} ref={isLastUser ? lastUserRef : undefined} className="ask__msg ask__msg--user">{m.content}</div>;
               }
               const { text, images } = splitContent(m.content);
               const loading = streaming && i === messages.length - 1 && !m.content;
@@ -122,6 +140,7 @@ export function ChatWidget({
               );
             })
           )}
+          {messages.length > 0 && <div ref={spacerRef} aria-hidden="true" style={{ flexShrink: 0 }} />}
         </div>
         <form className="ask__form" onSubmit={send}>
           <input
