@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSheetDrag } from "@/components/ui/useSheetDrag";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -9,21 +10,45 @@ export function ChatWidget({
   name,
   open,
   onClose,
+  ask,
+  onAskHandled,
 }: {
   username: string;
   name: string;
   open: boolean;
   onClose: () => void;
+  /** a question handed in from the launcher — sent automatically on open */
+  ask?: string | null;
+  onAskHandled?: () => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const sessionRef = useRef("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastUserRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const prevCount = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useSheetDrag(panelRef, onClose, open); // phones: swipe the sheet down to dismiss
 
+  // When a question is sent, pin it to the top of the window and reserve room
+  // below for the answer — then leave the scroll alone while it streams.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, open]);
+    const c = scrollRef.current;
+    const added = messages.length > prevCount.current;
+    prevCount.current = messages.length;
+    if (!c || !added) return;
+    const el = lastUserRef.current;
+    if (!el) return;
+    if (spacerRef.current) {
+      spacerRef.current.style.height = `${Math.max(0, c.clientHeight - el.offsetHeight - 100)}px`;
+    }
+    c.scrollTo({
+      top: c.scrollTop + el.getBoundingClientRect().top - c.getBoundingClientRect().top - 16,
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   useEffect(() => {
     if (!open) return;
@@ -37,9 +62,20 @@ export function ChatWidget({
     };
   }, [open, onClose]);
 
-  async function send(e?: React.FormEvent) {
-    e?.preventDefault();
-    const q = input.trim();
+  // a question handed in from the launcher: send it once, then let the
+  // parent clear it (the ref guards dev double-invoked effects)
+  const askedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open || !ask) { askedRef.current = null; return; }
+    if (askedRef.current === ask) return;
+    askedRef.current = ask;
+    void send(ask);
+    onAskHandled?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, ask]);
+
+  async function send(raw: string) {
+    const q = raw.trim();
     if (!q || streaming) return;
     if (!sessionRef.current) sessionRef.current = crypto.randomUUID();
 
@@ -80,7 +116,7 @@ export function ChatWidget({
 
   return (
     <div className="ask__scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="ask__panel" role="dialog" aria-modal="true" aria-label={`ask about ${name}`}>
+      <div className="ask__panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={`ask about ${name}`}>
         <div className="ask__head">
           <span>ask <span className="accent">/</span> {name.toLowerCase()}</span>
           <button onClick={onClose} aria-label="close">×</button>
@@ -98,7 +134,8 @@ export function ChatWidget({
           ) : (
             messages.map((m, i) => {
               if (m.role === "user") {
-                return <div key={i} className="ask__msg ask__msg--user">{m.content}</div>;
+                const isLastUser = i === messages.length - 2 || i === messages.length - 1;
+                return <div key={i} ref={isLastUser ? lastUserRef : undefined} className="ask__msg ask__msg--user">{m.content}</div>;
               }
               const { text, images } = splitContent(m.content);
               const loading = streaming && i === messages.length - 1 && !m.content;
@@ -122,8 +159,9 @@ export function ChatWidget({
               );
             })
           )}
+          {messages.length > 0 && <div ref={spacerRef} aria-hidden="true" style={{ flexShrink: 0 }} />}
         </div>
-        <form className="ask__form" onSubmit={send}>
+        <form className="ask__form" onSubmit={(e) => { e.preventDefault(); void send(input); }}>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
