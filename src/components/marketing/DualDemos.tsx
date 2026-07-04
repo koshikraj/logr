@@ -1,7 +1,8 @@
 "use client";
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useInView } from "./useInView";
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const reduced = () =>
@@ -151,10 +152,13 @@ const HV_ENTRIES: HVEntry[] = [
 
 export function HumanVoiceDemo() {
   const [count, setCount] = useState(1);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef);
 
   useEffect(() => {
     let alive = true;
     if (reduced()) { setCount(HV_ENTRIES.length); return; }
+    if (!inView) return; // paused off-screen
     (async () => {
       while (alive) {
         for (let n = 2; n <= HV_ENTRIES.length; n++) {
@@ -169,12 +173,12 @@ export function HumanVoiceDemo() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [inView]);
 
   const shown = HV_ENTRIES.slice(0, count);
 
   return (
-    <div className="hv-timeline">
+    <div className="hv-timeline" ref={rootRef}>
       {shown.map((e) => (
         <div key={e.date} className={`hv-entry hv-entry--${e.recency}`}>
           <div className="hv-entry__meta">
@@ -228,6 +232,8 @@ export function MachineVoiceChat() {
   const [history, setHistory] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [phase, setPhase] = useState<"typing" | "thinking" | "idle">("idle");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef);
 
   useEffect(() => {
     let alive = true;
@@ -238,6 +244,7 @@ export function MachineVoiceChat() {
       ]);
       return;
     }
+    if (!inView) return; // paused off-screen
     (async () => {
       let i = 0;
       while (alive) {
@@ -253,21 +260,25 @@ export function MachineVoiceChat() {
         setPhase("thinking"); setInput("");
         await wait(1100);
         if (!alive) return;
-        setHistory((h) => [
-          ...h.slice(-2),
-          { role: "user", text: q },
-          { role: "ai", text: a },
-        ]);
+        // the answer streams in, like the real grounded chat
+        setHistory((h) => [...h.slice(-2), { role: "user", text: q }, { role: "ai", text: "" }]);
         setPhase("idle");
+        for (let c = 1; c <= a.length; c += 2) {
+          if (!alive) return;
+          const part = a.slice(0, c);
+          setHistory((h) => [...h.slice(0, -1), { role: "ai", text: part }]);
+          await wait(24);
+        }
+        setHistory((h) => [...h.slice(0, -1), { role: "ai", text: a }]);
         await wait(2600);
         i++;
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [inView]);
 
   return (
-    <div className="mv-chat">
+    <div className="mv-chat" ref={rootRef}>
       <div className="mv-chat__messages">
         {history.map((m, i) => (
           <div key={i} className={`mv-msg mv-msg--${m.role}`}>

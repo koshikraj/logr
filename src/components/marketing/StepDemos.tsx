@@ -3,7 +3,8 @@
    async loops is intentional. */
 /* eslint-disable react-hooks/set-state-in-effect */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useInView } from "./useInView";
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const reduced = () =>
@@ -16,6 +17,8 @@ export function ComposeDemo() {
   const [typed, setTyped] = useState("");
   const [photos, setPhotos] = useState(0);
   const [saved, setSaved] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef);
 
   useEffect(() => {
     let alive = true;
@@ -24,6 +27,7 @@ export function ComposeDemo() {
       setPhotos(1);
       return;
     }
+    if (!inView) return; // paused off-screen
     (async () => {
       let li = 0;
       while (alive) {
@@ -49,10 +53,10 @@ export function ComposeDemo() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [inView]);
 
   return (
-    <div className="pw-compose">
+    <div className="pw-compose" ref={rootRef}>
       <div className="pw-compose__line">
         <span className="pw-compose__date">2026.05.21</span>
         <span className="pw-compose__colon">:</span>
@@ -86,10 +90,13 @@ export function AskDemo() {
   const [q, setQ] = useState("");
   const [phase, setPhase] = useState<"typing" | "thinking" | "answer">("typing");
   const [a, setA] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef);
 
   useEffect(() => {
     let alive = true;
     if (reduced()) { setQ(QA[0].q); setA(QA[0].a); setPhase("answer"); return; }
+    if (!inView) return; // paused off-screen
     (async () => {
       let i = 0;
       while (alive) {
@@ -98,15 +105,18 @@ export function AskDemo() {
         for (let c = 0; c <= qq.length; c++) { if (!alive) return; setQ(qq.slice(0, c)); await wait(42); }
         await wait(350);
         if (!alive) return; setPhase("thinking"); await wait(1100);
-        if (!alive) return; setPhase("answer"); setA(aa); await wait(2600);
+        if (!alive) return; setPhase("answer");
+        // stream the answer, like the real grounded chat
+        for (let c = 1; c <= aa.length; c += 2) { if (!alive) return; setA(aa.slice(0, c)); await wait(22); }
+        setA(aa); await wait(2600);
         i++;
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [inView]);
 
   return (
-    <div className="pw-mini pw-mini--ask">
+    <div className="pw-mini pw-mini--ask" ref={rootRef}>
       <div className="pw-mini__bar"><span className="accent">/</span>koshik<span className="accent">/</span>ask</div>
       <div className="pw-mini__body">
         <div className="q">{q}<span className="pw-compose__caret" style={{ opacity: phase === "typing" ? 1 : 0 }} /></div>
@@ -128,10 +138,13 @@ const MOMENTS = [
 
 export function GrowDemo() {
   const [count, setCount] = useState(1);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef);
 
   useEffect(() => {
     let alive = true;
     if (reduced()) { setCount(MOMENTS.length); return; }
+    if (!inView) return; // paused off-screen
     (async () => {
       while (alive) {
         for (let n = 1; n <= MOMENTS.length; n++) { if (!alive) return; setCount(n); await wait(1500); }
@@ -140,12 +153,12 @@ export function GrowDemo() {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [inView]);
 
   // newest (most recently added) on top
   const shown = MOMENTS.slice(0, count).reverse();
   return (
-    <div className="pw-timeline">
+    <div className="pw-timeline" ref={rootRef}>
       {shown.map((m, i) => (
         <div key={m.date} className={`pw-timeline-entry ${i === 0 ? "pw-timeline-entry--now" : i === 1 ? "pw-timeline-entry--recent" : ""}`}>
           <div className="pw-timeline-entry__date">{m.date}</div>

@@ -96,7 +96,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <div className="step__num">01</div>
               <div className="step__copy">
                 <h3 className="step__title">claim a handle.</h3>
-                <p className="step__body">your handle is your address. <span style={{ color: "var(--user-accent)" }}>logr.life/koshik</span> — the page, the llm.txt, eventually the chat endpoint. one handle, one life.</p>
+                <p className="step__body">your handle is your address. <span style={{ color: "var(--user-accent)" }}>logr.life/koshik</span> — the page, the llm.txt, the ask-anything chat. one handle, one life.</p>
               </div>
               <div className="step__demo">
                 <div className="preview-window">
@@ -113,7 +113,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <div className="step__num">02</div>
               <div className="step__copy">
                 <h3 className="step__title">add an entry.</h3>
-                <p className="step__body">a date and a sentence. that&apos;s the whole format. add a link or a photo if you want. don&apos;t if you don&apos;t.</p>
+                <p className="step__body">a date and a sentence. that&apos;s the whole format. add a link or a photo if you want. or paste your story — a resume, a url — and ai drafts the events for you to review.</p>
               </div>
               <div className="step__demo">
                 <div className="preview-window">
@@ -128,7 +128,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <div className="step__num">03</div>
               <div className="step__copy">
                 <h3 className="step__title">it becomes three things.</h3>
-                <p className="step__body">your timeline updates. your llm.txt regenerates. and one day, your chat endpoint learns the new entry.</p>
+                <p className="step__body">your timeline updates. your llm.txt regenerates. and your chat answers visitors with the new entry — grounded in your log, nothing else.</p>
               </div>
               <div className="step__demo">
                 <div className="pw-triplet">
@@ -186,16 +186,17 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             </div>
             <div className="preview__feed">
               {[
-                ["now", "2026.05", "started logr."],
-                ["recent", "2026.04", "built sage on solana."],
-                ["recent", "2025.11", "devconnect argentina."],
-                ["past", "2019.01", "founded consenso labs."],
-                ["past", "2014", "mtech, manipal."],
-              ].map(([k, d, t]) => (
+                ["now", "2026.05", "started logr.", "one log for the humans who know you and the agents that don't."],
+                ["recent", "2026.04", "built sage on solana.", "an ai co-signer for wallets, live on mainnet from day one."],
+                ["recent", "2025.11", "devconnect argentina.", "spoke on on-chain identity in buenos aires."],
+                ["past", "2019.01", "founded consenso labs.", "a small r&d lab for blockchain infrastructure."],
+                ["past", "2014", "mtech, manipal.", "computer & information systems security."],
+              ].map(([k, d, t, b]) => (
                 <div key={d} className={`preview-entry preview-entry--${k}`}>
                   <span className="preview-entry__dot" aria-hidden="true" />
                   <div className="preview-entry__date">{d}</div>
                   <div className="preview-entry__title">{t}</div>
+                  <p className="preview-entry__body">{b}</p>
                 </div>
               ))}
             </div>
@@ -209,7 +210,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           <div className="closing__form">
             <HandleClaim id="handle-claim" />
           </div>
-          <p className="closing__note">free forever for personal logs · early access · no email yet, just your handle</p>
+          <p className="closing__note">free forever for personal logs · early access · ninety seconds to the first entry</p>
         </section>
 
         {/* footer */}
