@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { useSheetDrag } from "./useSheetDrag";
 
 /** Dashboard modal shell: scrim, Escape-to-close, body scroll lock.
  *
@@ -24,6 +25,9 @@ export function Dialog({
   className?: string;
   children: ReactNode;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  useSheetDrag(cardRef, onClose); // phones: swipe the sheet down to dismiss
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);
@@ -35,7 +39,7 @@ export function Dialog({
   return (
     <div className="modal" role="dialog" aria-modal="true" aria-label={label}>
       <div className="modal__overlay" onClick={onClose} />
-      <div className={cn(variant === "wide" ? "emodal" : "modal__card", className)}>{children}</div>
+      <div ref={cardRef} className={cn(variant === "wide" ? "emodal" : "modal__card", className)}>{children}</div>
     </div>
   );
 }

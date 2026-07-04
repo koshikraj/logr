@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSheetDrag } from "@/components/ui/useSheetDrag";
 
 export function ShareModal({
   username,
@@ -14,6 +15,8 @@ export function ShareModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  useSheetDrag(cardRef, onClose, open); // phones: swipe the sheet down to dismiss
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +47,7 @@ export function ShareModal({
 
   return (
     <div className="share__scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="share" role="dialog" aria-modal="true" aria-label={`share ${name}'s log`}>
+      <div className="share" ref={cardRef} role="dialog" aria-modal="true" aria-label={`share ${name}'s log`}>
         <div className="share__head">
           <span>share <span className="accent">/</span> {name.toLowerCase()}</span>
           <button onClick={onClose} aria-label="close">×</button>

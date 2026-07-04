@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSheetDrag } from "@/components/ui/useSheetDrag";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -28,6 +29,8 @@ export function ChatWidget({
   const lastUserRef = useRef<HTMLDivElement>(null);
   const spacerRef = useRef<HTMLDivElement>(null);
   const prevCount = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useSheetDrag(panelRef, onClose, open); // phones: swipe the sheet down to dismiss
 
   // When a question is sent, pin it to the top of the window and reserve room
   // below for the answer — then leave the scroll alone while it streams.
@@ -113,7 +116,7 @@ export function ChatWidget({
 
   return (
     <div className="ask__scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="ask__panel" role="dialog" aria-modal="true" aria-label={`ask about ${name}`}>
+      <div className="ask__panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={`ask about ${name}`}>
         <div className="ask__head">
           <span>ask <span className="accent">/</span> {name.toLowerCase()}</span>
           <button onClick={onClose} aria-label="close">×</button>
