@@ -33,9 +33,9 @@ export default async function LoginPage({
             <button type="submit" className="btn btn--ghost" style={{ width: "100%", justifyContent: "center" }}>continue with 𝕏 →</button>
           </form>
         )}
-        {error === "x-not-connected" && (
+        {error && (
           <p className="modal__sub" style={{ marginTop: 16, color: "var(--user-accent)" }}>
-            that 𝕏 account isn&apos;t linked to a logr yet — sign in with Google first, then connect 𝕏 from your dashboard.
+            sign-in didn&apos;t complete — try again.
           </p>
         )}
       </div>

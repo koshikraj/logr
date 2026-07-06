@@ -12,21 +12,21 @@ export const dynamic = "force-dynamic";
 // without Auth.js switching the session to a new User. After this row exists,
 // "login with X" works through the stock Twitter provider.
 export async function GET(req: NextRequest) {
-  const back = (q: string) => NextResponse.redirect(new URL(`/dashboard?x=${q}`, req.nextUrl.origin));
-
-  const userId = await getUserId();
-  if (!userId) return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
-
   const cookie = req.cookies.get(X_COOKIE)?.value;
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
 
-  let saved: { state?: string; verifier?: string } = {};
+  let saved: { state?: string; verifier?: string; ret?: string } = {};
   try {
     saved = JSON.parse(cookie ?? "{}");
   } catch {
     /* treated as missing below */
   }
+  const ret = saved.ret === "/welcome" ? "/welcome" : "/dashboard";
+  const back = (q: string) => NextResponse.redirect(new URL(`${ret}?x=${q}`, req.nextUrl.origin));
+
+  const userId = await getUserId();
+  if (!userId) return NextResponse.redirect(new URL("/login", req.nextUrl.origin));
 
   const done = (q: string) => {
     const res = back(q);
@@ -53,7 +53,13 @@ export async function GET(req: NextRequest) {
   if (existing && existing.userId !== userId) return done("taken");
   if (!existing) {
     await prisma.account.create({
-      data: { userId, type: "oauth", provider: "twitter", providerAccountId: x.id },
+      data: { userId, type: "oauth", provider: "twitter", providerAccountId: x.id, username: x.username },
+    });
+  } else {
+    // refresh the stored handle — people rename on X
+    await prisma.account.updateMany({
+      where: { provider: "twitter", providerAccountId: x.id },
+      data: { username: x.username },
     });
   }
 

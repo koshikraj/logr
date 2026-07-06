@@ -23,11 +23,13 @@ export function isXAuthEnabled(): boolean {
 // Google + X sign-in via Auth.js, with the Prisma adapter (database sessions).
 // Reads AUTH_GOOGLE_ID/SECRET, AUTH_TWITTER_ID/SECRET, AUTH_SECRET from env.
 //
-// X login is CONNECTED-ACCOUNTS-ONLY: X often returns no email, so a cold X
-// sign-in would mint an orphan User the person can never reach from their
-// Google account. Users first link X from the dashboard (the custom
-// /api/x/connect flow writes the Account row); after that the adapter resolves
-// provider+providerAccountId → existing User and login just works.
+// X sign-in works two ways:
+//  - cold signup/login: an unknown X identity creates a fresh User (email may
+//    be null — X often doesn't return one). The welcome flow then offers any
+//    claimable seeded profile whose attributedX matches their handle.
+//  - connected login: a user who linked X from the dashboard
+//    (/api/x/connect) signs in to their existing account — the adapter
+//    resolves provider+providerAccountId → User, no email needed.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -41,20 +43,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user && user) session.user.id = user.id;
       return session;
     },
-    async signIn({ account, profile, user }) {
-      // X: allow only accounts already connected via /api/x/connect (see above).
-      if (account?.provider === "twitter") {
-        const linked = await prisma.account.findUnique({
-          where: {
-            provider_providerAccountId: {
-              provider: "twitter",
-              providerAccountId: account.providerAccountId,
-            },
-          },
-          select: { id: true },
-        });
-        return linked ? true : "/login?error=x-not-connected";
-      }
+    async signIn({ profile, user }) {
       // Block Auth.js's automatic account-linking for every email-bearing
       // provider: if the incoming account's email differs from the email
       // already on the User record, deny the link. Without this, signing in
