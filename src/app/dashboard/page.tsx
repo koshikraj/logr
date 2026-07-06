@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { isXAuthEnabled } from "@/auth";
 import { currentProfileId, getUserId } from "@/lib/session";
 import { getProfile } from "@/lib/profile";
 import { AdminShell } from "@/components/admin/AdminShell";
@@ -18,6 +19,12 @@ export default async function AdminPage() {
   const profile = row ? await getProfile(row.username) : null;
   if (!profile) redirect("/login");
 
+  // connected-accounts state for the bar's "connect X" control
+  const userId = await getUserId();
+  const xConnected = isXAuthEnabled()
+    ? Boolean(await prisma.account.findFirst({ where: { userId: userId!, provider: "twitter" }, select: { id: true } }))
+    : null; // null = X auth not configured, hide the control
+
   // Events arrive sorted by position asc; expose a contiguous index.
   const events = profile.events.map((e, i) => ({
     id: e.id,
@@ -35,5 +42,5 @@ export default async function AdminPage() {
     media: e.media,
   }));
 
-  return <AdminShell profile={profile} events={events} />;
+  return <AdminShell profile={profile} events={events} xConnected={xConnected} />;
 }

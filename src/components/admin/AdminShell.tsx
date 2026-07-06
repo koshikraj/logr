@@ -44,9 +44,12 @@ function toEventDTO(e: EditableEvent): EventDTO {
 export function AdminShell({
   profile,
   events,
+  xConnected = null,
 }: {
   profile: ProfileDTO;
   events: EditableEvent[];
+  /** true = linked, false = offer connect, null = X auth not configured */
+  xConnected?: boolean | null;
 }) {
   const [tab, setTab] = useState("profile");
   // owner's theme draft — drives the dashboard's own look + the live preview
@@ -81,6 +84,8 @@ export function AdminShell({
               </span>
               <nav className="bar__util" aria-label="utilities">
                 <span className="bar__saved" aria-hidden="true"><span className="bar__saved__dot" />saved</span>
+                {xConnected === false && <a href="/api/x/connect">connect 𝕏</a>}
+                {xConnected === true && <span title="X account linked — you can sign in with X">𝕏 linked</span>}
                 <a href={`/${profile.username}`} target="_blank" rel="noopener noreferrer">open ↗</a>
                 <form action={logoutAction}><button type="submit">sign out</button></form>
               </nav>

@@ -38,6 +38,12 @@ export async function googleSignInAction() {
   await signIn("google", { redirectTo: "/welcome" });
 }
 
+/** "Continue with X" (login page) — works for accounts that connected X from
+ *  the dashboard; unknown X identities are denied in auth.ts's signIn callback. */
+export async function xSignInAction() {
+  await signIn("twitter", { redirectTo: "/welcome" });
+}
+
 // ---------- ONBOARDING ----------
 const RESERVED = new Set([
   "admin", "login", "logout", "welcome", "api", "dashboard", "settings", "new",
