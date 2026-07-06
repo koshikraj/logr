@@ -37,6 +37,7 @@ function toEventDTO(e: EditableEvent): EventDTO {
     body: e.body,
     icon: e.icon,
     link: e.linkHref ? { label: e.linkLabel ?? e.linkHref, href: e.linkHref } : null,
+    sourceUrl: null,
     media: e.media,
   };
 }
