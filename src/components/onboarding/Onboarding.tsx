@@ -230,6 +230,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
   const preview: ProfileDTO = useMemo(() => ({
     id: "preview",
     username: handle || "you",
+    claimStatus: "owned",
     name: name || "Your name",
     bio: bio || "a line about you.",
     status: "",
@@ -250,6 +251,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
       body: e.body,
       icon: null,
       link: null,
+      sourceUrl: null,
       media: e.media as MediaItem[],
     })),
   }), [handle, name, bio, image, palette, layout, events]);

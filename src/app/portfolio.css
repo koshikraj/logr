@@ -940,3 +940,25 @@
 .logr .tw-more { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--user-accent); }
 .logr .tw-source { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--muted); margin-left: auto; }
 .logr .tw-source:hover { color: var(--ink); }
+
+/* ---------- seeded-profile disclosure (Phase 3, PLAN-seeded-profiles.md) ---------- */
+.logr .seeded-banner {
+  display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 9px 20px;
+  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.03em;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--user-accent) 7%, var(--paper));
+  border-bottom: 0.5px solid var(--rule);
+}
+.logr .seeded-banner__actions { display: inline-flex; gap: 10px; align-items: baseline; }
+.logr .seeded-banner__actions a { color: var(--user-accent); text-decoration: none; border-bottom: 0.5px solid color-mix(in srgb, var(--user-accent) 45%, transparent); }
+.logr .seeded-banner__actions a:hover { border-bottom-color: var(--user-accent); }
+
+.logr .entry__source {
+  margin-left: 8px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em;
+  color: var(--muted); text-decoration: none;
+  border-bottom: 0.5px solid var(--rule);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.logr .entry__source:hover { color: var(--user-accent); border-bottom-color: var(--user-accent); }

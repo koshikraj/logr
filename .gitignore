@@ -51,3 +51,6 @@ next-env.d.ts
 # uploaded media (local dev)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# private product plan — lives in the logr-seed repo, never committed here
+PLAN-seeded-profiles.md

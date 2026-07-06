@@ -30,11 +30,45 @@ model Profile {
   socials   String // JSON: [{ label, href }]
   theme     String // JSON: { palette, fonts, rounded, accentOverride, postStyle, dotStyle, photoHover, dark }
 
+  // Seeded-profile lifecycle (PLAN-seeded-profiles.md). `status` above is the
+  // display tagline — this is the claim/publish state machine.
+  claimStatus     ClaimStatus @default(owned)
+  attributedX     String? // X handle for unclaimed seeded profiles (claim matching)
+  attributedGh    String? // GitHub username fallback
+  claimProofToken String? // one-time tweet-to-claim code (hashed); invalidated on claim
+
   events       Event[]
   chatMessages ChatMessage[]
+  sources      ProfileSource[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A citation source used to build a seeded profile (admin-curated).
+model ProfileSource {
+  id        String    @id @default(cuid())
+  profileId String
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url       String
+  fetchedAt DateTime?
+  notes     String? // why this source was included / conflicts noted
+
+  @@index([profileId])
+}
+
+enum ClaimStatus {
+  owned // normal user profile
+  draft // seeded, imported, not yet public
+  published // seeded + live with the unverified banner
+  claimed // was seeded, now claimed by verified owner
+  takedown // subject requested removal; hidden, record kept
+}
+
+enum Provenance {
+  userCreated // user typed it
+  userImported // user imported (resume, URL, AI-drafted from their own text)
+  seeded // admin-generated from external sources
 }
 
 // ---------- Auth.js (NextAuth) ----------
@@ -99,6 +133,13 @@ model Event {
 
   linkLabel String?
   linkHref  String?
+
+  // Provenance (PLAN-seeded-profiles.md): origin is immutable; `verified` is
+  // owner-flippable after claim. sourceUrl is required for provenance=seeded —
+  // enforced in the service layer, not here.
+  sourceUrl  String?
+  provenance Provenance @default(userCreated)
+  verified   Boolean    @default(false)
 
   position Int // explicit ordering (reverse-chronological)
 

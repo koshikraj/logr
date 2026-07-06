@@ -33,12 +33,16 @@ export type EventDTO = {
   body: string;
   icon: string | null; // optional glyph/emoji for the timeline dot
   link: { label: string; href: string } | null;
+  sourceUrl: string | null; // citation for seeded events — rendered as ↗ on public surfaces
   media: MediaItem[]; // images + videos, in order (empty placeholder slots dropped)
 };
+
+export type ClaimStatus = "owned" | "draft" | "published" | "claimed" | "takedown";
 
 export type ProfileDTO = {
   id: string;
   username: string; // unique URL slug, doubles as the public "@handle"
+  claimStatus: ClaimStatus; // seeded-profile lifecycle; "published" renders with the unverified banner
   name: string;
   bio: string;
   status: string;
@@ -69,10 +73,15 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     },
   });
   if (!row) return null;
+  // Seeded-profile gating: drafts and takedowns are invisible on every public
+  // surface (page, llm.txt, OG image, chat all load through here). The private
+  // admin app reads the DB directly and is unaffected.
+  if (row.claimStatus === "draft" || row.claimStatus === "takedown") return null;
 
   return {
     id: row.id,
     username: row.username,
+    claimStatus: row.claimStatus,
     name: row.name,
     bio: row.bio,
     status: row.status,
@@ -92,6 +101,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
       body: e.body,
       icon: e.icon,
       link: e.linkHref ? { label: e.linkLabel ?? e.linkHref, href: e.linkHref } : null,
+      sourceUrl: e.provenance === "seeded" ? e.sourceUrl : null,
       media: e.media
         .filter((m) => !!m.url)
         .map((m) => ({
