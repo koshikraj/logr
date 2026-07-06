@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { DEFAULT_THEME, type Theme } from "@/lib/theme";
 import { unfurl } from "@/lib/unfurl";
@@ -36,6 +37,24 @@ export async function startSignupAction(formData: FormData) {
 /** Plain "continue with Google" (login page). */
 export async function googleSignInAction() {
   await signIn("google", { redirectTo: "/welcome" });
+}
+
+/** "Continue with X" (login page) — existing accounts sign in; unknown X
+ *  identities get a fresh User, and /welcome offers any claimable profile. */
+export async function xSignInAction() {
+  await signIn("twitter", { redirectTo: "/welcome" });
+}
+
+/** Claim the seeded profile matching the user's verified X handle (welcome screen). */
+export async function claimProfileAction() {
+  const userId = await getUserId();
+  if (!userId) redirect("/login");
+  const { claimProfile } = await import("@/lib/claim");
+  const res = await claimProfile(userId);
+  if (!res.ok) redirect("/welcome?claim=failed");
+  revalidatePath("/");
+  revalidatePath(`/${res.username}`);
+  redirect("/dashboard");
 }
 
 // ---------- ONBOARDING ----------

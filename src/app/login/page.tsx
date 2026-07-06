@@ -1,14 +1,19 @@
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
-import { googleSignInAction } from "@/lib/actions";
-import { auth } from "@/auth";
+import { googleSignInAction, xSignInAction } from "@/lib/actions";
+import { auth, isXAuthEnabled } from "@/auth";
 import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
 
 export const metadata = { title: "sign in — logr" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   if ((await auth())?.user) redirect("/dashboard"); // already signed in
+  const { error } = await searchParams;
   const vars = themeCssVars(DEFAULT_THEME) as CSSProperties;
 
   return (
@@ -23,6 +28,16 @@ export default async function LoginPage() {
         <form action={googleSignInAction}>
           <button type="submit" className="btn btn--primary" style={{ width: "100%", justifyContent: "center" }}>continue with Google →</button>
         </form>
+        {isXAuthEnabled() && (
+          <form action={xSignInAction} style={{ marginTop: 10 }}>
+            <button type="submit" className="btn btn--ghost" style={{ width: "100%", justifyContent: "center" }}>continue with 𝕏 →</button>
+          </form>
+        )}
+        {error && (
+          <p className="modal__sub" style={{ marginTop: 16, color: "var(--user-accent)" }}>
+            sign-in didn&apos;t complete — try again.
+          </p>
+        )}
       </div>
     </div>
   );

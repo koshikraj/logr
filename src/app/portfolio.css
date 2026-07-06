@@ -941,18 +941,95 @@
 .logr .tw-source { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--muted); margin-left: auto; }
 .logr .tw-source:hover { color: var(--ink); }
 
-/* ---------- seeded-profile disclosure (Phase 3, PLAN-seeded-profiles.md) ---------- */
+/* ---------- seeded-profile disclosure + claim (Phase 3/4) ---------- */
 .logr .seeded-banner {
-  display: flex; align-items: baseline; justify-content: center; gap: 14px; flex-wrap: wrap;
-  padding: 9px 20px;
-  font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.03em;
-  color: var(--muted);
-  background: color-mix(in srgb, var(--user-accent) 7%, var(--paper));
+  display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 20px;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.03em;
+  color: var(--ink);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--user-accent) 16%, var(--paper)),
+    color-mix(in srgb, var(--user-accent) 6%, var(--paper)) 60%,
+    color-mix(in srgb, var(--user-accent) 14%, var(--paper))
+  );
+  border-bottom: 1px solid color-mix(in srgb, var(--user-accent) 40%, transparent);
+}
+.logr .seeded-banner__badge {
+  padding: 2px 10px; border-radius: 999px;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--user-accent);
+  border: 1px solid color-mix(in srgb, var(--user-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--user-accent) 9%, var(--paper));
+}
+.logr .seeded-banner__text { color: color-mix(in srgb, var(--ink) 78%, transparent); }
+.logr .seeded-banner__text strong { color: var(--ink); font-weight: 600; }
+.logr .seeded-banner__cta {
+  appearance: none; cursor: pointer; border: none;
+  padding: 7px 18px; border-radius: 999px;
+  font-family: var(--mono); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  background: var(--user-accent); color: var(--paper);
+  box-shadow: 0 4px 14px -6px color-mix(in srgb, var(--user-accent) 70%, transparent);
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+.logr .seeded-banner__cta:hover { transform: translateY(-1px); box-shadow: 0 8px 20px -8px color-mix(in srgb, var(--user-accent) 80%, transparent); }
+.logr .seeded-banner__removal {
+  font-size: 11px; color: var(--muted); text-decoration: none;
   border-bottom: 0.5px solid var(--rule);
 }
-.logr .seeded-banner__actions { display: inline-flex; gap: 10px; align-items: baseline; }
-.logr .seeded-banner__actions a { color: var(--user-accent); text-decoration: none; border-bottom: 0.5px solid color-mix(in srgb, var(--user-accent) 45%, transparent); }
-.logr .seeded-banner__actions a:hover { border-bottom-color: var(--user-accent); }
+.logr .seeded-banner__removal:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* claim dialog */
+.logr .claim-modal { position: fixed; inset: 0; z-index: 220; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.logr .claim-modal__scrim { position: absolute; inset: 0; background: rgba(10, 10, 10, 0.45); backdrop-filter: blur(3px); }
+.logr .claim-modal__card {
+  position: relative; width: 100%; max-width: 420px;
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 18px;
+  padding: 28px 26px 22px;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.45);
+  animation: claim-pop 220ms ease;
+}
+@keyframes claim-pop { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+.logr .claim-modal__close {
+  position: absolute; top: 12px; right: 14px;
+  appearance: none; border: none; background: none; cursor: pointer;
+  font-size: 20px; line-height: 1; color: var(--muted);
+}
+.logr .claim-modal__close:hover { color: var(--ink); }
+.logr .claim-modal__title { font-family: var(--serif); font-size: 24px; letter-spacing: -0.02em; margin: 0 0 8px; }
+.logr .claim-modal__colon { color: var(--user-accent); }
+.logr .claim-modal__sub { font-size: 13.5px; line-height: 1.55; color: var(--muted); margin: 0 0 20px; }
+.logr .claim-modal__options { display: grid; gap: 10px; }
+.logr .claim-option {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px; border: 1px solid var(--rule); border-radius: 12px;
+  text-decoration: none; color: var(--ink);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.logr .claim-option:hover {
+  border-color: color-mix(in srgb, var(--user-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--user-accent) 6%, var(--paper));
+  transform: translateY(-1px);
+}
+.logr .claim-option__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  border: 0.5px solid var(--rule);
+}
+.logr .claim-option__copy { display: grid; gap: 1px; flex: 1; }
+.logr .claim-option__label { font-family: var(--serif); font-size: 15.5px; letter-spacing: -0.01em; }
+.logr .claim-option__desc { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--muted); }
+.logr .claim-option__arrow { color: var(--user-accent); font-size: 15px; transition: transform 160ms ease; }
+.logr .claim-option:hover .claim-option__arrow { transform: translateX(3px); }
+.logr .claim-modal__foot { margin: 18px 0 0; font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; }
+.logr .claim-modal__foot a { color: inherit; }
+
+@media (max-width: 600px) {
+  .logr .seeded-banner { gap: 10px; padding: 10px 14px; font-size: 11px; }
+  .logr .seeded-banner__removal { display: none; }
+}
 
 .logr .entry__source {
   margin-left: 8px;

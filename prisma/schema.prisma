@@ -97,6 +97,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
+  username          String? // provider-side handle (X @username) — set by connect flow or lazily from the token; drives seeded-profile claim matching
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
