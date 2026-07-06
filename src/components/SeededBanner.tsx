@@ -39,7 +39,7 @@ const CLAIM_OPTIONS = [
     icon: <XIcon />,
     label: "Claim with X",
     desc: "sign in with the attributed X account",
-    href: "/login",
+    href: "/login/x", // straight to the X OAuth screen
   },
   {
     key: "github",
