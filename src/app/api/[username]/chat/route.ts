@@ -65,11 +65,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
 
   const profile = await getProfile(username);
   if (!profile) return Response.json({ error: "Not found" }, { status: 404 });
-  // Unclaimed seeded profiles: no chat — nobody consented to an AI speaking
-  // for them, and each conversation spends the operator's model budget.
-  if (profile.claimStatus === "published") {
-    return Response.json({ error: "Chat unlocks when this profile is claimed." }, { status: 403 });
-  }
 
   const origin = req.nextUrl.origin;
   const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
