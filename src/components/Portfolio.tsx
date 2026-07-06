@@ -22,6 +22,7 @@ import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
 import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
+import { SeededBanner } from "@/components/SeededBanner";
 
 const EASE = [0.2, 0.8, 0.2, 1] as [number, number, number, number];
 const VIEWPORT = { once: true, amount: 0.2, margin: "0px 0px -6% 0px" } as const;
@@ -208,6 +209,11 @@ function Entry({ h, recency, active, spotlight, popOrigin }: { h: EventDTO; rece
       <div className="entry__date">
         {h.date}
         <span className="entry__tag">{tagLabel}</span>
+        {h.sourceUrl && (
+          <a className="entry__source" href={h.sourceUrl} target="_blank" rel="noopener noreferrer" title="source for this entry">
+            source ↗
+          </a>
+        )}
       </div>
       <h3 className="entry__title">
         <EntryIcon h={h} />
@@ -339,7 +345,7 @@ const SORTS: { v: SortKey; label: string }[] = [
 ];
 
 // ---------- ROOT ----------
-export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode }: { profile: ProfileDTO; chatEnabled?: boolean; loggedIn?: boolean; previewMode?: boolean }) {
+export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode, claimContact }: { profile: ProfileDTO; chatEnabled?: boolean; loggedIn?: boolean; previewMode?: boolean; claimContact?: string }) {
   // The owner's saved theme (from the DB) is authoritative. The floating
   // picker only sets an in-session preview override (derived, no effect), so
   // it never overrides the saved default on the next load.
@@ -527,6 +533,10 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode 
   return (
     <MotionConfig reducedMotion="user">
       <div className="logr" data-layout={layout} data-mode={PALETTES[palette]?.dark ? "dark" : "light"} style={vars} data-preview={previewMode ? "true" : undefined}>
+        {/* unclaimed seeded profile — disclosure before anything else (Phase 3) */}
+        {!previewMode && profile.claimStatus === "published" && (
+          <SeededBanner name={profile.name} handle={profile.username} contact={claimContact ?? "hello@logr.life"} />
+        )}
         {/* docked strip — replaces the profile card under the bar, tracking the
             year/title the reader is currently on (updates with the scroll-spy) */}
         {!previewMode && (

@@ -16,6 +16,8 @@ export async function GET(
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate",
+      // unverified auto-generated bios of real people stay out of search indexes
+      ...(profile.claimStatus === "published" ? { "X-Robots-Tag": "noindex" } : {}),
     },
   });
 }
