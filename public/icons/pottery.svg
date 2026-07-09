@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <clipPath id="vase">
+      <path d="M206 398 C196 356 216 330 206 300 C200 274 212 252 236 244 L230 216 C228 206 236 198 246 198 L280 196 C290 196 298 204 296 214 L290 242 C316 250 328 274 318 302 C310 330 326 358 314 398 Z"></path>
+    </clipPath>
+  </defs>
+  <g transform="rotate(2.5 260 320)">
+    <path fill="#1A1A1A" d="M206 398 C196 356 216 330 206 300 C200 274 212 252 236 244 L230 216 C228 206 236 198 246 198 L280 196 C290 196 298 204 296 214 L290 242 C316 250 328 274 318 302 C310 330 326 358 314 398 Z"></path>
+    <path fill="#D85A30" clip-path="url(#vase)" d="M180 316 C230 302 290 332 344 312 L344 348 C288 362 226 336 180 350 Z"></path>
+  </g>
+  <rect fill="#1A1A1A" x="132" y="402" width="248" height="26" rx="10" transform="rotate(-1 256 415)"></rect>
+  <rect fill="#1A1A1A" x="234" y="428" width="44" height="22"></rect>
+  <rect fill="#1A1A1A" x="198" y="450" width="116" height="18" rx="9" transform="rotate(1 256 459)"></rect>
+</svg>

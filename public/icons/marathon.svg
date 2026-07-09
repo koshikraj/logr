@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <path fill="#1A1A1A" fill-rule="evenodd" transform="rotate(-2 300 300)" d="M162 356 V306 C162 288 174 276 192 272 C232 264 258 248 278 228 C288 218 304 217 314 228 C338 254 378 280 420 290 C442 295 456 310 456 330 V356 C456 362 451 366 445 366 H173 C167 366 162 362 162 356 Z M162 322 H456 V334 H162 Z M246 288 L282 306 L276 318 L240 300 Z M282 262 L314 282 L307 293 L275 273 Z"></path>
+  <g fill="#D85A30">
+    <rect x="66" y="256" width="62" height="18" rx="9" transform="rotate(-4 97 265)"></rect>
+    <rect x="50" y="298" width="50" height="18" rx="9" transform="rotate(2 75 307)"></rect>
+    <rect x="68" y="338" width="68" height="18" rx="9" transform="rotate(-3 102 347)"></rect>
+  </g>
+</svg>

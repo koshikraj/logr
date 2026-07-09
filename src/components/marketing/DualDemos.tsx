@@ -8,104 +8,7 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const reduced = () =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// ── Cartoon SVG illustrations ──────────────────────────────────────────
-
-function ImgCode() {
-  return (
-    <svg viewBox="0 0 88 72" width="100%" height="72" aria-hidden="true" className="hv-img-svg">
-      {/* warm bg */}
-      <rect width="88" height="72" fill="#f0ece3" rx="3"/>
-      {/* laptop base */}
-      <rect x="6" y="50" width="76" height="8" rx="3" fill="#2a2520" opacity="0.72"/>
-      {/* hinge notch */}
-      <rect x="37" y="50" width="14" height="4" rx="2" fill="#1a1a1a" opacity="0.4"/>
-      {/* screen frame */}
-      <rect x="12" y="10" width="64" height="42" rx="3.5" fill="#2a2520" opacity="0.8"/>
-      {/* screen glass */}
-      <rect x="16" y="13.5" width="56" height="35" rx="2" fill="#111"/>
-      {/* accent line at top of screen */}
-      <rect x="16" y="13.5" width="56" height="2" rx="1" fill="#d85a30" opacity="0.6"/>
-      {/* code lines */}
-      <rect x="20" y="20" width="26" height="2.5" rx="1" fill="#d85a30" opacity="0.9"/>
-      <rect x="20" y="26" width="40" height="2.5" rx="1" fill="#faf8f3" opacity="0.3"/>
-      <rect x="24" y="32" width="30" height="2.5" rx="1" fill="#d85a30" opacity="0.6"/>
-      <rect x="24" y="38" width="22" height="2.5" rx="1" fill="#faf8f3" opacity="0.25"/>
-      <rect x="24" y="44" width="34" height="2.5" rx="1" fill="#faf8f3" opacity="0.18"/>
-      {/* blinking cursor */}
-      <rect x="60" y="44" width="2.5" height="2.5" rx="0.5" fill="#d85a30" opacity="0.95"/>
-      {/* camera dot */}
-      <circle cx="44" cy="12" r="1.5" fill="#d85a30" opacity="0.45"/>
-      {/* status light */}
-      <circle cx="79" cy="15" r="2.5" fill="#d85a30" opacity="0.5"/>
-    </svg>
-  );
-}
-
-function ImgTrophy() {
-  return (
-    <svg viewBox="0 0 88 72" width="100%" height="72" aria-hidden="true" className="hv-img-svg">
-      {/* warm bg */}
-      <rect width="88" height="72" fill="#f5efe6" rx="3"/>
-      {/* glow behind trophy */}
-      <ellipse cx="44" cy="38" rx="22" ry="16" fill="#d85a30" opacity="0.08"/>
-      {/* base plate */}
-      <rect x="31" y="59" width="26" height="5" rx="2" fill="#d85a30"/>
-      <rect x="27" y="62" width="34" height="3" rx="1.5" fill="#c44f28"/>
-      {/* stem */}
-      <rect x="40" y="48" width="8" height="13" fill="#d85a30"/>
-      {/* left handle */}
-      <path d="M24,16 Q14,16 14,26 Q14,36 24,36" stroke="#d85a30" strokeWidth="4" fill="none" strokeLinecap="round"/>
-      {/* right handle */}
-      <path d="M64,16 Q74,16 74,26 Q74,36 64,36" stroke="#d85a30" strokeWidth="4" fill="none" strokeLinecap="round"/>
-      {/* cup body */}
-      <path d="M24,10 L64,10 L59,48 L29,48 Z" fill="#d85a30"/>
-      {/* cup rim */}
-      <ellipse cx="44" cy="10" rx="20" ry="6" fill="#e87050"/>
-      {/* inner highlight */}
-      <ellipse cx="38" cy="24" rx="5" ry="3.5" fill="#e87050" opacity="0.35" transform="rotate(-22,38,24)"/>
-      {/* stars */}
-      <text x="4" y="28" fontSize="11" fill="#d85a30" opacity="0.55">✦</text>
-      <text x="70" y="26" fontSize="9" fill="#d85a30" opacity="0.45">✦</text>
-      <text x="6" y="54" fontSize="6" fill="#d85a30" opacity="0.28">✦</text>
-      <text x="74" y="50" fontSize="5" fill="#d85a30" opacity="0.22">✦</text>
-      {/* "1st" badge */}
-      <circle cx="44" cy="29" r="9" fill="#faf8f3" opacity="0.18"/>
-      <text x="44" y="33" fontSize="10" fontFamily="monospace" fill="#faf8f3" textAnchor="middle" opacity="0.9">1st</text>
-    </svg>
-  );
-}
-
-function ImgCrowd() {
-  return (
-    <svg viewBox="0 0 88 72" width="100%" height="72" aria-hidden="true" className="hv-img-svg">
-      {/* warm bg */}
-      <rect width="88" height="72" fill="#f5efe6" rx="3"/>
-      {/* confetti */}
-      <rect x="5"  y="4"  width="9"  height="5" rx="2" fill="#d85a30" opacity="0.7"  transform="rotate(-18,9,6)"/>
-      <rect x="26" y="2"  width="5"  height="9" rx="2" fill="#1a1a1a" opacity="0.28" transform="rotate(20,28,6)"/>
-      <rect x="52" y="3"  width="8"  height="4" rx="2" fill="#d85a30" opacity="0.5"  transform="rotate(-12,56,5)"/>
-      <rect x="70" y="6"  width="5"  height="7" rx="2" fill="#1a1a1a" opacity="0.22" transform="rotate(28,72,9)"/>
-      <circle cx="18" cy="15" r="4"   fill="#d85a30" opacity="0.38"/>
-      <circle cx="63" cy="9"  r="3"   fill="#d85a30" opacity="0.3"/>
-      <circle cx="78" cy="20" r="2"   fill="#d85a30" opacity="0.25"/>
-      <circle cx="6"  cy="26" r="1.5" fill="#d85a30" opacity="0.2"/>
-      {/* person left */}
-      <circle cx="18" cy="40" r="7" fill="#6b6862" opacity="0.65"/>
-      <path d="M11,47 Q11,68 25,68 Q25,47 25,47 Z" fill="#6b6862" opacity="0.5"/>
-      {/* person centre — winner, highlighted */}
-      <circle cx="44" cy="37" r="8" fill="#d85a30" opacity="0.88"/>
-      <path d="M36,45 Q36,68 52,68 Q52,45 52,45 Z" fill="#d85a30" opacity="0.72"/>
-      {/* raised arm */}
-      <path d="M51,46 Q60,35 68,28" stroke="#d85a30" strokeWidth="5.5" strokeLinecap="round" fill="none" opacity="0.62"/>
-      <circle cx="69" cy="26" r="3.5" fill="#d85a30" opacity="0.5"/>
-      {/* person right */}
-      <circle cx="70" cy="40" r="7" fill="#6b6862" opacity="0.55"/>
-      <path d="M63,47 Q63,68 77,68 Q77,47 77,47 Z" fill="#6b6862" opacity="0.42"/>
-    </svg>
-  );
-}
-
-// ── Human Voice: animated timeline with icons + cartoon images ─────────
+// ── Human Voice: animated timeline with icons + photos ─────────────────
 
 interface HVEntry {
   date: string;
@@ -114,38 +17,34 @@ interface HVEntry {
   title: string;
   body: string;
   tweet?: { handle: string; text: string };
-  imgVariant?: "hackathon";
+  photos?: string[];
 }
 
 const HV_ENTRIES: HVEntry[] = [
   {
-    date: "2026.05",
+    date: "2026.06",
     recency: "now",
-    icon: "🚀",
-    title: "launched logr. quiet, then not.",
-    body: "shipped to the first 50. front page by the next morning.",
-    tweet: {
-      handle: "@rajkoshik",
-      text: "logr is live. your whole story — for the humans who know you and the agents that don't. logr.life",
-    },
+    icon: "/icons/cipher-boss.svg",
+    title: "kicked off 'obfuscation: the final boss of cryptography'.",
+    body: "part i of a new series on the blog.",
   },
   {
-    date: "2026.02",
+    date: "2023.11",
     recency: "recent",
-    icon: "🏆",
-    title: "built zhentan. won the bnb openclaw hackathon.",
-    body: "top project out of 600 builders. community spun up a token within hours.",
-    imgVariant: "hackathon",
+    icon: "/icons/optimism-path.svg",
+    title: "wrote 'my techno-optimism'.",
+    body: "warm but nuanced — the direction of progress matters, not just the magnitude.",
+    photos: ["/marketing/vit-techno.png", "/marketing/vit-endgame.png"],
   },
   {
-    date: "2025.11",
+    date: "2022.02",
     recency: "mid",
-    icon: "🎤",
-    title: "devconnect, buenos aires.",
-    body: "spoke on on-chain identity. one person in the room later joined.",
+    icon: "/icons/split-diamond.svg",
+    title: "said it plainly, the day the war began.",
+    body: "and endorsed the crypto projects supporting ukraine.",
     tweet: {
-      handle: "@rajkoshik",
-      text: "just spoke on on-chain identity at devconnect BA. slides: zhentan.me/devconnect",
+      handle: "@VitalikButerin",
+      text: "Ethereum is neutral, but I am not.",
     },
   },
 ];
@@ -182,16 +81,20 @@ export function HumanVoiceDemo() {
       {shown.map((e) => (
         <div key={e.date} className={`hv-entry hv-entry--${e.recency}`}>
           <div className="hv-entry__meta">
-            {e.icon && <span className="hv-entry__icon">{e.icon}</span>}
+            {e.icon && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="hv-entry__icon" src={e.icon} alt="" width="20" height="20" />
+            )}
             <span className="hv-entry__date">{e.date}</span>
           </div>
           <div className="hv-entry__title">{e.title}</div>
           <p className="hv-entry__body">{e.body}</p>
-          {e.imgVariant === "hackathon" && (
+          {e.photos && (
             <div className="hv-images">
-              <ImgCode />
-              <ImgTrophy />
-              <ImgCrowd />
+              {e.photos.map((src) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={src} className="hv-img-svg" src={src} alt="" height="72" style={{ objectFit: "cover" }} />
+              ))}
             </div>
           )}
           {e.tweet && (
@@ -215,16 +118,16 @@ type Msg = { role: "user" | "ai"; text: string };
 
 const MV_QA = [
   {
-    q: "what's koshik working on?",
-    a: "logr — a personal life-log for humans and AI agents. launched may 2026.",
+    q: "what has vitalik been up to?",
+    a: "he just kicked off obfuscation — a new series he calls the final boss of cryptography.",
   },
   {
-    q: "has he won any hackathons?",
-    a: "yes. the bnb openclaw hackathon with zhentan. 600 competitors, feb 2026.",
+    q: "what about ai?",
+    a: "'my response to ai 2027', july 2025 — skeptical of timelines that fast.",
   },
   {
-    q: "where is he based?",
-    a: "bengaluru. building in crypto since 2018, security before that.",
+    q: "and the famous tweet?",
+    a: "feb 24, 2022: \"Ethereum is neutral, but I am not.\"",
   },
 ];
 

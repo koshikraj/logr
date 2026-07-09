@@ -48,8 +48,22 @@
 .mkt .bar__util .cta { color: var(--paper); background: var(--user-accent); border-color: var(--user-accent); }
 .mkt .bar__util .cta:hover { color: var(--paper); background: var(--user-accent); border-color: var(--user-accent); opacity: 0.92; }
 
-/* hello */
-.mkt .hello { display: flex; align-items: center; gap: 16px; padding: 28px 0 22px; border-bottom: 0.5px solid var(--rule); }
+/* hello — the maker's note, delivered like a chat message */
+.mkt .hello { display: flex; align-items: flex-start; gap: 16px; padding: 28px 0 22px; border-bottom: 0.5px solid var(--rule); }
+.mkt .hello__avatar { margin-top: 20px; }
+.mkt .hello__msg { display: flex; flex-direction: column; gap: 6px; }
+.mkt .hello__label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint); padding-left: 4px; }
+.mkt .hello__label .accent { color: var(--user-accent); }
+.mkt .hello__bubble {
+  background: var(--card-bg); border: 0.5px solid var(--rule);
+  border-radius: 4px 14px 14px 14px; padding: 13px 18px; max-width: 62ch;
+  box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.2); min-height: 47px;
+  display: flex; align-items: center;
+}
+.mkt .hello__word { animation: mkt-word-in 0.26s var(--ease-settle) both; }
+@keyframes mkt-word-in { from { opacity: 0; } to { opacity: 1; } }
+.mkt .hello__caret { display: inline-block; width: 2px; height: 14px; background: var(--user-accent); vertical-align: -2px; animation: mkt-blink 1.05s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) { .mkt .hello__word { animation: none; } }
 .mkt .hello__avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 0.5px solid var(--rule-strong); flex-shrink: 0; background: var(--paper); display: flex; align-items: center; justify-content: center; }
 .mkt .hello__avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .mkt .hello__avatar__initial { font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--muted); }
@@ -306,6 +320,32 @@
   .mkt .preview-entry__body { transition: none; }
 }
 @media (max-width: 720px) { .mkt .preview { grid-template-columns: 1fr; } .mkt .preview__copy { border-right: 0; border-bottom: 0.5px solid var(--rule); } .mkt .preview__feed::before { left: 32px; } }
+
+/* promo additions — icon chips, roles line, polaroid avatar, hero tag */
+.mkt .hero__tag { margin-top: 18px; font-family: var(--mono); font-size: 13px; letter-spacing: 0.09em; color: var(--muted); }
+.mkt .preview-entry__icon {
+  float: right; width: 38px; height: 38px; padding: 3px; margin-left: 12px;
+  border-radius: 9px; border: 0.5px solid var(--rule);
+  background: color-mix(in srgb, #fff 62%, transparent);
+}
+.mkt .preview__roles { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.05em; color: var(--faint); }
+.mkt .preview__roles .accent { color: var(--user-accent); }
+.mkt .preview__avatar {
+  width: 84px; background: #fff; padding: 5px 5px 14px; border-radius: 3px;
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.3); transform: rotate(-3deg);
+}
+.mkt .preview__avatar img { width: 74px; height: 74px; object-fit: cover; display: block; }
+
+/* 02 — give it any look: the same entry in four of the app's looks */
+.mkt .looks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.mkt .look { border: 0.5px solid var(--rule-strong); border-radius: 12px; overflow: hidden; background: var(--card-bg); }
+.mkt .look__canvas { padding: 18px 16px; min-height: 108px; display: flex; align-items: center; }
+.mkt .look__label {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint);
+  padding: 9px 13px; border-top: 0.5px solid var(--rule); display: flex; justify-content: space-between;
+}
+.mkt .look__label .accent { color: var(--user-accent); }
+@media (max-width: 900px) { .mkt .looks { grid-template-columns: repeat(2, 1fr); } }
 
 /* closing */
 .mkt .closing { padding: 120px 0 0; }

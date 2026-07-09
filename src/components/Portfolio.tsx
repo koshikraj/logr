@@ -773,7 +773,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
 
           {/* footer */}
           <footer className="foot">
-            <span className="brand"><Mark />logr — log your life.</span>
+            <span className="brand"><Mark />logr — just logr it.</span>
             <span>read by humans <span className="accent">·</span> ingested by machines</span>
           </footer>
             </div>
