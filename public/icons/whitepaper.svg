@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <path fill="#1A1A1A" fill-rule="evenodd" transform="rotate(1.2 272 264)" d="M172 96 H330 L392 158 V420 C392 429 385 436 376 436 H172 C163 436 156 429 156 420 V112 C156 103 163 96 172 96 Z M330 108 L378 156 L370 156 L330 116 Z M186 140 H282 V152 H186 Z M186 166 H306 V178 H186 Z"></path>
+  <path fill="#D85A30" fill-rule="evenodd" transform="rotate(1.2 272 264)" d="M274 236 L328 296 L274 358 L220 296 Z M214 291 H334 V301 H214 Z"></path>
+</svg>

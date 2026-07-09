@@ -11,7 +11,7 @@ const reduced = () =>
   typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ---------- STEP 02 — compose: type, attach, send, loop ----------
-const COMPOSE_LINES = ["started logr.", "shipped the new dashboard.", "spoke at devconnect."];
+const COMPOSE_LINES = ["shipped my first app.", "started pottery. terrible at it.", "ran a half marathon."];
 
 export function ComposeDemo() {
   const [typed, setTyped] = useState("");
@@ -58,7 +58,7 @@ export function ComposeDemo() {
   return (
     <div className="pw-compose" ref={rootRef}>
       <div className="pw-compose__line">
-        <span className="pw-compose__date">2026.05.21</span>
+        <span className="pw-compose__date">2026.01.02</span>
         <span className="pw-compose__colon">:</span>
         <span className="pw-compose__text">{typed}<span className="pw-compose__caret" /></span>
       </div>
@@ -81,9 +81,9 @@ export function ComposeDemo() {
 
 // ---------- STEP 03 — the /ask chat, live ----------
 const QA = [
-  { q: "what's koshik working on?", a: "sage — an ai co-signer for solana wallets. live on mainnet." },
-  { q: "since when?", a: "april 2026." },
-  { q: "what did he win?", a: "the bnb openclaw hackathon, with zhentan." },
+  { q: "what has asha been up to?", a: "she just left big tech — and wrote about it." },
+  { q: "since when?", a: "the essay went up in july 2026." },
+  { q: "does she run?", a: "a half marathon in march. 2:19." },
 ];
 
 export function AskDemo() {
@@ -117,7 +117,7 @@ export function AskDemo() {
 
   return (
     <div className="pw-mini pw-mini--ask" ref={rootRef}>
-      <div className="pw-mini__bar"><span className="accent">/</span>koshik<span className="accent">/</span>ask</div>
+      <div className="pw-mini__bar"><span className="accent">/</span>asha<span className="accent">/</span>ask</div>
       <div className="pw-mini__body">
         <div className="q">{q}<span className="pw-compose__caret" style={{ opacity: phase === "typing" ? 1 : 0 }} /></div>
         {phase === "thinking" && <div className="pw-dots" aria-label="thinking"><span /><span /><span /></div>}
@@ -129,11 +129,11 @@ export function AskDemo() {
 
 // ---------- STEP 04 — keep going: entries accumulate, with photos, in a loop ----------
 const MOMENTS = [
-  { date: "2026.05", title: "started logr." },
-  { date: "2026.06", title: "crossed 100 entries.", photo: true },
-  { date: "2026.08", title: "shipped /ask for agents." },
-  { date: "2026.10", title: "a quiet tuesday. good bread.", photo: true },
-  { date: "2027.01", title: "two years in. still here." },
+  { date: "2026.07", title: "left big tech. wrote about it." },
+  { date: "2026.08", title: "first 100 readers.", photo: true },
+  { date: "2026.09", title: "second pot. less lopsided.", photo: true },
+  { date: "2026.11", title: "a quiet tuesday. good bread." },
+  { date: "2027.01", title: "a year of logging. still here." },
 ];
 
 export function GrowDemo() {

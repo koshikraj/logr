@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "logr — log your life",
+  title: "logr — just logr it",
   description:
-    "A personal life-log built for two readers: humans, and the machines they raise. One timeline, kept once.",
+    "Log anything, for anyone. One timeline humans read and agents can just ask. Just logr it.",
 };
 
 export default function RootLayout({

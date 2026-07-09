@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g transform="rotate(-1 256 266)">
+    <path fill="#1A1A1A" fill-rule="evenodd" d="M249 82 L146 298 L249 356 Z M152 294 H249 V304 H152 Z"></path>
+    <path fill="#D85A30" fill-rule="evenodd" d="M263 80 L369 294 L263 358 Z M263 292 H364 V302 H263 Z"></path>
+    <path fill="#1A1A1A" d="M148 320 L249 396 L249 452 Z"></path>
+    <path fill="#D85A30" d="M366 318 L263 394 L263 450 Z"></path>
+  </g>
+</svg>
