@@ -25,6 +25,13 @@ const HOSTS: Record<string, string> = {
   "whatsapp.com": "whatsapp",
   "api.whatsapp.com": "whatsapp",
   "chat.whatsapp.com": "whatsapp",
+  "peerlist.io": "peerlist",
+  "topmate.io": "topmate",
+  "dev.to": "dev.to",
+  "producthunt.com": "producthunt",
+  "patreon.com": "patreon",
+  "daily.dev": "daily.dev",
+  "app.daily.dev": "daily.dev",
 };
 
 /** Derive a canonical platform label from a normalized href. */
