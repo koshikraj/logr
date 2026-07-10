@@ -154,13 +154,13 @@
   font-family: var(--sans); font-size: 13px; color: var(--muted); letter-spacing: 0; margin-top: 2px;
 }
 .profile__meta dt { color: var(--faint); }
-.profile__meta dd { margin: 0; color: var(--ink); }
+.profile__meta dd { margin: 0; color: var(--ink); min-width: 0; }
 .profile__meta dd a { border-bottom: 0.5px solid var(--rule-strong); padding-bottom: 1px; transition: border-color 160ms ease; }
 .profile__meta dd a:hover { border-color: var(--user-accent); color: var(--user-accent); }
 .profile__meta dd .accent { color: var(--user-accent); }
 
 /* social icons (the "elsewhere" row) */
-.profile__socials { display: inline-flex; align-items: center; gap: 14px; }
+.profile__socials { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .profile__meta dd a.profile__social { border: 0; padding: 0; color: var(--muted); display: inline-flex; transition: color 160ms ease, transform 160ms ease; }
 .profile__meta dd a.profile__social:hover { color: var(--user-accent); transform: translateY(-1px); }
 .profile__social svg { width: 18px; height: 18px; display: block; }
@@ -663,14 +663,14 @@
 /* the ask launcher — the primary action, so it carries the brand accent.
    collapsed: a pill whose label rotates through the suggested questions.
    open: the same box widens into an input bar; suggestions drop beneath. */
-.logr .ask-launch { position: relative; width: 212px; transition: width 300ms cubic-bezier(0.32, 0.72, 0.28, 1); }
+.logr .ask-launch { position: relative; width: 240px; transition: width 300ms cubic-bezier(0.32, 0.72, 0.28, 1); }
 .logr .ask-launch.is-open { width: min(420px, calc(100vw - 200px)); }
 
 .logr .ask-launch__btn {
   display: flex; align-items: center; gap: 6px; width: 100%;
-  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em;
   color: var(--paper); background: var(--user-accent); border: 0.5px solid var(--user-accent);
-  padding: 6px 13px; transition: opacity 180ms ease;
+  padding: 6px 14px; transition: opacity 180ms ease;
 }
 .logr .ask-launch__btn:hover { opacity: 0.92; }
 .logr .ask-launch__btn > svg { display: block; flex-shrink: 0; color: var(--paper); }
@@ -694,13 +694,13 @@
 .logr .ask-launch.is-open .ask-launch__form { opacity: 1; pointer-events: auto; }
 .logr .ask-launch__form > svg { display: block; flex-shrink: 0; color: var(--user-accent); }
 .logr .ask-launch__form input {
-  flex: 1; min-width: 0; font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; letter-spacing: 0.05em;
   color: var(--ink); background: transparent; border: 0; outline: none;
 }
 .logr .ask-launch__form input::placeholder { color: var(--faint); }
 .logr .ask-launch__form button {
-  flex-shrink: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
-  color: var(--paper); background: var(--user-accent); font-size: 12px; line-height: 1;
+  flex-shrink: 0; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  color: var(--paper); background: var(--user-accent); font-size: 13px; line-height: 1;
   transition: opacity 160ms ease;
 }
 .logr .ask-launch__form button:disabled { opacity: 0.35; }
@@ -724,7 +724,7 @@
 .logr .ask-launch__drop button:hover { background: color-mix(in srgb, var(--user-accent) 7%, transparent); color: var(--user-accent); }
 
 @media (max-width: 600px) {
-  .logr .ask-launch { width: 178px; }
+  .logr .ask-launch { width: min(208px, calc(100vw - 175px)); }
   .logr .ask-launch.is-open { width: calc(100vw - 170px); }
   .logr .ask-launch__form input { font-size: 16px; } /* prevent iOS focus zoom */
 }
