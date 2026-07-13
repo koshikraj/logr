@@ -29,7 +29,7 @@ export async function unfurl(rawUrl: string): Promise<Unfurled> {
   try {
     const res = await fetch(u.toString(), {
       headers: {
-        "user-agent": "Mozilla/5.0 (compatible; logr/1.0; +https://logr.life)",
+        "user-agent": "Mozilla/5.0 (compatible; logr/1.0; +https://logr.it)",
         accept: "text/html,application/xhtml+xml",
       },
       signal: AbortSignal.timeout(6000),

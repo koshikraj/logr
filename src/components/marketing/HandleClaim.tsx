@@ -11,7 +11,7 @@ export function HandleClaim({ id, autoFocus }: { id: string; autoFocus?: boolean
   return (
     <form action={startSignupAction} style={{ display: "contents" }}>
       <label className="handle-input" htmlFor={id}>
-        <span className="handle-input__prefix">logr.life<span className="accent">/</span></span>
+        <span className="handle-input__prefix">logr.it<span className="accent">/</span></span>
         <input
           id={id}
           name="handle"

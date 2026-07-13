@@ -146,7 +146,7 @@ export function ProfileForm({
                 )}
               </span>
             ) : (
-              <span className="field__hint">your page lives at logr.life/&lt;handle&gt; — changing it changes your URL.</span>
+              <span className="field__hint">your page lives at logr.it/&lt;handle&gt; — changing it changes your URL.</span>
             )}
           </div>
         </div>

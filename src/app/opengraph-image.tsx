@@ -54,7 +54,7 @@ export default async function OgImage() {
             one timeline humans read — and agents can just ask.
           </div>
           <div style={{ display: "flex", fontSize: 20, color: MUTED, marginTop: 8 }}>
-            logr<span style={{ color: ACCENT }}>.</span>life
+            logr<span style={{ color: ACCENT }}>.</span>it
           </div>
         </div>
       </div>

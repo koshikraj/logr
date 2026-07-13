@@ -553,7 +553,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
       <div className="logr" data-layout={layout} data-mode={PALETTES[palette]?.dark ? "dark" : "light"} style={vars} data-preview={previewMode ? "true" : undefined}>
         {/* unclaimed seeded profile — disclosure before anything else (Phase 3) */}
         {!previewMode && profile.claimStatus === "published" && (
-          <SeededBanner name={profile.name} handle={profile.username} contact={claimContact ?? "hello@logr.life"} />
+          <SeededBanner name={profile.name} handle={profile.username} contact={claimContact ?? "hello@logr.it"} />
         )}
         {/* docked strip — replaces the profile card under the bar, tracking the
             year/title the reader is currently on (updates with the scroll-spy) */}
@@ -662,7 +662,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
                 <div className="profile__card">
                   <div className="profile__main">
                 <p className="profile__handle">
-                  logr.life<span className="accent">/</span>{profile.username}
+                  logr.it<span className="accent">/</span>{profile.username}
                 </p>
 
                 {/* polaroid + name, inline */}

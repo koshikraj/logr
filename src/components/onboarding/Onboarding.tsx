@@ -291,7 +291,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
             <span className="onb__pd-label">events incoming</span>
           </div>
           <p className="onb__pub-msg">your page is getting ready.</p>
-          <span className="onb__pub-handle">logr.life/<span>{handle}</span></span>
+          <span className="onb__pub-handle">logr.it/<span>{handle}</span></span>
         </div>
       )}
 
@@ -361,7 +361,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
                   />
 
                   <div className="onb__handle-row">
-                    <span className="onb__handle-prefix">logr.life<span className="onb__slash">/</span></span>
+                    <span className="onb__handle-prefix">logr.it<span className="onb__slash">/</span></span>
                     <input
                       className="onb__handle-input"
                       value={handle}
@@ -542,7 +542,7 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
         {/* RIGHT: LIVE PREVIEW — full height, no nav bar */}
         <aside className="onb__preview" aria-label="live preview">
           <div className="onb__preview__head">
-            <span>logr.life/{handle || "you"}</span>
+            <span>logr.it/{handle || "you"}</span>
             <span className="onb__live">
               <span className="onb__live__dot" aria-hidden="true" />
               LIVE

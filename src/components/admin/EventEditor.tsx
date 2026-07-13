@@ -331,7 +331,7 @@ export function EventEditor({
       <aside className="emodal__preview">
         <div className="emodal__preview-head">
           <span className="emodal__preview-cap"><span aria-hidden="true" />live preview</span>
-          <span className="emodal__preview-domain">logr.life/{username}</span>
+          <span className="emodal__preview-domain">logr.it/{username}</span>
         </div>
 
         <div className="pv-entry-wrap">

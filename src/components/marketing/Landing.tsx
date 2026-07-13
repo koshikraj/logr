@@ -130,7 +130,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           <div className="hero__cta">
             <HandleClaim id="handle-hero" />
             <span className="hero__or">or</span>
-            <Link className="hero__see" href="/vitalik">see one in motion · logr.life/vitalik →</Link>
+            <Link className="hero__see" href="/vitalik">see one in motion · logr.it/vitalik →</Link>
           </div>
         </section>
 
@@ -145,7 +145,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           </div>
           <div className="preview">
             <div className="preview__copy">
-              <span className="preview__handle">logr.life<span className="accent">/</span>asha</span>
+              <span className="preview__handle">logr.it<span className="accent">/</span>asha</span>
               <span className="preview__name">asha<span className="colon">:</span></span>
               <p className="preview__bio">shipped an app in january. quit big tech in july. logged all of it, one line at a time.</p>
               <p className="preview__roles">for artists <span className="accent">·</span> founders <span className="accent">·</span> influencers <span className="accent">·</span> devs <span className="accent">·</span> anyone</p>
@@ -205,7 +205,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/marketing/vitalik.jpg" alt="" />
               </span>
-              <span className="preview__handle">logr.life<span className="accent">/</span>vitalik</span>
+              <span className="preview__handle">logr.it<span className="accent">/</span>vitalik</span>
               <span className="preview__name">vitalik buterin<span className="colon">:</span></span>
               <p className="preview__bio">wrote the ethereum white paper at nineteen. the log runs from a bitcoin forum in 2011 to the final boss of cryptography.</p>
               <span className="preview__link">read the full log →</span>
@@ -262,13 +262,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <div className="step__num">01</div>
               <div className="step__copy">
                 <h3 className="step__title">claim a handle.</h3>
-                <p className="step__body">your handle is your address. <span style={{ color: "var(--user-accent)" }}>logr.life/asha</span> — the page, the llm.txt, the ask-anything chat. one handle, one life.</p>
+                <p className="step__body">your handle is your address. <span style={{ color: "var(--user-accent)" }}>logr.it/asha</span> — the page, the llm.txt, the ask-anything chat. one handle, one life.</p>
               </div>
               <div className="step__demo">
                 <div className="preview-window">
-                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.life<span className="accent">/</span>claim</span></div>
+                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.it<span className="accent">/</span>claim</span></div>
                   <div className="preview-window__body">
-                    <div className="pw-handle"><span className="prefix">logr.life<span className="accent">/</span></span><span className="name">asha</span></div>
+                    <div className="pw-handle"><span className="prefix">logr.it<span className="accent">/</span></span><span className="name">asha</span></div>
                     <div className="pw-row"><span className="pill">available</span><span>· <span className="accent">free</span> forever</span></div>
                     <div className="pw-cta"><span className="pw-cta__btn">claim →</span></div>
                   </div>
@@ -283,7 +283,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               </div>
               <div className="step__demo">
                 <div className="preview-window">
-                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.life<span className="accent">/</span>asha<span className="accent">/</span>new</span></div>
+                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.it<span className="accent">/</span>asha<span className="accent">/</span>new</span></div>
                   <div className="preview-window__body">
                     <ComposeDemo />
                   </div>
@@ -324,7 +324,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               </div>
               <div className="step__demo">
                 <div className="preview-window">
-                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.life<span className="accent">/</span>asha</span></div>
+                  <div className="preview-window__bar"><span className="preview-window__dots"><span /><span /><span /></span><span className="url">logr.it<span className="accent">/</span>asha</span></div>
                   <div className="preview-window__body">
                     <GrowDemo />
                   </div>
@@ -371,7 +371,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <h4>elsewhere</h4>
               <a href="https://x.com/uselogr" target="_blank" rel="noopener noreferrer">x · @uselogr</a>
               <a href="https://github.com/koshikraj/logr" target="_blank" rel="noopener noreferrer">github · koshikraj/logr</a>
-              <a href="mailto:hello@logr.life">contact · hello@logr.life</a>
+              <a href="mailto:hello@logr.it">contact · hello@logr.it</a>
             </nav>
           </div>
           <div className="foot__bottom">
