@@ -729,6 +729,36 @@
   .logr .ask-launch__form input { font-size: 16px; } /* prevent iOS focus zoom */
 }
 
+/* dedicated /[username]/ask page — the chat, full-bleed, in the owner's palette */
+.ask-page {
+  min-height: 100dvh; display: flex; flex-direction: column;
+  max-width: 720px; margin: 0 auto; padding: 10px 20px 20px;
+}
+.ask-page__hero { padding: 24px 0 2px; }
+.ask-page__handle { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--muted); }
+.ask-page__handle .accent, .ask-page .accent { color: var(--user-accent); }
+.ask-page__title {
+  margin-top: 8px;
+  font-family: var(--serif); font-size: clamp(26px, 4.2vw, 38px);
+  letter-spacing: -0.03em; line-height: 1.05; color: var(--ink);
+}
+.ask-page__sub { margin-top: 8px; font-family: var(--serif); font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 52ch; }
+.ask-page__panel {
+  flex: 1; min-height: 340px; display: flex; flex-direction: column;
+  margin-top: 18px; overflow: hidden;
+  background: var(--paper); border: 0.5px solid var(--rule-strong); border-radius: 16px;
+  box-shadow: 0 30px 70px -44px rgba(0, 0, 0, 0.4);
+}
+.ask-page__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding-top: 14px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--faint);
+}
+.ask-page__foot .mark { font-size: 9px; margin-right: 4px; }
+@media (max-width: 600px) {
+  .ask-page { padding: 6px 14px 14px; }
+  .ask-page__hero { padding-top: 16px; }
+}
+
 /* centered modal window */
 .ask__scrim {
   position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;
@@ -841,13 +871,17 @@
 }
 .ask__followups button:hover { color: var(--user-accent); border-color: var(--user-accent); }
 .ask__head {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; gap: 10px;
   padding: 12px 16px; border-bottom: 0.5px solid var(--rule);
   font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted);
 }
+.ask__head > span:first-child { margin-right: auto; }
 .ask__head .accent { color: var(--user-accent); }
 .ask__head button { font-family: var(--serif); font-size: 18px; color: var(--muted); line-height: 1; padding: 0 4px; }
 .ask__head button:hover { color: var(--ink); }
+/* "open as full page" — sits between the title and the close button */
+.ask__expand { font-family: var(--mono); font-size: 14px; color: var(--muted); line-height: 1; padding: 0 4px; transition: color 140ms ease; }
+.ask__expand:hover { color: var(--user-accent); }
 .ask__msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .ask__empty { color: var(--muted); font-family: var(--serif); font-size: 15px; line-height: 1.5; }
 .ask__suggest { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
