@@ -729,10 +729,14 @@
   .logr .ask-launch__form input { font-size: 16px; } /* prevent iOS focus zoom */
 }
 
-/* dedicated /[username]/ask page — the chat, full-bleed, in the owner's palette */
+/* dedicated /[username]/ask page — the chat, full-bleed, in the owner's palette.
+   Locked to the viewport height: the panel takes the leftover space and the
+   messages scroll INSIDE it, so the input stays pinned at the bottom and the
+   pin-question-to-top behavior works exactly like the modal. Width matches
+   the profile page (.logr .page). */
 .ask-page {
-  min-height: 100dvh; display: flex; flex-direction: column;
-  max-width: 720px; margin: 0 auto; padding: 10px 20px 20px;
+  height: 100dvh; display: flex; flex-direction: column;
+  max-width: 988px; margin: 0 auto; padding: 10px 32px 20px;
 }
 .ask-page__hero { padding: 24px 0 2px; }
 .ask-page__handle { font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em; color: var(--muted); }
@@ -744,7 +748,7 @@
 }
 .ask-page__sub { margin-top: 8px; font-family: var(--serif); font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 52ch; }
 .ask-page__panel {
-  flex: 1; min-height: 340px; display: flex; flex-direction: column;
+  flex: 1 1 0; min-height: 240px; display: flex; flex-direction: column;
   margin-top: 18px; overflow: hidden;
   background: var(--paper); border: 0.5px solid var(--rule-strong); border-radius: 16px;
   box-shadow: 0 30px 70px -44px rgba(0, 0, 0, 0.4);
