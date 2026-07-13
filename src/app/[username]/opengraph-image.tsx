@@ -114,7 +114,7 @@ export default async function OgImage({ params }: Props) {
           >
             {/* handle */}
             <div style={{ display: "flex", fontSize: 15, color: MUTED, fontFamily: "monospace", letterSpacing: "0.07em" }}>
-              logr.life<span style={{ color: ACCENT }}>/</span>{username}
+              logr.it<span style={{ color: ACCENT }}>/</span>{username}
             </div>
 
             {/* polaroid + name (inline row) */}

@@ -61,7 +61,7 @@ const CLAIM_OPTIONS = [
 
 export function SeededBanner({ name, handle, contact }: { name?: string; handle: string; contact: string }) {
   const [open, setOpen] = useState(false);
-  const removal = `mailto:${contact}?subject=${encodeURIComponent(`Remove logr.life/${handle}`)}`;
+  const removal = `mailto:${contact}?subject=${encodeURIComponent(`Remove logr.it/${handle}`)}`;
   const first = name ? name.split(" ")[0] : "you";
 
   useEffect(() => {

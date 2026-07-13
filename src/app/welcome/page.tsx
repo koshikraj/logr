@@ -48,7 +48,7 @@ export default async function WelcomePage({
             <div>
               <div style={{ fontFamily: "var(--serif)", fontSize: 19, color: "var(--ink)" }}>{claimable.name}</div>
               <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--muted)" }}>
-                logr.life/{claimable.username} · {claimable.eventCount} events
+                logr.it/{claimable.username} · {claimable.eventCount} events
               </div>
             </div>
           </div>

@@ -10,6 +10,6 @@ export async function PortfolioPage({ profile }: { profile: ProfileDTO }) {
   const chatEnabled = isChatEnabled() || process.env.NODE_ENV !== "production";
   const session = await auth();
   const loggedIn = !!session?.user;
-  const claimContact = process.env.CLAIM_CONTACT_EMAIL ?? "hello@logr.life";
+  const claimContact = process.env.CLAIM_CONTACT_EMAIL ?? "hello@logr.it";
   return <Portfolio profile={profile} chatEnabled={chatEnabled} loggedIn={loggedIn} claimContact={claimContact} />;
 }

@@ -299,7 +299,7 @@ export function AddEventsDialog({
               <aside className="emodal__preview">
                 <div className="emodal__preview-head">
                   <span className="emodal__preview-cap"><span aria-hidden="true" />live preview</span>
-                  <span className="emodal__preview-domain">logr.life/{username}</span>
+                  <span className="emodal__preview-domain">logr.it/{username}</span>
                 </div>
                 <div className="pv-entry-wrap pv-entry-wrap--stack">
                   {items.filter((it) => it.include).map((it, i) => <PvEntry key={i} e={it} />)}
