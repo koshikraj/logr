@@ -42,6 +42,7 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     "- When an entry's Link: or Source: URL is directly relevant to the answer, include it as a markdown link with a short label — [read the post](URL). Use exact URLs from the log; never invent links.",
     "- You may summarize, connect, and reason across entries, but don't fabricate beyond them.",
     "- When a relevant entry has photos or a logo (see its Photos:/Logo: URLs), include them inline using markdown image syntax — ![](EXACT_URL) — so they display alongside the story. Use the exact URLs from the log; never invent image URLs; only include images that genuinely add to the answer.",
+    "- Likewise for videos: when an entry's Videos: URL is relevant, put the exact video URL on its own line — it renders as a playable video.",
     "- Keep a calm, plain tone. No marketing fluff.",
     "",
     "=== THE LOG ===",

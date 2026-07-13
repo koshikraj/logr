@@ -8,6 +8,7 @@ import { useSheetDrag } from "@/components/ui/useSheetDrag";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { SOCIAL_ICONS } from "@/components/social-icons";
 import { detectPlatform } from "@/lib/socials";
+import { parseVideoUrl } from "@/lib/video";
 import type { MediaItem } from "@/lib/profile";
 
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean };
@@ -194,7 +195,7 @@ export function ChatWidget({
               const isLast = i === messages.length - 1;
               const streamingThis = streaming && isLast;
               const loading = streamingThis && !m.content;
-              const { text, images, links } = parseAnswer(m.content, streamingThis);
+              const { text, gallery, links } = parseAnswer(m.content, streamingThis);
               return (
                 <div key={i} className="ask__msg ask__msg--assistant">
                   {loading ? (
@@ -236,16 +237,25 @@ export function ChatWidget({
                           })}
                         </div>
                       )}
-                      {images.length > 0 && (
+                      {gallery.length > 0 && (
                         <div className="ask__imgs">
-                          {images.map((u, idx) => (
+                          {gallery.map((g, idx) => (
                             <button
-                              key={u}
-                              onClick={() => setViewer({ items: images.map(toMedia), index: idx })}
-                              aria-label="view image"
+                              key={g.url}
+                              onClick={() => setViewer({ items: gallery, index: idx })}
+                              aria-label={g.kind === "video" ? "play video" : "view image"}
                             >
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={u} alt="" loading="lazy" />
+                              {g.kind === "video" && !g.poster ? (
+                                <span className="ask__imgs__vbg" />
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={g.kind === "video" ? g.poster! : g.url} alt="" loading="lazy" />
+                              )}
+                              {g.kind === "video" && (
+                                <span className="ask__imgs__play" aria-hidden="true">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                                </span>
+                              )}
                             </button>
                           ))}
                         </div>
@@ -291,38 +301,64 @@ export function ChatWidget({
   );
 }
 
-const toMedia = (url: string): MediaItem => ({ kind: "image", url, poster: null, provider: null, title: null });
-
 const IMG_EXT = /\.(?:png|jpe?g|webp|gif|avif)(?:\?\S*)?$/i;
 
-/** Split a (possibly still streaming) answer into prose, gallery images and
- *  reference links. Images leave the text entirely; links stay inline AND
- *  are collected for the chip row. Mid-stream, unfinished markdown (a
- *  half-typed link, an unclosed **bold**) is patched so it never flashes
- *  as raw syntax. */
-function parseAnswer(content: string, streaming: boolean): { text: string; images: string[]; links: ChatLink[] } {
-  const images: string[] = [];
-  const links: ChatLink[] = [];
+/** Recognize a video URL (incl. the youtube-nocookie embed URLs the log
+ *  stores) and shape it for the Lightbox player. */
+function toVideoItem(url: string): MediaItem | null {
+  const nc = url.match(/youtube-nocookie\.com\/embed\/([A-Za-z0-9_-]{11})/);
+  if (nc) {
+    return {
+      kind: "video",
+      url: `https://www.youtube-nocookie.com/embed/${nc[1]}`,
+      poster: `https://i.ytimg.com/vi/${nc[1]}/hqdefault.jpg`,
+      provider: "youtube",
+      title: null,
+    };
+  }
+  const v = parseVideoUrl(url);
+  return v ? { kind: "video", url: v.embedUrl, poster: v.poster, provider: v.provider, title: null } : null;
+}
 
-  // markdown images + bare image URLs → filmstrip
+/** Split a (possibly still streaming) answer into prose, a media gallery
+ *  (images + playable videos) and reference links. Media URLs leave the
+ *  text entirely; links stay inline AND are collected for the chip row.
+ *  Mid-stream, unfinished markdown (a half-typed link, an unclosed
+ *  **bold**) is patched so it never flashes as raw syntax. */
+function parseAnswer(content: string, streaming: boolean): { text: string; gallery: MediaItem[]; links: ChatLink[] } {
+  const gallery: MediaItem[] = [];
+  const links: ChatLink[] = [];
+  const pushMedia = (url: string) => {
+    gallery.push(toVideoItem(url) ?? { kind: "image", url, poster: null, provider: null, title: null });
+  };
+
+  // markdown images + bare image/video URLs → gallery
   let text = content.replace(/!\[[^\]]*\]\(\s*(\S+?)\s*\)/g, (_m, u: string) => {
-    images.push(u);
+    pushMedia(u);
     return "";
   });
   text = text.replace(/(https?:\/\/\S+?\.(?:png|jpe?g|webp|gif|avif)(?:\?\S*)?)(?![^([]*[)\]])/gi, (u) => {
-    images.push(u);
+    pushMedia(u);
     return "";
   });
 
-  // collect markdown links (kept inline in the prose)
+  // collect markdown links; video hrefs also get a playable gallery tile
   for (const m of text.matchAll(/\[([^\]]+)\]\(\s*(https?:\/\/[^)\s]+)\s*\)/g)) {
-    if (!IMG_EXT.test(m[2])) links.push({ label: m[1], href: m[2] });
+    if (IMG_EXT.test(m[2])) continue;
+    if (toVideoItem(m[2])) pushMedia(m[2]);
+    else links.push({ label: m[1], href: m[2] });
   }
-  // bare URLs that aren't part of a markdown link → chip with the hostname
+  // bare URLs that aren't part of a markdown link: videos → gallery,
+  // the rest → chip with the hostname
   const withoutMd = text.replace(/\[([^\]]+)\]\(\s*https?:\/\/[^)\s]+\s*\)/g, "$1");
   for (const m of withoutMd.matchAll(/https?:\/\/[^\s<>()"']+/g)) {
     const href = m[0].replace(/[.,;:!?]+$/, "");
     if (IMG_EXT.test(href)) continue;
+    if (toVideoItem(href)) {
+      pushMedia(href);
+      text = text.replace(href, "");
+      continue;
+    }
     try {
       links.push({ label: new URL(href).hostname.replace(/^www\./, ""), href });
     } catch { /* not a URL after all */ }
@@ -336,11 +372,12 @@ function parseAnswer(content: string, streaming: boolean): { text: string; image
 
   text = text.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 
-  const seen = new Set<string>();
+  const seenMedia = new Set<string>();
+  const seenLinks = new Set<string>();
   return {
     text,
-    images: Array.from(new Set(images)),
-    links: links.filter((l) => !seen.has(l.href) && seen.add(l.href)),
+    gallery: gallery.filter((g) => !seenMedia.has(g.url) && seenMedia.add(g.url)),
+    links: links.filter((l) => !seenLinks.has(l.href) && seenLinks.add(l.href)),
   };
 }
 

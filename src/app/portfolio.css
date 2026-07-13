@@ -766,9 +766,23 @@
   overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 4px;
   scrollbar-width: thin;
 }
-.ask__imgs button { flex-shrink: 0; scroll-snap-align: start; width: 150px; cursor: zoom-in; }
+.ask__imgs button { position: relative; flex-shrink: 0; scroll-snap-align: start; width: 150px; cursor: zoom-in; }
 .ask__imgs img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 0.5px solid var(--rule-strong); border-radius: 8px; transition: transform 200ms ease; }
 .ask__imgs button:hover img { transform: scale(1.02); }
+/* video tiles: poster (or dark placeholder) + play badge */
+.ask__imgs__vbg {
+  display: block; width: 100%; aspect-ratio: 4 / 3; border-radius: 8px;
+  border: 0.5px solid var(--rule-strong);
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+}
+.ask__imgs__play {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; pointer-events: none;
+}
+.ask__imgs__play svg {
+  box-sizing: content-box; padding: 8px;
+  background: rgba(20, 18, 14, 0.55); border-radius: 50%;
+}
 
 /* markdown inside answers — prose, highlighted facts, safe links */
 .ask__md p { margin: 0 0 8px; }
