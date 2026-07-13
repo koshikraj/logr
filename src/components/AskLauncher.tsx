@@ -6,14 +6,11 @@ import { TypingLabel } from "@/components/TypingLabel";
 /** The top-bar "ask" affordance. Collapsed, it's an accent pill that types
  *  through the suggested questions. Clicked, it morphs in place into a wider
  *  input bar with the suggestions as a dropdown beneath. Submitting (typed
- *  or picked) hands the question to the chat window via onAsk. */
-export function AskLauncher({ name, onAsk }: { name: string; onAsk: (q: string) => void }) {
+ *  or picked) hands the question to the chat window via onAsk.
+ *  `suggestions` come from the profile's own log (lib/suggest.ts) and are
+ *  swapped for the model's follow-ups once a conversation happens. */
+export function AskLauncher({ name, suggestions, onAsk }: { name: string; suggestions: string[]; onAsk: (q: string) => void }) {
   const first = name.split(" ")[0].toLowerCase();
-  const suggestions = [
-    `what is ${first} building now?`,
-    "what have they shipped?",
-    "what's their background?",
-  ];
   const [expanded, setExpanded] = useState(false);
   const [value, setValue] = useState("");
   const wrapRef = useRef<HTMLDivElement>(null);

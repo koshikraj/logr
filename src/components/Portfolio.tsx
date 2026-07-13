@@ -15,6 +15,7 @@ import {
 } from "@/lib/theme";
 import { isImageIcon } from "@/lib/icon";
 import { detectPlatform } from "@/lib/socials";
+import { seedQuestions } from "@/lib/suggest";
 import { SOCIAL_ICONS } from "@/components/social-icons";
 import { Lightbox } from "@/components/ui/Lightbox";
 import { Mark } from "@/components/Mark";
@@ -320,6 +321,10 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
   const [chatOpen, setChatOpen] = useState(false);
   const [pendingAsk, setPendingAsk] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  // ask suggestions: log-derived seeds until a conversation happens, then the
+  // model's own follow-ups take over the launcher for the rest of the visit
+  const askSeeds = useMemo(() => seedQuestions(profile), [profile]);
+  const [liveAsk, setLiveAsk] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   // open on the owner's preferred order; falls back to "newest" by default.
   const [sort, setSort] = useState<SortKey>(profile.theme.defaultView ?? "newest");
@@ -533,6 +538,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
               {chatEnabled && (
                 <AskLauncher
                   name={profile.name}
+                  suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
                   onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
                 />
               )}
@@ -753,6 +759,8 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
             onClose={() => setChatOpen(false)}
             ask={pendingAsk}
             onAskHandled={() => setPendingAsk(null)}
+            suggestions={askSeeds}
+            onSuggestions={setLiveAsk}
           />
         )}
         {!previewMode && <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />}

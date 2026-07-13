@@ -35,6 +35,8 @@ export function ChatWidget({
   onClose,
   ask,
   onAskHandled,
+  suggestions: seedSuggestions,
+  onSuggestions,
 }: {
   username: string;
   name: string;
@@ -43,6 +45,10 @@ export function ChatWidget({
   /** a question handed in from the launcher — sent automatically on open */
   ask?: string | null;
   onAskHandled?: () => void;
+  /** log-derived seed questions (lib/suggest.ts); also the chip fallback */
+  suggestions?: string[];
+  /** reports the model's follow-ups upward (they feed the ask launcher) */
+  onSuggestions?: (qs: string[]) => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -139,6 +145,8 @@ export function ChatWidget({
         acc += dec.decode(value, { stream: true });
         setMessages((m) => replaceLast(m, acc));
       }
+      const { suggestions: dyn } = parseAnswer(acc, false);
+      if (dyn.length) onSuggestions?.(dyn);
     } catch {
       setMessages((m) => replaceLast(m, "Sorry, the connection dropped.", true));
     } finally {
@@ -164,7 +172,9 @@ export function ChatWidget({
 
   if (!open) return null;
   const first = name.split(" ")[0].toLowerCase();
-  const suggestions = [`what is ${first} building now?`, "what have they shipped?", "what's their background?"];
+  const suggestions = seedSuggestions?.length
+    ? seedSuggestions
+    : [`what is ${first} building now?`, "what have they shipped?", "what's their background?"];
   const followups = suggestions.filter(
     (s) => !messages.some((m) => m.role === "user" && m.content.toLowerCase() === s.toLowerCase())
   );
