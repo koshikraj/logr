@@ -5,12 +5,18 @@ import type { ProfileDTO } from "@/lib/profile";
  * the profile's own structured data, so every question is answerable from
  * the log *by construction* (the grounded chat's core promise). No LLM, no
  * queries: pure string selection over the already-loaded DTO.
+ *
+ * Wording is entity-neutral: a logr can be a person, a brand, a community
+ * or a project, so questions avoid pronouns and person-only activities
+ * ("talks given", "beside work") — the subject is always the name, and the
+ * activities are the tags the profile actually logged. (Per-kind voice and
+ * owner-curated questions are tracked in a follow-up issue.)
  */
 export function seedQuestions(profile: ProfileDTO): string[] {
-  const first = (profile.name.trim().split(/\s+/)[0] || "them").toLowerCase();
+  const who = (profile.name.trim().split(/\s+/)[0] || "them").toLowerCase();
   const out: string[] = [];
 
-  if (profile.status) out.push(`what is ${first} building now?`);
+  if (profile.status) out.push(`what is ${who} up to right now?`);
 
   // a featured event with a slot-friendly title gets name-dropped — the
   // strongest hook, but only when the title reads naturally in a question
@@ -20,12 +26,20 @@ export function seedQuestions(profile: ProfileDTO): string[] {
 
   // tag presence guarantees the log can answer the capability question
   const tags = new Set(profile.events.flatMap((e) => e.tags));
-  if (tags.has("talk")) out.push(`what talks has ${first} given?`);
-  if (tags.has("writing")) out.push(`what has ${first} written?`);
-  if (tags.has("side_quest")) out.push(`what does ${first} do beside work?`);
+  if (tags.has("milestone")) out.push("what are the biggest milestones?");
+  if (tags.has("work")) out.push(`what has ${who} launched?`);
+  if (tags.has("writing")) out.push(`what has ${who} published?`);
+  if (tags.has("talk")) out.push("any talks or events?");
+  if (tags.has("side_quest")) out.push("what happens off the main track?");
+
+  // a log with real history invites the origin question
+  const years = profile.events.length
+    ? new Date().getFullYear() - Math.min(...profile.events.map((e) => e.year))
+    : 0;
+  if (years >= 3) out.push(`how did ${who} start?`);
 
   // generic closers so there are always enough
-  out.push("what have they shipped?", "what's their background?");
+  out.push("what's the story so far?", "what's new recently?");
 
   const seen = new Set<string>();
   // the launcher pill is ~200px of mono type — keep phrases short

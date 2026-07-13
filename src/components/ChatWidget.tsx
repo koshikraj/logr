@@ -174,7 +174,7 @@ export function ChatWidget({
   const first = name.split(" ")[0].toLowerCase();
   const suggestions = seedSuggestions?.length
     ? seedSuggestions
-    : [`what is ${first} building now?`, "what have they shipped?", "what's their background?"];
+    : [`what is ${first} up to right now?`, "what's the story so far?", "what's new recently?"];
   const followups = suggestions.filter(
     (s) => !messages.some((m) => m.role === "user" && m.content.toLowerCase() === s.toLowerCase())
   );
