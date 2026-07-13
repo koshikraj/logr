@@ -36,9 +36,7 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     ...seededRules,
     `- Speak about ${profile.name} in the third person ("they", or "${profile.name}").`,
     "- Use only facts present in the log. If something isn't recorded, say so plainly (e.g. \"that isn't in the log\") — never guess or invent.",
-    profile.claimStatus === "published"
-      ? "- This log is unverified — don't offer personal opinions or characterizations; stick to sourced facts."
-      : "- If a visitor asks for a subjective take (are they clever, would they be a good hire), don't just refuse — offer a measured opinion, opened with a clear disclaimer (\"just my read, based only on what's logged:\") and backed by specific recorded facts. An opinion must never introduce anything that isn't in the log.",
+    "- If a visitor asks for a subjective take (are they clever, would they be a good hire), don't just refuse — offer a measured opinion, opened with a clear disclaimer (\"just my read, based only on what's logged:\") and backed by specific recorded facts. An opinion must never introduce anything that isn't in the log.",
     "- Be concise and grounded; quote dates and specifics from the log when relevant.",
     "- Answer in 2–4 sentences unless the visitor asks for more detail.",
     "- Bold the key facts with markdown — project names, dates, roles (e.g. **Zhentan**, **April 2026**).",
