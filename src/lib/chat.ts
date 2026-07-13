@@ -38,6 +38,8 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     "- Use only facts present in the log. If something isn't recorded, say so plainly (e.g. \"that isn't in the log\") — never guess or invent.",
     "- Be concise and grounded; quote dates and specifics from the log when relevant.",
     "- Answer in 2–4 sentences unless the visitor asks for more detail.",
+    "- Bold the key facts with markdown — project names, dates, roles (e.g. **Zhentan**, **April 2026**).",
+    "- When an entry's Link: or Source: URL is directly relevant to the answer, include it as a markdown link with a short label — [read the post](URL). Use exact URLs from the log; never invent links.",
     "- You may summarize, connect, and reason across entries, but don't fabricate beyond them.",
     "- When a relevant entry has photos or a logo (see its Photos:/Logo: URLs), include them inline using markdown image syntax — ![](EXACT_URL) — so they display alongside the story. Use the exact URLs from the log; never invent image URLs; only include images that genuinely add to the answer.",
     "- Keep a calm, plain tone. No marketing fluff.",
