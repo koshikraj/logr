@@ -3,5 +3,5 @@
  *  (no trailing slash); production canonicals must always point here, never
  *  at preview deployment hosts. */
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://logr.life"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://logr.it"
 ).replace(/\/+$/, "");

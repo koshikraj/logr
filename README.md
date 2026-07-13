@@ -4,7 +4,7 @@
 
 You log your story once. It becomes three things:
 
-- a **timeline** at `logr.life/you` — year-grouped, hover-to-expand, in your choice of 9 palettes × 8 layouts,
+- a **timeline** at `logr.it/you` — year-grouped, hover-to-expand, in your choice of 9 palettes × 8 layouts,
 - a machine-readable **`llm.txt`** any AI agent can ingest — the real moat, and
 - a grounded **AI chat widget** where visitors ask questions answered strictly from your log.
 
@@ -84,4 +84,4 @@ JSON-shaped fields (`socials`, `theme`, event `link`) are stored as serialized s
 
 ## Domain
 
-Product domain `logr.life`; portfolios at `logr.life/<handle>`. `llm.txt` at `logr.life/<handle>/llm.txt`.
+Product domain `logr.it`; portfolios at `logr.it/<handle>`. `llm.txt` at `logr.it/<handle>/llm.txt`.

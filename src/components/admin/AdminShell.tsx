@@ -138,7 +138,7 @@ export function AdminShell({
 
             <aside className="dash-preview" aria-label="live preview of your page">
               <div className="dash-preview__bar">
-                <span className="dash-preview__url">logr.life<span className="accent">/</span>{previewProfile.username}</span>
+                <span className="dash-preview__url">logr.it<span className="accent">/</span>{previewProfile.username}</span>
                 <span className="dash-preview__live"><span className="dash-preview__live__dot" />live</span>
               </div>
               <div className="dash-preview__frame">
