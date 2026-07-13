@@ -6,6 +6,8 @@ import remarkGfm from "remark-gfm";
 import { AnimatePresence } from "framer-motion";
 import { useSheetDrag } from "@/components/ui/useSheetDrag";
 import { Lightbox } from "@/components/ui/Lightbox";
+import { SOCIAL_ICONS } from "@/components/social-icons";
+import { detectPlatform } from "@/lib/socials";
 import type { MediaItem } from "@/lib/profile";
 
 type Msg = { role: "user" | "assistant"; content: string; error?: boolean };
@@ -217,11 +219,21 @@ export function ChatWidget({
                       </div>
                       {links.length > 0 && (
                         <div className="ask__links">
-                          {links.map((l) => (
-                            <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" title={l.href}>
-                              {l.label} <span aria-hidden="true">↗</span>
-                            </a>
-                          ))}
+                          {links.map((l) => {
+                            const platform = detectPlatform(l.href);
+                            const icon = SOCIAL_ICONS[platform] ?? SOCIAL_ICONS.link;
+                            // a hostname label on a recognized platform reads
+                            // better as the platform's own name
+                            const label =
+                              SOCIAL_ICONS[platform] && l.label.includes(".") ? platform : l.label;
+                            return (
+                              <a key={l.href} href={l.href} target="_blank" rel="noopener noreferrer" title={l.href}>
+                                {icon}
+                                <span className="ask__links__label">{label}</span>
+                                <span className="ask__links__arrow" aria-hidden="true">↗</span>
+                              </a>
+                            );
+                          })}
                         </div>
                       )}
                       {images.length > 0 && (
