@@ -203,9 +203,10 @@ export function ChatPanel({
         {messages.length === 0 ? (
           <div className="ask__empty">
             <p>ask anything about {name}&apos;s log — grounded only in what&apos;s recorded.</p>
+            {/* tap = ask: pills submit straight away, same as follow-up chips */}
             <div className="ask__suggest">
               {suggestions.map((s) => (
-                <button key={s} onClick={() => setInput(s)}>{s}</button>
+                <button key={s} onClick={() => void send(s)}>{s}</button>
               ))}
             </div>
           </div>
