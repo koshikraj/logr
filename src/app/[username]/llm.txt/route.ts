@@ -16,8 +16,10 @@ export async function GET(
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate",
-      // unverified auto-generated bios of real people stay out of search indexes
-      ...(profile.claimStatus === "published" ? { "X-Robots-Tag": "noindex" } : {}),
+      // never indexed: it's a plain-text twin of the profile page and would
+      // compete with it in search results. Agents reach it via the page's
+      // rel=alternate link, not via search.
+      "X-Robots-Tag": "noindex",
     },
   });
 }

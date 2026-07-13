@@ -13,6 +13,8 @@ export async function GET(req: NextRequest) {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=0, s-maxage=3600, stale-while-revalidate",
+      // plain-text twin of the profile page — linked for agents, not indexed
+      "X-Robots-Tag": "noindex",
     },
   });
 }

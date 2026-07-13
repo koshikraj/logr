@@ -5,7 +5,7 @@ import { auth, isXAuthEnabled } from "@/auth";
 import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
 
-export const metadata = { title: "sign in — logr" };
+export const metadata = { title: "sign in", robots: { index: false, follow: false } };
 
 export default async function LoginPage({
   searchParams,

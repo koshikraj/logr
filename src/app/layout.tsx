@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "logr — just logr it",
+  // Resolves every relative metadata URL (canonicals, og:url, OG images) to
+  // the canonical origin — keeps preview deployments out of search indexes.
+  metadataBase: new URL(SITE_URL),
+  title: { default: "logr — just logr it", template: "%s · logr" },
   description:
     "Log anything, for anyone. One timeline humans read and agents can just ask. Just logr it.",
+  openGraph: { siteName: "logr", type: "website" },
+  twitter: { site: "@uselogr" },
 };
 
 export default function RootLayout({

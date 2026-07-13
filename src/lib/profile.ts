@@ -52,6 +52,7 @@ export type ProfileDTO = {
   socials: Social[];
   theme: Theme;
   events: EventDTO[];
+  updatedAt: string; // ISO timestamp of the last profile edit (SEO dateModified)
 };
 
 function parseJSON<T>(value: string, fallback: T): T {
@@ -90,6 +91,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     avatarUrl: row.avatarUrl,
     socials: healSocials(parseJSON<Social[]>(row.socials, [])),
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
+    updatedAt: row.updatedAt.toISOString(),
     events: row.events.map((e) => ({
       id: e.id,
       dateOn: e.dateOn,

@@ -354,6 +354,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <nav className="foot__col" aria-label="product">
               <h4>product</h4>
               <a href="#claim">claim a handle</a>
+              <Link href="/explore">explore people</Link>
               <Link href="/vitalik">see an example</Link>
               {signedIn ? (
                 <Link href="/dashboard">dashboard</Link>
