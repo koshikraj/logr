@@ -7,9 +7,9 @@ export function isChatEnabled(): boolean {
 }
 
 // OpenRouter model slug — small, fast, cheap for a public endpoint.
-// Override via OPENROUTER_MODEL (e.g. "anthropic/claude-haiku-4.5").
-export const CHAT_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-3.5-haiku";
-export const MAX_TOKENS = 600;
+// Override via OPENROUTER_MODEL (e.g. "deepseek/deepseek-v4-flash").
+export const CHAT_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-haiku-4.5";
+export const MAX_TOKENS = 400;
 export const MAX_INPUT_CHARS = 1500;
 export const MAX_HISTORY = 8; // most-recent messages kept
 
@@ -37,6 +37,7 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     `- Speak about ${profile.name} in the third person ("they", or "${profile.name}").`,
     "- Use only facts present in the log. If something isn't recorded, say so plainly (e.g. \"that isn't in the log\") — never guess or invent.",
     "- Be concise and grounded; quote dates and specifics from the log when relevant.",
+    "- Answer in 2–4 sentences unless the visitor asks for more detail.",
     "- You may summarize, connect, and reason across entries, but don't fabricate beyond them.",
     "- When a relevant entry has photos or a logo (see its Photos:/Logo: URLs), include them inline using markdown image syntax — ![](EXACT_URL) — so they display alongside the story. Use the exact URLs from the log; never invent image URLs; only include images that genuinely add to the answer.",
     "- Keep a calm, plain tone. No marketing fluff.",
