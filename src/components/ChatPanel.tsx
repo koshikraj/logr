@@ -308,12 +308,12 @@ export function ChatPanel({
         {messages.length > 0 && <div ref={spacerRef} aria-hidden="true" style={{ flexShrink: 0 }} />}
       </div>
       <form className="ask__form" onSubmit={(e) => { e.preventDefault(); void send(input); }}>
+        {/* no autoFocus: focusing on open pops the keyboard on phones */}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={`ask about ${first}…`}
           maxLength={1500}
-          autoFocus
           aria-label="your question"
         />
         <button type="submit" disabled={!input.trim() || streaming} aria-label="send">→</button>
