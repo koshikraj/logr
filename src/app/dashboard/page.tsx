@@ -5,7 +5,7 @@ import { currentProfileId, getUserId } from "@/lib/session";
 import { getProfile } from "@/lib/profile";
 import { AdminShell } from "@/components/admin/AdminShell";
 
-export const metadata = { title: "Dashboard — logr" };
+export const metadata = { title: "dashboard", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {

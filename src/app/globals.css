@@ -8,6 +8,7 @@
 @import "./marketing.css";
 @import "./onboarding.css";
 @import "./motion.css";
+@import "./explore.css";
 
 /* Shared Button component variants — color/border only; layout comes from Tailwind via Button.tsx */
 [class*="btn-v"] { cursor: pointer; }

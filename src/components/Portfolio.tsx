@@ -93,7 +93,7 @@ const SOCIAL_ICONS: Record<string, ReactNode> = {
 };
 
 // ---------- ENTRY MEDIA (photos + videos, with lightbox) ----------
-function EntryPhotos({ media }: { media: MediaItem[] }) {
+function EntryPhotos({ media, eventTitle }: { media: MediaItem[]; eventTitle: string }) {
   const [viewer, setViewer] = useState<number | null>(null);
   if (media.length === 0) return null;
   const cols = media.length >= 2 ? "two" : "one";
@@ -116,7 +116,7 @@ function EntryPhotos({ media }: { media: MediaItem[] }) {
               )
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.url} alt="" loading="lazy" />
+              <img src={m.url} alt={m.title || eventTitle} loading="lazy" />
             )}
             {m.kind === "video" && (
               <span className="entry__photos__play" aria-hidden="true">
@@ -233,13 +233,13 @@ function Entry({ h, recency, active, spotlight, popOrigin }: { h: EventDTO; rece
           </a>
         )}
       </div>
-      <h3 className="entry__title">
+      <h2 className="entry__title">
         <EntryIcon h={h} />
         <span className="entry__title__text">{h.title}</span>
-      </h3>
+      </h2>
       {h.body && <p className="entry__body">{h.body}</p>}
       {h.media.some((m) => m.kind === "image" || m.kind === "video") && (
-        <EntryPhotos media={h.media.filter((m) => m.kind === "image" || m.kind === "video")} />
+        <EntryPhotos media={h.media.filter((m) => m.kind === "image" || m.kind === "video")} eventTitle={h.title} />
       )}
       {h.media.some((m) => m.kind === "link") && (
         <EntryLinks links={h.media.filter((m) => m.kind === "link")} />

@@ -9,7 +9,7 @@ import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
 import { Onboarding } from "@/components/onboarding/Onboarding";
 
-export const metadata = { title: "Welcome — logr" };
+export const metadata = { title: "welcome", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function WelcomePage({
