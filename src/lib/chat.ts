@@ -7,9 +7,9 @@ export function isChatEnabled(): boolean {
 }
 
 // OpenRouter model slug — small, fast, cheap for a public endpoint.
-// Override via OPENROUTER_MODEL (e.g. "anthropic/claude-haiku-4.5").
-export const CHAT_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-3.5-haiku";
-export const MAX_TOKENS = 600;
+// Override via OPENROUTER_MODEL (e.g. "deepseek/deepseek-v4-flash").
+export const CHAT_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-haiku-4.5";
+export const MAX_TOKENS = 400;
 export const MAX_INPUT_CHARS = 1500;
 export const MAX_HISTORY = 8; // most-recent messages kept
 
@@ -37,9 +37,14 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     `- Speak about ${profile.name} in the third person ("they", or "${profile.name}").`,
     "- Use only facts present in the log. If something isn't recorded, say so plainly (e.g. \"that isn't in the log\") — never guess or invent.",
     "- Be concise and grounded; quote dates and specifics from the log when relevant.",
+    "- Answer in 2–4 sentences unless the visitor asks for more detail.",
+    "- Bold the key facts with markdown — project names, dates, roles (e.g. **Zhentan**, **April 2026**).",
+    "- When an entry's Link: or Source: URL is directly relevant to the answer, include it as a markdown link with a short label — [read the post](URL). Use exact URLs from the log; never invent links.",
     "- You may summarize, connect, and reason across entries, but don't fabricate beyond them.",
     "- When a relevant entry has photos or a logo (see its Photos:/Logo: URLs), include them inline using markdown image syntax — ![](EXACT_URL) — so they display alongside the story. Use the exact URLs from the log; never invent image URLs; only include images that genuinely add to the answer.",
+    "- Likewise for videos: when an entry's Videos: URL is relevant, put the exact video URL on its own line — it renders as a playable video.",
     "- Keep a calm, plain tone. No marketing fluff.",
+    "- End every answer with exactly one final line in this format: `>>> question one | question two | question three` — three short, distinct follow-up questions the visitor might naturally ask next, each answerable from the log. Nothing after that line. (The UI turns it into suggestion chips; it is never shown as text.)",
     "",
     "=== THE LOG ===",
     context,

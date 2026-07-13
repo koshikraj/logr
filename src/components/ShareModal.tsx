@@ -8,11 +8,14 @@ export function ShareModal({
   name,
   open,
   onClose,
+  withAsk,
 }: {
   username: string;
   name: string;
   open: boolean;
   onClose: () => void;
+  /** also offer the /ask chat link (used on the dedicated ask page) */
+  withAsk?: boolean;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -62,6 +65,17 @@ export function ShareModal({
             </div>
             <p className="share__note">a timeline anyone can read.</p>
           </div>
+
+          {withAsk && (
+            <div className="share__block">
+              <span className="share__label">for questions <span className="accent">·</span> ask</span>
+              <div className="share__row">
+                <input readOnly value={`${pageUrl}/ask`} onFocus={(e) => e.currentTarget.select()} aria-label="ask link" />
+                <button type="button" onClick={() => copy(`${pageUrl}/ask`, "ask")}>{label("ask")}</button>
+              </div>
+              <p className="share__note">a live chat grounded in the log — anyone can ask.</p>
+            </div>
+          )}
 
           <div className="share__block">
             <span className="share__label">for agents <span className="accent">·</span> ai</span>
