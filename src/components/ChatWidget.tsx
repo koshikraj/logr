@@ -195,7 +195,9 @@ export function ChatWidget({
               const isLast = i === messages.length - 1;
               const streamingThis = streaming && isLast;
               const loading = streamingThis && !m.content;
-              const { text, gallery, links } = parseAnswer(m.content, streamingThis);
+              const { text, gallery, links, suggestions: dynamicFollowups } = parseAnswer(m.content, streamingThis);
+              // model-suggested follow-ups when it produced them, static otherwise
+              const chips = dynamicFollowups.length > 0 ? dynamicFollowups : followups.slice(0, 2);
               return (
                 <div key={i} className="ask__msg ask__msg--assistant">
                   {loading ? (
@@ -262,14 +264,14 @@ export function ChatWidget({
                       )}
                       {!streamingThis && m.content && (
                         <div className="ask__actions">
-                          <button className="ask__action" onClick={() => copyAnswer(i, m.content)}>
+                          <button className="ask__action" onClick={() => copyAnswer(i, text)}>
                             {copied === i ? "✓ copied" : "⧉ copy"}
                           </button>
                         </div>
                       )}
-                      {!streaming && isLast && followups.length > 0 && (
+                      {!streaming && isLast && chips.length > 0 && (
                         <div className="ask__followups">
-                          {followups.slice(0, 2).map((s) => (
+                          {chips.map((s) => (
                             <button key={s} onClick={() => void send(s)}>{s}</button>
                           ))}
                         </div>
@@ -325,15 +327,25 @@ function toVideoItem(url: string): MediaItem | null {
  *  text entirely; links stay inline AND are collected for the chip row.
  *  Mid-stream, unfinished markdown (a half-typed link, an unclosed
  *  **bold**) is patched so it never flashes as raw syntax. */
-function parseAnswer(content: string, streaming: boolean): { text: string; gallery: MediaItem[]; links: ChatLink[] } {
+function parseAnswer(
+  content: string,
+  streaming: boolean
+): { text: string; gallery: MediaItem[]; links: ChatLink[]; suggestions: string[] } {
   const gallery: MediaItem[] = [];
   const links: ChatLink[] = [];
   const pushMedia = (url: string) => {
     gallery.push(toVideoItem(url) ?? { kind: "image", url, poster: null, provider: null, title: null });
   };
 
+  // the model's final `>>> q1 | q2 | q3` line → follow-up suggestion chips
+  let suggestions: string[] = [];
+  let text = content.replace(/\n?^\s*>{3}\s*([^\n]+)\s*$/m, (_m, line: string) => {
+    suggestions = line.split("|").map((s) => s.trim()).filter(Boolean).slice(0, 3);
+    return "";
+  });
+
   // markdown images + bare image/video URLs → gallery
-  let text = content.replace(/!\[[^\]]*\]\(\s*(\S+?)\s*\)/g, (_m, u: string) => {
+  text = text.replace(/!\[[^\]]*\]\(\s*(\S+?)\s*\)/g, (_m, u: string) => {
     pushMedia(u);
     return "";
   });
@@ -365,8 +377,10 @@ function parseAnswer(content: string, streaming: boolean): { text: string; galle
   }
 
   if (streaming) {
-    // drop a half-typed image/link at the stream tail, close an open **bold**
+    // drop a half-typed image/link/suggestion-line at the stream tail,
+    // close an open **bold**
     text = text.replace(/!?\[[^\]]*(\]\([^)]*)?$/, "");
+    text = text.replace(/\n\s*>{1,3}[^\n]*$/, "");
     if (text.split("**").length % 2 === 0) text += "**";
   }
 
@@ -378,6 +392,7 @@ function parseAnswer(content: string, streaming: boolean): { text: string; galle
     text,
     gallery: gallery.filter((g) => !seenMedia.has(g.url) && seenMedia.add(g.url)),
     links: links.filter((l) => !seenLinks.has(l.href) && seenLinks.add(l.href)),
+    suggestions,
   };
 }
 

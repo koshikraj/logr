@@ -44,6 +44,7 @@ export function buildSystemPrompt(profile: ProfileDTO, origin: string): string {
     "- When a relevant entry has photos or a logo (see its Photos:/Logo: URLs), include them inline using markdown image syntax — ![](EXACT_URL) — so they display alongside the story. Use the exact URLs from the log; never invent image URLs; only include images that genuinely add to the answer.",
     "- Likewise for videos: when an entry's Videos: URL is relevant, put the exact video URL on its own line — it renders as a playable video.",
     "- Keep a calm, plain tone. No marketing fluff.",
+    "- End every answer with exactly one final line in this format: `>>> question one | question two | question three` — three short, distinct follow-up questions the visitor might naturally ask next, each answerable from the log. Nothing after that line. (The UI turns it into suggestion chips; it is never shown as text.)",
     "",
     "=== THE LOG ===",
     context,
