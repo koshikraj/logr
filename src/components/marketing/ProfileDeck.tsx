@@ -11,8 +11,8 @@ import { useInView } from "./useInView";
 export type FeaturedProfile = {
   username: string;
   name: string;
-  role?: string; // card label: "community", "celebrity", … (curated cards only)
-  word?: string; // headline word: "communities.", … (absent on auto-filled extras)
+  role: string; // card label: "community", "celebrity", …
+  word: string; // headline word: "communities.", "celebrities.", …
   avatarUrl: string | null;
   events: number;
 };
@@ -20,28 +20,25 @@ export type FeaturedProfile = {
 const HOLD_MS = 2600;
 
 export function ProfileDeck({ profiles }: { profiles: FeaturedProfile[] }) {
-  // Curated profiles (the ones with a headline word) must come first in
-  // `profiles` — slot i highlights card i. Auto-filled extras follow: they get
-  // no rotation slot and only light up on the closing "anyone." beat.
-  const wordCount = profiles.filter((p) => p.word).length;
-  const slots = wordCount + 1;
+  // one slot per profile, plus a closing "anyone." beat where every card lights
+  const slots = profiles.length + 1;
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const inView = useInView(rootRef);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setActive(wordCount); // settle on "anyone." — all cards lit
+      setActive(profiles.length); // settle on "anyone." — all cards lit
       return;
     }
     if (!inView) return; // paused off-screen
     const id = setInterval(() => setActive((a) => (a + 1) % slots), HOLD_MS);
     return () => clearInterval(id);
-  }, [inView, slots, wordCount]);
+  }, [inView, slots, profiles.length]);
 
-  const anyone = active === wordCount;
+  const anyone = active === profiles.length;
   const leaving = (active + slots - 1) % slots;
-  const words = [...profiles.flatMap((p) => (p.word ? [p.word] : [])), "anyone."];
+  const words = [...profiles.map((p) => p.word), "anyone."];
 
   return (
     <div className="deck" ref={rootRef}>
@@ -87,8 +84,7 @@ export function ProfileDeck({ profiles }: { profiles: FeaturedProfile[] }) {
                 {p.username}
               </span>
               <span className="person__meta">
-                · {p.role ? `${p.role} · ` : ""}
-                {p.events} events
+                · {p.role} · {p.events} events
               </span>
             </span>
           </Link>
