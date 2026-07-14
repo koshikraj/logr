@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Landing } from "@/components/marketing/Landing";
 import type { FeaturedProfile } from "@/components/marketing/ProfileDeck";
+import type { LiveProfile } from "@/components/marketing/ProfileMarquee";
 import { getUserId } from "@/lib/session";
 import { prisma } from "@/lib/db";
 
@@ -28,6 +29,9 @@ const FEATURED = [
   { handle: "vitalik", role: "builder", word: "builders." },
 ];
 
+// How many live profiles the scrolling strip under the deck pulls in.
+const MARQUEE_SIZE = 12;
+
 async function loadFeatured(): Promise<FeaturedProfile[]> {
   const rows = await prisma.profile.findMany({
     where: { username: { in: FEATURED.map((f) => f.handle) }, events: { some: {} } },
@@ -53,13 +57,40 @@ async function loadFeatured(): Promise<FeaturedProfile[]> {
   });
 }
 
+// Live profiles for the scrolling strip: most-active first. Same visibility
+// rule as /explore and the sitemap — owner-verified profiles only.
+async function loadLive(): Promise<LiveProfile[]> {
+  const rows = await prisma.profile.findMany({
+    where: {
+      claimStatus: { in: ["owned", "claimed"] },
+      events: { some: {} },
+      username: { notIn: FEATURED.map((f) => f.handle) },
+    },
+    select: {
+      username: true,
+      name: true,
+      avatarUrl: true,
+      _count: { select: { events: true } },
+    },
+    orderBy: [{ events: { _count: "desc" } }, { updatedAt: "desc" }],
+    take: MARQUEE_SIZE,
+  });
+  return rows.map((p) => ({
+    username: p.username,
+    name: p.name,
+    avatarUrl: p.avatarUrl,
+    events: p._count.events,
+  }));
+}
+
 // Reads the session and featured profiles, so render per-request.
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [signedIn, featured] = await Promise.all([
+  const [signedIn, featured, live] = await Promise.all([
     getUserId().then(Boolean),
     loadFeatured(),
+    loadLive(),
   ]);
-  return <Landing signedIn={signedIn} featured={featured} />;
+  return <Landing signedIn={signedIn} featured={featured} live={live} />;
 }

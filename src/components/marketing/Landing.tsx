@@ -7,6 +7,7 @@ import { HeroStory } from "./HeroStory";
 import { StampFeed } from "./StampFeed";
 import { LooksFlip } from "./LooksFlip";
 import { ProfileDeck, type FeaturedProfile } from "./ProfileDeck";
+import { ProfileMarquee, type LiveProfile } from "./ProfileMarquee";
 import { Mark } from "@/components/Mark";
 
 // The logr marketing landing, cut to the launch promo's rhythm:
@@ -24,9 +25,11 @@ const STEPS = [
 export function Landing({
   signedIn = false,
   featured = [],
+  live = [],
 }: {
   signedIn?: boolean;
   featured?: FeaturedProfile[];
+  live?: LiveProfile[];
 }) {
   return (
     <div className="mkt">
@@ -88,11 +91,13 @@ export function Landing({
           </div>
         </section>
 
-        {/* 02 for anyone — real profiles, a highlight sweeping across them */}
-        {featured.length > 0 && (
+        {/* 02 for anyone — real profiles, a highlight sweeping across them,
+            plus a slim strip of live profiles drifting underneath */}
+        {(featured.length > 0 || live.length > 0) && (
           <section className="section" data-reveal>
             <div className="section__num section__num--solo">02 — for anyone</div>
-            <ProfileDeck profiles={featured} />
+            {featured.length > 0 && <ProfileDeck profiles={featured} />}
+            <ProfileMarquee profiles={live} />
           </section>
         )}
 

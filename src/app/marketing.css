@@ -213,6 +213,36 @@
   .mkt .person { opacity: 1; }
 }
 
+/* 02b — live marquee: small profile cards drifting under the deck */
+.mkt .mq {
+  margin-top: 36px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+}
+.mkt .mq__track { display: flex; width: max-content; animation: mq-drift 40s linear infinite; }
+.mkt .mq:hover .mq__track { animation-play-state: paused; }
+.mkt .mq__set { display: flex; gap: 12px; padding-right: 12px; }
+.mkt .mq__card {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card-bg); border: 0.5px solid var(--rule); border-radius: 10px;
+  padding: 8px 16px 8px 10px; white-space: nowrap;
+  transition: border-color 160ms ease;
+}
+.mkt .mq__card:hover { border-color: color-mix(in srgb, var(--user-accent) 55%, transparent); }
+.mkt .mq__photo { background: #fff; padding: 2px 2px 6px; border-radius: 2px; box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.3); transform: rotate(-3deg); flex-shrink: 0; }
+.mkt .mq__card:nth-child(even) .mq__photo { transform: rotate(3deg); }
+.mkt .mq__photo img, .mkt .mq__initial { width: 26px; height: 28px; object-fit: cover; display: block; }
+.mkt .mq__initial { display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted); background: color-mix(in srgb, var(--user-accent) 10%, #fff); }
+.mkt .mq__copy { display: flex; flex-direction: column; gap: 1px; }
+.mkt .mq__name { font-family: var(--serif); font-size: 13px; letter-spacing: -0.01em; color: var(--ink); }
+.mkt .mq__meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--faint); }
+.mkt .mq__meta .accent { color: var(--user-accent); }
+@keyframes mq-drift { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .mkt .mq { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+  .mkt .mq__track { animation: none; }
+}
+
 /* 01 — log anything: a rail grows, entries stamp onto it */
 .mkt .anything { display: grid; grid-template-columns: 320px 1fr; gap: 48px; align-items: center; }
 .mkt .anything__head { font-family: var(--serif); font-size: clamp(32px, 4vw, 46px); letter-spacing: -0.03em; line-height: 1.12; color: var(--ink); }
