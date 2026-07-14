@@ -44,3 +44,24 @@ export function parseTweetUrl(raw: string): { id: string } | null {
   const m = raw.trim().match(/(?:twitter\.com|x\.com)\/[^/]+\/status(?:es)?\/(\d+)/i);
   return m ? { id: m[1] } : null;
 }
+
+/** Detect an Instagram post / reel / tv link. Returns the canonical post URL
+ *  (stored on the media row) and the keyless public embed URL (iframed at
+ *  render time — Meta's oEmbed API needs an app token, `/embed/` doesn't). */
+export function parseInstagramUrl(
+  raw: string
+): { shortcode: string; postUrl: string; embedUrl: string } | null {
+  // covers instagram.com/p/<code>, /reel(s)/<code>, /tv/<code>, and the
+  // share form instagram.com/<user>/p/<code>
+  const m = raw
+    .trim()
+    .match(/instagram\.com\/(?:[A-Za-z0-9_.]+\/)?(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/i);
+  if (!m) return null;
+  const type = m[1].toLowerCase() === "reels" ? "reel" : m[1].toLowerCase();
+  const shortcode = m[2];
+  return {
+    shortcode,
+    postUrl: `https://www.instagram.com/${type}/${shortcode}/`,
+    embedUrl: `https://www.instagram.com/${type}/${shortcode}/embed/`,
+  };
+}

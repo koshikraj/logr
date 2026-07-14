@@ -14,6 +14,7 @@ import {
   type DefaultView,
 } from "@/lib/theme";
 import { isImageIcon } from "@/lib/icon";
+import { parseInstagramUrl } from "@/lib/video";
 import { detectPlatform } from "@/lib/socials";
 import { seedQuestions } from "@/lib/suggest";
 import { SOCIAL_ICONS } from "@/components/social-icons";
@@ -125,6 +126,41 @@ function EntryTweets({ tweets }: { tweets: MediaItem[] }) {
   );
 }
 
+// ---------- ENTRY INSTAGRAM (public post embeds, keyless /embed/ iframe) ----------
+// Also catches Instagram URLs stored as generic "link" media before the
+// dedicated kind existed, so old rows upgrade to embeds without a backfill.
+function isInstaMedia(m: MediaItem): boolean {
+  return m.kind === "instagram" || (m.kind === "link" && !!parseInstagramUrl(m.url));
+}
+
+function EntryInstagrams({ posts }: { posts: MediaItem[] }) {
+  return (
+    <div className="entry__instas">
+      {posts.map((m, i) => {
+        const ig = parseInstagramUrl(m.url);
+        return ig ? (
+          <iframe
+            key={i}
+            className="entry__insta"
+            src={ig.embedUrl}
+            title="Instagram post"
+            loading="lazy"
+            scrolling="no"
+            allowFullScreen
+          />
+        ) : (
+          <a key={i} className="entry__link-card" href={m.url} target="_blank" rel="noopener noreferrer">
+            <span className="entry__link-card__copy">
+              <span className="entry__link-card__title">View this post on Instagram</span>
+              <span className="entry__link-card__site">instagram.com ↗</span>
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 // ---------- ENTRY ICON ----------
 function EntryIcon({ h }: { h: EventDTO }) {
   if (h.icon && isImageIcon(h.icon)) {
@@ -188,11 +224,14 @@ function Entry({ h, recency, active, spotlight, popOrigin }: { h: EventDTO; rece
       {h.media.some((m) => m.kind === "image" || m.kind === "video") && (
         <EntryPhotos media={h.media.filter((m) => m.kind === "image" || m.kind === "video")} eventTitle={h.title} />
       )}
-      {h.media.some((m) => m.kind === "link") && (
-        <EntryLinks links={h.media.filter((m) => m.kind === "link")} />
+      {h.media.some((m) => m.kind === "link" && !isInstaMedia(m)) && (
+        <EntryLinks links={h.media.filter((m) => m.kind === "link" && !isInstaMedia(m))} />
       )}
       {h.media.some((m) => m.kind === "tweet") && (
         <EntryTweets tweets={h.media.filter((m) => m.kind === "tweet")} />
+      )}
+      {h.media.some(isInstaMedia) && (
+        <EntryInstagrams posts={h.media.filter(isInstaMedia)} />
       )}
       {h.link && (
         <a className="entry__link" href={h.link.href} target="_blank" rel="noopener noreferrer">
