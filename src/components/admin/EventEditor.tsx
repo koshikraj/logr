@@ -6,7 +6,7 @@ import { unfurlLinkAction, type EventInput } from "@/lib/actions";
 import { TAG_META } from "@/lib/theme";
 import { isImageIcon } from "@/lib/icon";
 import { uploadImage } from "@/lib/upload";
-import { parseVideoUrl, parseTweetUrl } from "@/lib/video";
+import { parseVideoUrl, parseTweetUrl, parseInstagramUrl } from "@/lib/video";
 import { DatePicker } from "./DatePicker";
 
 export const TAG_OPTIONS = ["work", "milestone", "talk", "side_quest", "writing"];
@@ -52,7 +52,7 @@ export function PvEntry({ e }: { e: EventInput }) {
               {m.kind === "image" || m.poster ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={m.kind === "image" ? m.url : (m.poster as string)} alt="" />
-              ) : (m.kind === "tweet" ? "𝕏" : m.kind === "video" ? "▶" : "↗")}
+              ) : (m.kind === "tweet" ? "𝕏" : m.kind === "instagram" ? "◉" : m.kind === "video" ? "▶" : "↗")}
             </span>
           ))}
         </div>
@@ -156,6 +156,12 @@ export function EventEditor({
     if (draft.media.length >= 8) { toast("Up to 8 media items", "error"); return; }
     if (parseTweetUrl(url)) {
       set("media", [...draft.media, { kind: "tweet", url, poster: null, provider: "x", title: null }]);
+      setVideoUrl("");
+      return;
+    }
+    const ig = parseInstagramUrl(url);
+    if (ig) {
+      set("media", [...draft.media, { kind: "instagram", url: ig.postUrl, poster: null, provider: "instagram", title: null }]);
       setVideoUrl("");
       return;
     }
@@ -299,6 +305,7 @@ export function EventEditor({
                 {m.kind === "video" && <span className="field-photos__play" aria-hidden="true">▶</span>}
                 {m.kind === "link" && <span className="field-photos__play" aria-hidden="true">↗</span>}
                 {m.kind === "tweet" && <span className="field-photos__play" aria-hidden="true">𝕏</span>}
+                {m.kind === "instagram" && <span className="field-photos__play" aria-hidden="true">◉</span>}
                 <button type="button" onClick={() => set("media", draft.media.filter((_, j) => j !== i))} aria-label="remove">×</button>
               </div>
             ))}

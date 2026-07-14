@@ -17,7 +17,7 @@ const TOKENS: Tok[] = [
   { text: "hi,", hi: true },
   { text: "i'm", hi: true },
   { text: "koshik.", href: "/koshik", hi: true },
-  ..."no resume, bio, or feed ever held a whole story. so i built logr: log anything — a launch, a marathon, a terrible first pot — and anyone who's curious, human or agent, can just ask."
+  ..."no resume or feed ever held a whole story. so i built logr — log it once, and anyone curious, human or agent, can just ask."
     .split(" ")
     .map((text) => ({ text })),
 ];

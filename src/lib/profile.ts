@@ -14,7 +14,7 @@ function deriveDate(dateOn: string, fullDate: boolean): { date: string; year: nu
 export type Social = { label: string; href: string };
 
 export type MediaItem = {
-  kind: "image" | "video" | "link" | "tweet";
+  kind: "image" | "video" | "link" | "tweet" | "instagram";
   url: string; // image URL, video embed URL, or external link
   poster: string | null; // thumbnail (video frame / og:image)
   provider: string | null; // youtube | vimeo | loom | site name
@@ -114,7 +114,9 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
                 ? ("link" as const)
                 : m.kind === "tweet"
                   ? ("tweet" as const)
-                  : ("image" as const),
+                  : m.kind === "instagram"
+                    ? ("instagram" as const)
+                    : ("image" as const),
           url: m.url as string,
           poster: m.poster,
           provider: m.provider,

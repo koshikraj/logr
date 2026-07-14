@@ -9,7 +9,7 @@ import { generateText } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { isChatEnabled, CHAT_MODEL } from "@/lib/chat";
 import { buildNarratePrompt, parseNarrated } from "@/lib/narrate";
-import { parseVideoUrl, parseTweetUrl } from "@/lib/video";
+import { parseVideoUrl, parseTweetUrl, parseInstagramUrl } from "@/lib/video";
 import { parseSocials } from "@/lib/socials";
 import { requireProfileId, requireSignedIn, getUserId } from "@/lib/session";
 import { signIn, signOut } from "@/auth";
@@ -165,7 +165,7 @@ export async function updateThemeAction(theme: Partial<Theme>) {
 
 // ---------- EVENTS ----------
 export type MediaInput = {
-  kind: "image" | "video" | "link" | "tweet";
+  kind: "image" | "video" | "link" | "tweet" | "instagram";
   url: string;
   poster: string | null;
   provider: string | null;
@@ -265,6 +265,11 @@ async function resolveMedia(links: string[]): Promise<MediaInput[]> {
   for (const url of links.slice(0, 4)) {
     if (parseTweetUrl(url)) {
       out.push({ kind: "tweet", url, poster: null, provider: "x", title: null });
+      continue;
+    }
+    const ig = parseInstagramUrl(url);
+    if (ig) {
+      out.push({ kind: "instagram", url: ig.postUrl, poster: null, provider: "instagram", title: null });
       continue;
     }
     const v = parseVideoUrl(url);

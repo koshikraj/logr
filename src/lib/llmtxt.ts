@@ -74,6 +74,9 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
     for (const m of e.media.filter((x) => x.kind === "tweet")) {
       lines.push(`- Tweet: ${m.url}`);
     }
+    for (const m of e.media.filter((x) => x.kind === "instagram")) {
+      lines.push(`- Instagram: ${m.url}`);
+    }
     lines.push("");
   }
 

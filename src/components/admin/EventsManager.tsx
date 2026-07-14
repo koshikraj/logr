@@ -88,12 +88,14 @@ function EventRow({
   const videos = e.media.filter((m) => m.kind === "video");
   const linksN = e.media.filter((m) => m.kind === "link").length;
   const tweetsN = e.media.filter((m) => m.kind === "tweet").length;
+  const instasN = e.media.filter((m) => m.kind === "instagram").length;
   const thumb = photos[0]?.url ?? videos[0]?.poster ?? e.media.find((m) => m.poster)?.poster ?? null;
   const counts = [
     photos.length ? `${photos.length} photo${photos.length > 1 ? "s" : ""}` : "",
     videos.length ? `${videos.length} video${videos.length > 1 ? "s" : ""}` : "",
     linksN ? `${linksN} link${linksN > 1 ? "s" : ""}` : "",
     tweetsN ? `${tweetsN} tweet${tweetsN > 1 ? "s" : ""}` : "",
+    instasN ? `${instasN} insta post${instasN > 1 ? "s" : ""}` : "",
   ].filter(Boolean).join(" · ");
   return (
     <Reorder.Item
