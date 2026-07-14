@@ -852,6 +852,10 @@
   background: color-mix(in srgb, var(--user-accent) 12%, transparent);
   padding: 0 3px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
 }
+/* dark palettes (ink): a 12% wash disappears against dark paper */
+.logr[data-mode="dark"] .ask__md strong {
+  background: color-mix(in srgb, var(--user-accent) 26%, transparent);
+}
 .ask__md a { color: var(--user-accent); border-bottom: 0.5px solid currentColor; padding-bottom: 1px; }
 .ask__md a:hover { opacity: 0.8; }
 .ask__md ul, .ask__md ol { margin: 0 0 8px; padding-left: 20px; }
