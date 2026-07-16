@@ -11,9 +11,9 @@ export function ClaimButton({ username }: { username: string }) {
   return (
     <button
       type="submit"
-      className="btn btn--primary"
+      className="onb2-login-btn"
       disabled={pending}
-      style={{ width: "100%", justifyContent: "center", opacity: pending ? 0.6 : 1 }}
+      style={{ opacity: pending ? 0.6 : 1 }}
     >
       {pending ? "claiming your profile…" : `claim @${username} →`}
     </button>
