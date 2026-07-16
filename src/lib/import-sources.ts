@@ -224,9 +224,15 @@ export function formatLinkedInRecord(r: Record<string, unknown>, profileUrl: str
     const when = [str(e.start_year), str(e.end_year)].filter(Boolean).join(" — ");
     return `- ${what}${when ? ` | ${when}` : ""}`;
   });
+  // some profiles come back with education:null but a plain-text summary
+  if (!objList(r.education).length && str(r.educations_details)) {
+    lines.push("", `Education: ${str(r.educations_details)}`);
+  }
   sect("Certifications", objList(r.certifications), (e) => {
     const what = [str(e.title), str(e.subtitle)].filter(Boolean).join(" — ");
-    return what ? `- ${what}` : null;
+    // issue date lives in `meta`, e.g. "Issued Nov 2017 See credential"
+    const issued = /issued\s+([A-Za-z]{3,9}\s+\d{4})/i.exec(str(e.meta) ?? "")?.[1];
+    return what ? `- ${what}${issued ? ` | issued ${issued}` : ""}` : null;
   });
   sect("Honors & awards", objList(r.honors_and_awards), (e) => {
     const what = [str(e.title), str(e.publication)].filter(Boolean).join(" — ");
@@ -234,7 +240,17 @@ export function formatLinkedInRecord(r: Record<string, unknown>, profileUrl: str
   });
   sect("Projects", objList(r.projects), (e) => {
     const what = str(e.title);
-    return what ? `- ${what}${str(e.start_date) ? ` | ${str(e.start_date)}` : ""}` : null;
+    if (!what) return null;
+    const when = [str(e.start_date), str(e.end_date)].filter(Boolean).join(" — ");
+    const desc = str(e.description);
+    return `- ${what}${when ? ` | ${when}` : ""}${desc ? ` | ${desc.slice(0, 160)}` : ""}`;
+  });
+  // recent posts/activity — the freshest signal on most profiles
+  sect("Recent posts and activity", objList(r.activity), (e) => {
+    const title = str(e.title);
+    if (!title) return null;
+    const link = str(e.link);
+    return `- ${title.slice(0, 220)}${link ? ` | ${link}` : ""}`;
   });
 
   // Unknown schema → generic flatten so odd records still yield something.

@@ -54,7 +54,7 @@ export const EXTRACT_HINTS: Partial<Record<SourceKind, string>> = {
   "linkedin-pdf":
     "The text is a LinkedIn profile export. Extract roles, education, and launches; use the start date of a date range as dateOn.",
   linkedin:
-    "The text is structured LinkedIn profile data. Extract roles, education, and launches; use the start date of a date range as dateOn.",
+    "The text is structured LinkedIn profile data. Extract roles, education, certifications, projects, and notable recent posts (announcements, wins, talks — put the post URL in links); use the start date of a date range as dateOn.",
 };
 
 export type ProfileFacts = {
