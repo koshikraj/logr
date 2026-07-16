@@ -67,6 +67,7 @@ In priority order:
 - [x] AI tag suggestion per event
 - [x] Edit-and-confirm review flow before anything is inserted
 - [x] Link enrichment — URLs in the narrative become tweet/video embeds or unfurled link cards
+- [x] Magical onboarding — paste sources (GitHub, blog RSS, dev.to, YouTube, own site via agentic crawl, resume/LinkedIn-PDF drop); publish immediately, background parallel parsing (`/api/import` + `ImportJob` tables) auto-inserts events (with emoji icons + link/tweet media) **and drafts bio/about/socials**; depth-1 discovery follows the site's own github/blog/channel links and captures x/linkedin/instagram profiles as socials; `/[handle]` renders live while building; dashboard shows the wait state
 - [ ] Image suggestions per event type
 - [ ] Iterative refinement via chat ("add my ETHGlobal win from 2023")
 

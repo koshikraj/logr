@@ -5,11 +5,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { DEFAULT_THEME, type Theme } from "@/lib/theme";
 import { unfurl } from "@/lib/unfurl";
-import { generateText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { isChatEnabled, CHAT_MODEL } from "@/lib/chat";
-import { buildNarratePrompt, parseNarrated } from "@/lib/narrate";
-import { parseVideoUrl, parseTweetUrl, parseInstagramUrl } from "@/lib/video";
+import { extractEvents, EXTRACT_HINTS } from "@/lib/extract";
+import { insertEventsForProfile, sanitizeTags } from "@/lib/events";
+import type { MediaInput, ReviewEvent, SourceChip, SourceKind, SourceStatus } from "@/lib/import-types";
 import { parseSocials } from "@/lib/socials";
 import { requireProfileId, requireSignedIn, getUserId } from "@/lib/session";
 import { signIn, signOut } from "@/auth";
@@ -102,7 +100,9 @@ export async function createProfileAction(
       about: null,
       avatarUrl: input.avatarUrl || null,
       socials: "[]",
-      theme: JSON.stringify(DEFAULT_THEME),
+      // new users start on the feed layout (DEFAULT_THEME stays "timeline"
+      // as the fallback for legacy/seeded profiles)
+      theme: JSON.stringify({ ...DEFAULT_THEME, layout: "feed" }),
     },
   });
   return { ok: true, username };
@@ -164,13 +164,7 @@ export async function updateThemeAction(theme: Partial<Theme>) {
 }
 
 // ---------- EVENTS ----------
-export type MediaInput = {
-  kind: "image" | "video" | "link" | "tweet" | "instagram";
-  url: string;
-  poster: string | null;
-  provider: string | null;
-  title: string | null;
-};
+export type { MediaInput, ReviewEvent } from "@/lib/import-types";
 
 export type EventInput = {
   id?: string;
@@ -186,19 +180,6 @@ export type EventInput = {
   position: number;
   media: MediaInput[]; // images + videos (0–8)
 };
-
-/** Known tags pass through; customs are normalized (lowercase, collapsed
- *  whitespace, length-capped) and deduped. Tags are free-form by design —
- *  the display layer falls back to the raw string for unknown keys. */
-function sanitizeTags(tags: string[]): string[] {
-  return Array.from(
-    new Set(
-      (tags ?? [])
-        .map((t) => String(t).trim().toLowerCase().replace(/\s+/g, " ").slice(0, 24))
-        .filter(Boolean)
-    )
-  ).slice(0, 12);
-}
 
 export async function saveEventAction(input: EventInput) {
   const profileId = await requireProfileId();
@@ -245,79 +226,10 @@ export async function deleteEventAction(id: string) {
   await revalidateForProfile(profileId);
 }
 
-export type ReviewEvent = {
-  dateOn: string;
-  fullDate: boolean;
-  title: string;
-  tags: string[];
-  featured: boolean;
-  body: string;
-  // optional — absent from AI extraction, settable in the review editor
-  icon?: string | null;
-  linkLabel?: string | null;
-  linkHref?: string | null;
-  media: MediaInput[];
-};
-
-/** Turn URLs from the narrative into media (tweet / video embed / link card). */
-async function resolveMedia(links: string[]): Promise<MediaInput[]> {
-  const out: MediaInput[] = [];
-  for (const url of links.slice(0, 4)) {
-    if (parseTweetUrl(url)) {
-      out.push({ kind: "tweet", url, poster: null, provider: "x", title: null });
-      continue;
-    }
-    const ig = parseInstagramUrl(url);
-    if (ig) {
-      out.push({ kind: "instagram", url: ig.postUrl, poster: null, provider: "instagram", title: null });
-      continue;
-    }
-    const v = parseVideoUrl(url);
-    if (v) {
-      out.push({ kind: "video", url: v.embedUrl, poster: v.poster, provider: v.provider, title: null });
-      continue;
-    }
-    try {
-      const u = await unfurl(url);
-      out.push({ kind: "link", url, poster: u.poster, provider: u.provider, title: u.title });
-    } catch {
-      out.push({ kind: "link", url, poster: null, provider: null, title: url });
-    }
-  }
-  return out;
-}
-
-async function narrateText(text: string): Promise<ReviewEvent[]> {
-  if (!isChatEnabled()) throw new Error("Chat is not configured.");
-  if (!text.trim()) return [];
-  const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
-  const { text: out } = await generateText({
-    model: openrouter.chat(CHAT_MODEL),
-    system:
-      "You output ONLY a raw JSON object — no prose, no markdown fences, no commentary. " +
-      'Shape: {"events":[{"dateOn":"YYYY-MM-DD","fullDate":boolean,"title":string,"tags":string[],"featured":boolean,"body":string,"links":string[]}]}. ' +
-      "tags must be a subset of: work, milestone, talk, side_quest, writing. links are full https URLs mentioned for the event.",
-    prompt: buildNarratePrompt(text.slice(0, 8000)),
-    temperature: 0.2,
-  });
-  const parsed = parseNarrated(out);
-  return Promise.all(
-    parsed.map(async (e) => ({
-      dateOn: e.dateOn,
-      fullDate: e.fullDate,
-      title: e.title,
-      tags: e.tags,
-      featured: e.featured,
-      body: e.body,
-      media: await resolveMedia(e.links),
-    }))
-  );
-}
-
 /** Extract structured events (with link/video/tweet media) from a narrative. */
 export async function narrateEventsAction(text: string): Promise<ReviewEvent[]> {
   await requireSignedIn();
-  return narrateText(text);
+  return extractEvents(text);
 }
 
 const FILE_SIZE_LIMIT = 5 * 1024 * 1024; // 5 MB
@@ -342,7 +254,7 @@ export async function importFileAction(formData: FormData): Promise<ReviewEvent[
     text = buffer.toString("utf-8");
   }
 
-  return narrateText(text);
+  return extractEvents(text, EXTRACT_HINTS.resume);
 }
 
 /** Extract events from a public portfolio or LinkedIn URL. */
@@ -351,50 +263,108 @@ export async function importUrlAction(url: string): Promise<ReviewEvent[]> {
   if (!url.trim()) return [];
   const { fetchUrlText } = await import("@/lib/import");
   const text = await fetchUrlText(url.trim());
-  return narrateText(text);
+  return extractEvents(text, EXTRACT_HINTS.site);
 }
 
 /** Bulk-insert events extracted from a narrative (newest get the top slots). */
 export async function insertEventsAction(events: ReviewEvent[]) {
   const profileId = await requireProfileId();
-  const clean = events
-    .filter((e) => e.title?.trim() && /^\d{4}-\d{2}-\d{2}$/.test(e.dateOn))
-    .slice(0, 50);
-  if (!clean.length) return;
-  const agg = await prisma.event.aggregate({ where: { profileId }, _min: { position: true } });
-  let pos = (agg._min.position ?? 0) - clean.length;
-  await prisma.$transaction(
-    clean.map((e) =>
-      prisma.event.create({
-        data: {
-          profileId,
-          dateOn: e.dateOn,
-          fullDate: !!e.fullDate,
-          title: e.title.trim(),
-          tags: sanitizeTags(e.tags),
-          featured: !!e.featured,
-          body: e.body ?? "",
-          icon: e.icon?.trim() || null,
-          linkLabel: e.linkLabel?.trim() || null,
-          linkHref: e.linkHref?.trim() || null,
-          position: pos++,
-          media: {
-            create: (e.media ?? []).slice(0, 8).map((m, i) => ({
-              kind: m.kind,
-              url: m.url || null,
-              poster: m.poster,
-              provider: m.provider,
-              title: m.title,
-              position: i,
-            })),
-          },
-        },
-      })
-    )
-  );
+  await insertEventsForProfile(profileId, events);
   await revalidateForProfile(profileId);
 }
 
+
+
+// ---------- IMPORT JOBS (magical onboarding) ----------
+
+export type ImportJobView = {
+  jobId: string;
+  status: "running" | "done" | "error";
+  sources: SourceChip[];
+  events: ReviewEvent[];
+};
+
+function parseEventsJson(raw: string | null): ReviewEvent[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? (v as ReviewEvent[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function jobViewFor(userId: string): Promise<ImportJobView | null> {
+  const job = await prisma.importJob.findFirst({
+    where: { userId, consumedAt: null, createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    orderBy: { createdAt: "desc" },
+    include: { sources: true },
+  });
+  if (!job) return null;
+  const events = job.mergedEvents
+    ? parseEventsJson(job.mergedEvents)
+    : job.sources.flatMap((s) => parseEventsJson(s.events));
+  return {
+    jobId: job.id,
+    status: job.status,
+    sources: job.sources.map((s) => ({
+      id: s.id,
+      kind: s.kind as SourceKind,
+      label: s.label,
+      status: s.status as SourceStatus,
+      eventCount: s.eventCount,
+      error: s.error ?? undefined,
+    })),
+    events,
+  };
+}
+
+/** The user's latest live import job (dashboard wait state). */
+export async function getImportJobAction(): Promise<ImportJobView | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
+  return jobViewFor(userId);
+}
+
+/** Public: live build progress for a handle whose page is still being
+ *  assembled — powers the /[username] live-building view. The in-flight
+ *  events are moments away from being public anyway. */
+export async function profileBuildStatusAction(username: string): Promise<ImportJobView | null> {
+  const profile = await prisma.profile.findUnique({
+    where: { username: username.trim().toLowerCase() },
+    select: { userId: true },
+  });
+  if (!profile?.userId) return null;
+  return jobViewFor(profile.userId);
+}
+
+/** Remove auto-published imported events the user tapped out during the
+ *  building screen (matched by date+title, imported provenance only). */
+export async function removeImportedEventsAction(keys: { dateOn: string; title: string }[]) {
+  const profileId = await requireProfileId();
+  const clean = keys
+    .filter((k) => typeof k?.dateOn === "string" && typeof k?.title === "string")
+    .slice(0, 40);
+  if (!clean.length) return;
+  await prisma.event.deleteMany({
+    where: {
+      profileId,
+      provenance: "userImported",
+      OR: clean.map((k) => ({ dateOn: k.dateOn, title: k.title })),
+    },
+  });
+  await revalidateForProfile(profileId);
+}
+
+/** Mark a job's events as inserted so it stops resurfacing. */
+export async function consumeImportJobAction(jobId: string) {
+  const userId = await getUserId();
+  if (!userId) return;
+  await prisma.importJob.updateMany({
+    where: { id: jobId, userId },
+    data: { consumedAt: new Date() },
+  });
+}
 
 /** Fetch Open Graph data for a pasted link, to build a link/article card. */
 export async function unfurlLinkAction(url: string): Promise<MediaInput> {

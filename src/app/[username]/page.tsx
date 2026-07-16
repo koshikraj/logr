@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { PortfolioPage } from "@/components/PortfolioPage";
+import { LiveBuilding } from "@/components/LiveBuilding";
+import { profileBuildStatusAction } from "@/lib/actions";
 import { getProfile } from "@/lib/profile";
 import { profileJsonLd, snippet } from "@/lib/seo";
 
@@ -52,6 +54,11 @@ export default async function UserPortfolio({ params }: Params) {
   const { username } = await params;
   const profile = await getProfile(username);
   if (!profile) notFound();
+  // Freshly onboarded and the background import is still assembling the
+  // timeline → render the real page in live-building mode: a status strip
+  // narrates the parsing and events pop in as sources complete.
+  const build = await profileBuildStatusAction(username);
+  if (build?.status === "running") return <LiveBuilding profile={profile} initial={build} />;
   // Person structured data only on owner-verified pages — seeded-unclaimed
   // profiles are noindexed and shouldn't assert facts about real people.
   const jsonLd = profile.claimStatus !== "published" ? profileJsonLd(profile) : null;

@@ -107,7 +107,9 @@ export async function extractDocxText(buffer: Buffer): Promise<string> {
   return value.replace(/\s{3,}/g, "\n\n").trim();
 }
 
-export async function fetchUrlText(url: string): Promise<string> {
+/** SSRF-guarded fetch of a user-supplied URL. ALL outbound requests to
+ *  user-controlled hosts must go through this (project rule). */
+export async function guardedFetch(url: string): Promise<{ body: string; contentType: string }> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -133,8 +135,8 @@ export async function fetchUrlText(url: string): Promise<string> {
       dispatcher: agent,
     });
     if (!res.ok) throw new Error(`Could not fetch page (${res.status}).`);
-    const html = await res.text();
-    return htmlToText(html);
+    const body = await res.text();
+    return { body, contentType: res.headers.get("content-type") ?? "" };
   } catch (e) {
     if (state.blocked) throw new Error("That URL is not accessible.");
     if (state.notFound) throw new Error("Could not resolve that host.");
@@ -143,6 +145,52 @@ export async function fetchUrlText(url: string): Promise<string> {
   } finally {
     void agent.close();
   }
+}
+
+export async function fetchUrlText(url: string): Promise<string> {
+  const { body } = await guardedFetch(url);
+  return htmlToText(body);
+}
+
+/** Fetch a page and return both its readable text and its links (extracted
+ *  before htmlToText strips <nav>/<header>). For the site crawler. */
+export async function fetchUrlPage(url: string): Promise<{ text: string; links: PageLink[] }> {
+  const { body } = await guardedFetch(url);
+  return { text: htmlToText(body), links: htmlToLinks(body, url) };
+}
+
+export type PageLink = { href: string; text: string; external: boolean };
+
+/** Extract <a href> links from raw HTML, resolved and deduped — same-origin
+ *  AND external (externals feed source discovery + event/media links). */
+export function htmlToLinks(html: string, baseUrl: string): PageLink[] {
+  let origin: string;
+  try {
+    origin = new URL(baseUrl).origin;
+  } catch {
+    return [];
+  }
+  const out: PageLink[] = [];
+  const seen = new Set<string>();
+  const re = /<a\b[^>]*\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*>([\s\S]{0,200}?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) && out.length < 80) {
+    const raw = (m[1] ?? m[2] ?? "").replace(/&amp;/g, "&").trim();
+    if (!raw || raw.startsWith("#") || /^(mailto|tel|javascript):/i.test(raw)) continue;
+    let resolved: URL;
+    try {
+      resolved = new URL(raw, baseUrl);
+    } catch {
+      continue;
+    }
+    if (!["http:", "https:"].includes(resolved.protocol)) continue;
+    resolved.hash = "";
+    if (seen.has(resolved.href)) continue;
+    seen.add(resolved.href);
+    const label = m[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+    out.push({ href: resolved.href, text: label, external: resolved.origin !== origin });
+  }
+  return out;
 }
 
 function htmlToText(html: string): string {

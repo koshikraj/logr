@@ -58,7 +58,7 @@ function isLinkish(t: string): boolean {
 }
 
 /** Turn a single token into a valid href (or "" if it can't be one). */
-function normalizeHref(token: string): string {
+export function normalizeHref(token: string): string {
   let h = token.trim().replace(/^[<(]+|[>)]+$/g, "").trim();
   if (!h) return "";
   if (/^mailto:/i.test(h)) return h;

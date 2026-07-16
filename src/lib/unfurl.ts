@@ -2,6 +2,8 @@
 // site name). Server-side only. Falls back to the hostname when scraping fails
 // (paywalls, JS-only pages, bot blocks) so the card is always usable.
 
+import { guardedFetch } from "@/lib/import";
+
 export type Unfurled = { title: string; poster: string | null; provider: string };
 
 const decode = (s: string | null) =>
@@ -27,14 +29,9 @@ export async function unfurl(rawUrl: string): Promise<Unfurled> {
 
   let html = "";
   try {
-    const res = await fetch(u.toString(), {
-      headers: {
-        "user-agent": "Mozilla/5.0 (compatible; logr/1.0; +https://logr.it)",
-        accept: "text/html,application/xhtml+xml",
-      },
-      signal: AbortSignal.timeout(6000),
-    });
-    html = (await res.text()).slice(0, 600_000); // cap parse size
+    // SSRF-guarded — these URLs are user-influenced (pasted links, model output).
+    const { body } = await guardedFetch(u.toString());
+    html = body.slice(0, 600_000); // cap parse size
   } catch {
     return { title: host, poster: null, provider: host };
   }

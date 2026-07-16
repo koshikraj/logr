@@ -81,6 +81,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   profile       Profile?
+  importJobs    ImportJob[]
   createdAt     DateTime  @default(now())
 }
 
@@ -164,6 +165,55 @@ model Media {
   position Int
 
   @@index([eventId, position])
+}
+
+// ---------- Magical-onboarding import jobs ----------
+// A background "paste your sources" import run. Tied to userId (not profileId)
+// because during onboarding the profile doesn't exist until publish.
+// Event payloads are JSON-serialized ReviewEvent[] strings, per convention.
+
+enum ImportJobStatus {
+  running
+  done
+  error
+}
+
+enum ImportSourceStatus {
+  queued
+  fetching
+  extracting
+  done
+  error
+}
+
+model ImportJob {
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       ImportJobStatus @default(running)
+  mergedEvents String? // JSON ReviewEvent[] — set after the cross-source merge pass
+  consumedAt   DateTime? // set once events were inserted (onboarding publish or dashboard banner)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  sources      ImportSource[]
+
+  @@index([userId, createdAt])
+}
+
+model ImportSource {
+  id         String             @id @default(cuid())
+  jobId      String
+  job        ImportJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  kind       String // github | rss | devto | youtube | site | linkedin | resume | linkedin-pdf
+  url        String? // null for uploaded files
+  label      String // chip label, e.g. "github.com/rishi"
+  status     ImportSourceStatus @default(queued)
+  error      String?
+  events     String? // JSON ReviewEvent[] extracted from this source
+  eventCount Int                @default(0)
+  updatedAt  DateTime           @updatedAt
+
+  @@index([jobId])
 }
 
 model ChatMessage {

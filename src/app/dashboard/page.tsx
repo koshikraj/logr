@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { isXAuthEnabled } from "@/auth";
 import { currentProfileId, getUserId } from "@/lib/session";
 import { getProfile } from "@/lib/profile";
+import { getImportJobAction } from "@/lib/actions";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { ImportPendingBanner } from "@/components/admin/ImportPendingBanner";
 
 export const metadata = { title: "dashboard", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -42,5 +44,16 @@ export default async function AdminPage() {
     media: e.media,
   }));
 
-  return <AdminShell profile={profile} events={events} xConnected={xConnected} />;
+  // background import still assembling the page → show the wait state
+  const importJob = await getImportJobAction();
+  const waiting = importJob?.status === "running";
+
+  return (
+    <AdminShell
+      profile={profile}
+      events={events}
+      xConnected={xConnected}
+      banner={waiting ? <ImportPendingBanner initial={importJob} /> : undefined}
+    />
+  );
 }

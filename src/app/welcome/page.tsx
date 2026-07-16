@@ -7,7 +7,9 @@ import { findClaimable } from "@/lib/claim";
 import { claimProfileAction } from "@/lib/actions";
 import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
+import { ClaimButton } from "@/components/ClaimButton";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { isLinkedInApiEnabled } from "@/lib/import-sources";
 
 export const metadata = { title: "welcome", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -60,10 +62,13 @@ export default async function WelcomePage({
             comes off, and every entry becomes editable.
           </p>
 
+          {claim === "failed" && (
+            <p style={{ fontFamily: "var(--mono)", fontSize: 12, color: "#b3402a", marginBottom: 12 }}>
+              that claim didn&apos;t go through — try again.
+            </p>
+          )}
           <form action={claimProfileAction}>
-            <button type="submit" className="btn btn--primary" style={{ width: "100%", justifyContent: "center" }}>
-              claim @{claimable.username} →
-            </button>
+            <ClaimButton username={claimable.username} />
           </form>
           <p style={{ textAlign: "center", marginTop: 14 }}>
             <a href="/welcome?fresh=1" style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--muted)" }}>
@@ -97,9 +102,10 @@ export default async function WelcomePage({
         name={session.user.name ?? ""}
         image={session.user.image ?? ""}
         suggestedHandle={suggested}
+        linkedinEnabled={isLinkedInApiEnabled()}
       />
       {(claim === "failed" || x === "error" || showXHint) && (
-        <div style={{ position: "fixed", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 50, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
+        <div data-welcome-hint style={{ position: "fixed", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 50, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
           {claim === "failed" && <span style={{ color: "#b3402a" }}>couldn&apos;t claim that profile — it may have just been claimed. </span>}
           {x === "error" && <span style={{ color: "#b3402a" }}>𝕏 verification didn&apos;t complete — try again. </span>}
           {showXHint && (
