@@ -9,7 +9,7 @@ import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
 import { ClaimButton } from "@/components/ClaimButton";
 import { Onboarding } from "@/components/onboarding/Onboarding";
-import { isLinkedInApiEnabled } from "@/lib/import-sources";
+import { isBrightDataEnabled } from "@/lib/import-sources";
 
 export const metadata = { title: "welcome", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -102,7 +102,7 @@ export default async function WelcomePage({
         name={session.user.name ?? ""}
         image={session.user.image ?? ""}
         suggestedHandle={suggested}
-        linkedinEnabled={isLinkedInApiEnabled()}
+        scraperEnabled={isBrightDataEnabled()}
       />
       {(claim === "failed" || x === "error" || showXHint) && (
         <div data-welcome-hint style={{ position: "fixed", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 50, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>

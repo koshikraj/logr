@@ -6,10 +6,23 @@ import type { SourceKind } from "@/lib/import-types";
 
 export type ClassifiedSource = { kind: SourceKind; url: string; label: string };
 
-/** Hosts we can't crawl (JS shells / bot-blocked) and have no free API for. */
+/** Hosts we can't crawl (JS shells / bot-blocked) and have no free API for.
+ *  x.com/twitter.com PROFILE urls are handled separately — they classify as
+ *  "twitter" and are served by the Bright Data scraper when configured. */
 const UNCRAWLABLE_HOSTS = new Set([
-  "x.com", "twitter.com", "instagram.com", "facebook.com", "tiktok.com", "threads.net",
+  "instagram.com", "facebook.com", "tiktok.com", "threads.net",
 ]);
+const X_HOSTS = new Set(["x.com", "twitter.com", "mobile.twitter.com"]);
+
+/** x.com/<handle> → handle; null for status links, search pages, etc. */
+function xProfileHandle(u: URL): string | null {
+  const segs = u.pathname.split("/").filter(Boolean);
+  if (segs.length !== 1) return null;
+  const handle = segs[0].replace(/^@/, "");
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return null;
+  if (/^(home|search|explore|intent|share|hashtag|i|settings|notifications|messages)$/i.test(handle)) return null;
+  return handle;
+}
 
 function hostOf(url: string): string {
   try {
@@ -32,7 +45,18 @@ function labelFor(url: string): string {
 /** True when the URL points at a platform we can't ingest at all. */
 export function isUncrawlable(rawUrl: string): boolean {
   const href = normalizeHref(rawUrl);
-  return !!href && UNCRAWLABLE_HOSTS.has(hostOf(href));
+  if (!href) return false;
+  const host = hostOf(href);
+  if (UNCRAWLABLE_HOSTS.has(host)) return true;
+  if (X_HOSTS.has(host)) {
+    // a single post/search link isn't a source; a profile classifies as "twitter"
+    try {
+      return xProfileHandle(new URL(href)) === null;
+    } catch {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Classify a pasted URL into a fetchable source. Returns null for
@@ -58,6 +82,11 @@ export function classifySource(rawUrl: string): ClassifiedSource | null {
   }
   if (host === "linkedin.com") {
     return { kind: "linkedin", url: href, label: labelFor(href) };
+  }
+  if (X_HOSTS.has(host)) {
+    const handle = xProfileHandle(u);
+    if (!handle) return null; // post/search links aren't sources
+    return { kind: "twitter", url: `https://x.com/${handle}`, label: `x.com/${handle}` };
   }
   if (host === "medium.com") {
     const user = segs[0]?.startsWith("@") ? segs[0] : null;

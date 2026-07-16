@@ -35,6 +35,7 @@ export type SourceKind =
   | "youtube"
   | "site"
   | "linkedin"
+  | "twitter"
   | "resume"
   | "linkedin-pdf";
 

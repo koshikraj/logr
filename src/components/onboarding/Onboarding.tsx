@@ -58,12 +58,12 @@ export function Onboarding({
   name: initialName,
   image,
   suggestedHandle,
-  linkedinEnabled = false,
+  scraperEnabled = false,
 }: {
   name: string;
   image: string;
   suggestedHandle: string;
-  linkedinEnabled?: boolean;
+  scraperEnabled?: boolean;
 }) {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("you");
@@ -369,7 +369,7 @@ export function Onboarding({
                 </div>
                 <p className="onb2-sub">paste your links — we&apos;ll build the page from them.</p>
 
-                <SourcesInput linkedinEnabled={linkedinEnabled} onChange={onSourcesChange} />
+                <SourcesInput scraperEnabled={scraperEnabled} onChange={onSourcesChange} />
 
                 <button type="button" className="onb2-story-link" onClick={() => setStoryOpen((v) => !v)}>
                   {storyOpen ? "hide the typing box" : "or just type your story →"}

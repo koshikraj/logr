@@ -10,7 +10,7 @@ import { extractEvents, extractProfileFacts, EXTRACT_HINTS, type ProfileFacts } 
 import { insertEventsForProfile } from "@/lib/events";
 import { crawlSite } from "@/lib/import-crawl";
 import { classifySource } from "@/lib/import-classify";
-import { fetchGithub, fetchRss, fetchDevto, fetchYoutube, fetchLinkedIn, isLinkedInApiEnabled } from "@/lib/import-sources";
+import { fetchGithub, fetchRss, fetchDevto, fetchYoutube, fetchLinkedIn, fetchTwitter, isBrightDataEnabled } from "@/lib/import-sources";
 import { detectPlatform, normalizeHref } from "@/lib/socials";
 import type { ImportStreamEvent, ReviewEvent, SourceKind } from "@/lib/import-types";
 
@@ -43,6 +43,8 @@ async function fetchSource(input: JobInput): Promise<{ text: string; external: s
       return { text: await fetchYoutube(input.url!), external: [] };
     case "linkedin":
       return { text: await fetchLinkedIn(input.url!), external: [] };
+    case "twitter":
+      return fetchTwitter(input.url!);
     case "site":
       return crawlSite(input.url!);
   }
@@ -251,13 +253,17 @@ export async function processJob(
     const wave1 = await Promise.all(inputs.map((input) => runSource(input, emit)));
 
     // Depth-1 discovery: the person's own site linked to their github/blog/
-    // channel → fetch those too. Uncrawlable social profiles (x, instagram,
-    // linkedin) become profile social links instead.
-    const external = [...new Set(wave1.flatMap((r) => r.external))];
+    // channel → fetch those too; an X profile's bio website → crawl it.
+    // Uncrawlable social profiles (x, instagram, linkedin) become profile
+    // social links instead.
+    const external = wave1.flatMap((r, i) => r.external.map((href) => ({ href, from: inputs[i].kind })));
+    const seenHref = new Set<string>();
     const known = new Set(inputs.map((i) => i.url).filter(Boolean) as string[]);
     const discovered: { kind: SourceKind; url: string; label: string }[] = [];
     const extraSocials: string[] = [];
-    for (const href of external) {
+    for (const { href, from } of external) {
+      if (seenHref.has(href)) continue;
+      seenHref.add(href);
       const social = socialProfileCandidate(href);
       if (social) {
         if (!extraSocials.includes(social)) extraSocials.push(social);
@@ -265,8 +271,12 @@ export async function processJob(
       }
       if (discovered.length >= MAX_DISCOVERED) continue;
       const c = classifySource(href);
-      if (!c || !DISCOVERABLE.has(c.kind) || known.has(c.url)) continue;
-      if (c.kind === "linkedin" && !isLinkedInApiEnabled()) continue;
+      if (!c || known.has(c.url)) continue;
+      // "site" is normally excluded (no crawling arbitrary third-party links),
+      // but a profile's own bio website is theirs — crawl it.
+      const siteFromProfile = c.kind === "site" && (from === "twitter" || from === "linkedin");
+      if (!DISCOVERABLE.has(c.kind) && !siteFromProfile) continue;
+      if ((c.kind === "linkedin" || c.kind === "twitter") && !isBrightDataEnabled()) continue;
       known.add(c.url);
       discovered.push(c);
     }

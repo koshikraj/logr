@@ -21,6 +21,7 @@ const KIND_GLYPH: Record<string, string> = {
   youtube: "yt",
   site: "www",
   linkedin: "in",
+  twitter: "x",
   resume: "cv",
   "linkedin-pdf": "in",
 };
@@ -29,10 +30,11 @@ let nextId = 1;
 const uid = () => `src-${nextId++}`;
 
 export function SourcesInput({
-  linkedinEnabled,
+  scraperEnabled,
   onChange,
 }: {
-  linkedinEnabled: boolean;
+  /** Bright Data configured → LinkedIn/X profile URLs are parseable */
+  scraperEnabled: boolean;
   onChange: (urls: string[], files: ImportFile[]) => void;
 }) {
   const [pending, setPending] = useState<PendingSource[]>([]);
@@ -70,14 +72,18 @@ export function SourcesInput({
             setWarn(`"${token.slice(0, 40)}" doesn't look like a link we can read.`);
             continue;
           }
+          if (c.kind === "twitter" && !scraperEnabled) {
+            setWarn("we can't read x.com without the scraper API — it blocks robots. link it in your socials instead.");
+            continue;
+          }
           if (next.some((p) => "url" in p && p.url === c.url)) continue;
-          const blocked = c.kind === "linkedin" && !linkedinEnabled;
+          const blocked = c.kind === "linkedin" && !scraperEnabled;
           next.push({ id: uid(), kind: c.kind, label: c.label, url: c.url, blocked });
         }
         return next.slice(0, 8);
       });
     },
-    [linkedinEnabled]
+    [scraperEnabled]
   );
 
   const addFiles = useCallback(

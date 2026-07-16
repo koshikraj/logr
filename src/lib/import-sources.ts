@@ -143,21 +143,28 @@ export async function fetchYoutube(url: string): Promise<string> {
   return fetchRss(`https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`);
 }
 
-// ---------- LinkedIn (Bright Data Web Scraper API) ----------
+// ---------- Bright Data Web Scraper API (LinkedIn + X/Twitter) ----------
 //
-// Paste-URL LinkedIn import is powered by Bright Data's "LinkedIn people
-// profile" dataset (docs.brightdata.com/datasets/scrapers/linkedin). Gated on
-// BRIGHTDATA_API_KEY — without it we ask for the profile's PDF export instead.
-// Fixed api.brightdata.com host: SSRF-safe by construction.
+// Paste-URL LinkedIn and X profile imports are powered by Bright Data's
+// pre-built scrapers (docs.brightdata.com/datasets/scrapers). Gated on
+// BRIGHTDATA_API_KEY — without it LinkedIn falls back to the PDF export and
+// X links are declined. Fixed api.brightdata.com host: SSRF-safe by
+// construction.
 
 const BD_BASE = "https://api.brightdata.com/datasets/v3";
 const BD_LINKEDIN_DATASET = "gd_l1viktl72bvl7bjuj0"; // LinkedIn people profiles
+const BD_X_PROFILE_DATASET = "gd_lwxmeb2u1cniijd7t4"; // X (Twitter) profiles
+const BD_X_POSTS_DATASET = "gd_lwxkxvnf1cynvib9co"; // X (Twitter) posts (discover by profile)
 const BD_DEADLINE_MS = 240_000; // fresh scrapes take ~30–90s; stay under route maxDuration
 const BD_POLL_MS = 8_000;
+const X_POSTS_LIMIT = 12;
 
-export function isLinkedInApiEnabled(): boolean {
+export function isBrightDataEnabled(): boolean {
   return Boolean(process.env.BRIGHTDATA_API_KEY);
 }
+
+/** @deprecated alias kept for call-site clarity around the LinkedIn gate */
+export const isLinkedInApiEnabled = isBrightDataEnabled;
 
 function bdHeaders(): Record<string, string> {
   return {
@@ -266,26 +273,106 @@ export function formatLinkedInRecord(r: Record<string, unknown>, profileUrl: str
   return lines.join("\n").slice(0, MAX_FACT_CHARS);
 }
 
-export async function fetchLinkedIn(profileUrl: string): Promise<string> {
-  if (!isLinkedInApiEnabled()) {
-    throw new Error("LinkedIn import isn't configured — upload your LinkedIn PDF export instead.");
-  }
+/** Synchronous scrape — "one request, one response", Bright Data's
+ *  recommended mode for single-URL real-time lookups. Falls back to
+ *  snapshot polling when the response is a pointer instead of records. */
+async function bdScrape(datasetId: string, input: Record<string, unknown>, params = ""): Promise<unknown> {
   const deadline = Date.now() + BD_DEADLINE_MS;
-  // Synchronous scrape — "one request, one response", Bright Data's
-  // recommended mode for single-URL real-time lookups.
-  const res = await fetch(`${BD_BASE}/scrape?dataset_id=${BD_LINKEDIN_DATASET}&format=json`, {
+  const res = await fetch(`${BD_BASE}/scrape?dataset_id=${datasetId}&format=json${params}`, {
     method: "POST",
     headers: bdHeaders(),
-    body: JSON.stringify([{ url: profileUrl }]),
+    body: JSON.stringify([input]),
     signal: AbortSignal.timeout(BD_DEADLINE_MS),
   });
   if (res.status === 401 || res.status === 403) throw new Error("Bright Data rejected the API key.");
   if (!res.ok) throw new Error(`Bright Data returned ${res.status}.`);
-  let data: unknown = await res.json();
-  // Long scrapes may answer with a snapshot pointer instead of records.
+  const data: unknown = await res.json();
   const snapshotId = str((data as Record<string, unknown>)?.snapshot_id);
-  if (snapshotId) data = await bdSnapshot(snapshotId, deadline);
+  if (snapshotId) return bdSnapshot(snapshotId, deadline);
+  return data;
+}
+
+/** Asynchronous collection (trigger → poll → snapshot) for jobs the sync
+ *  endpoint won't do fully, like discovering a profile's recent posts. */
+async function bdTrigger(datasetId: string, input: Record<string, unknown>, params = ""): Promise<unknown> {
+  const deadline = Date.now() + BD_DEADLINE_MS;
+  const res = await fetch(`${BD_BASE}/trigger?dataset_id=${datasetId}&format=json${params}`, {
+    method: "POST",
+    headers: bdHeaders(),
+    body: JSON.stringify([input]),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (res.status === 401 || res.status === 403) throw new Error("Bright Data rejected the API key.");
+  if (!res.ok) throw new Error(`Bright Data returned ${res.status}.`);
+  const snapshotId = str(((await res.json()) as Record<string, unknown>)?.snapshot_id);
+  if (!snapshotId) throw new Error("Bright Data did not return a snapshot id.");
+  return bdSnapshot(snapshotId, deadline);
+}
+
+export async function fetchLinkedIn(profileUrl: string): Promise<string> {
+  if (!isBrightDataEnabled()) {
+    throw new Error("LinkedIn import isn't configured — upload your LinkedIn PDF export instead.");
+  }
+  const data = await bdScrape(BD_LINKEDIN_DATASET, { url: profileUrl });
   const record = Array.isArray(data) ? data[0] : data;
   if (!record || typeof record !== "object") throw new Error("Bright Data returned no profile data.");
   return formatLinkedInRecord(record as Record<string, unknown>, profileUrl);
+}
+
+// ---------- X (Twitter) ----------
+
+/** Shape an X profile record + discovered posts into dated fact text. */
+export function formatTwitterRecord(
+  r: Record<string, unknown>,
+  posts: Record<string, unknown>[],
+  profileUrl: string
+): string {
+  const lines: string[] = [`X (Twitter) profile: ${profileUrl}`];
+  const handle = /(?:x|twitter)\.com\/(@?[\w.-]+)/i.exec(profileUrl)?.[1];
+  const name = str(r.profile_name) ?? str(r.name);
+  if (name) lines.push(`Name: ${name}${handle ? ` (@${handle.replace(/^@/, "")})` : ""}`);
+  if (str(r.biography)) lines.push(`Bio: ${str(r.biography)}`);
+  if (str(r.location)) lines.push(`Location: ${str(r.location)}`);
+  if (str(r.external_link)) lines.push(`Website: ${str(r.external_link)}`);
+  if (str(r.date_joined)) lines.push(`Joined: ${str(r.date_joined)!.slice(0, 10)}`);
+  if (typeof r.followers === "number") lines.push(`Followers: ${r.followers} · posts: ${r.posts_count ?? "?"}`);
+
+  const own = posts.filter((p) => p.is_repost !== true && str(p.description));
+  if (own.length) {
+    lines.push("", "Recent posts:");
+    for (const p of own.slice(0, X_POSTS_LIMIT)) {
+      const date = str(p.date_posted)?.slice(0, 10) ?? "unknown date";
+      const url = str(p.url)?.replace("twitter.com", "x.com");
+      lines.push(`- ${date} | ${str(p.description)!.slice(0, 240).replace(/\s+/g, " ")}${url ? ` | ${url}` : ""}`);
+    }
+  }
+  return lines.join("\n").slice(0, MAX_FACT_CHARS);
+}
+
+export async function fetchTwitter(profileUrl: string): Promise<{ text: string; external: string[] }> {
+  if (!isBrightDataEnabled()) {
+    throw new Error("X import isn't configured.");
+  }
+  // Profile (sync) and recent posts (async discovery) in parallel — posts are
+  // a bonus: if discovery times out, the profile alone still yields facts.
+  const [profile, posts] = await Promise.all([
+    bdScrape(BD_X_PROFILE_DATASET, { url: profileUrl }),
+    bdTrigger(
+      BD_X_POSTS_DATASET,
+      { url: profileUrl },
+      `&type=discover_new&discover_by=profile_url&limit_per_input=${X_POSTS_LIMIT}`
+    ).catch(() => []),
+  ]);
+  const record = Array.isArray(profile) ? profile[0] : profile;
+  if (!record || typeof record !== "object") throw new Error("Bright Data returned no profile data.");
+  const rec = record as Record<string, unknown>;
+  const postList = (Array.isArray(posts) ? posts : []).filter(
+    (p): p is Record<string, unknown> => !!p && typeof p === "object"
+  );
+  // the bio's website link is the person's own site — prime discovery material
+  const site = str(rec.external_link);
+  return {
+    text: formatTwitterRecord(rec, postList, profileUrl),
+    external: site && /^https?:\/\//.test(site) ? [site] : [],
+  };
 }

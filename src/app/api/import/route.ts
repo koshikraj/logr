@@ -10,7 +10,7 @@ import { prisma } from "@/lib/db";
 import { getUserId } from "@/lib/session";
 import { isChatEnabled } from "@/lib/chat";
 import { classifySource } from "@/lib/import-classify";
-import { isLinkedInApiEnabled } from "@/lib/import-sources";
+import { isBrightDataEnabled } from "@/lib/import-sources";
 import { extractPdfText, extractDocxText } from "@/lib/import";
 import { processJob, MAX_SOURCES, MAX_FILES, JOB_TTL_MS, type JobInput } from "@/lib/import-job";
 import type { ImportStreamEvent, SourceChip, SourceKind } from "@/lib/import-types";
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const classified = requested
     .map((s) => (typeof s?.url === "string" ? classifySource(s.url) : null))
     .filter((s): s is NonNullable<typeof s> => s !== null)
-    .filter((s) => s.kind !== "linkedin" || isLinkedInApiEnabled())
+    .filter((s) => (s.kind !== "linkedin" && s.kind !== "twitter") || isBrightDataEnabled())
     .filter((s, i, a) => a.findIndex((x) => x.url === s.url) === i);
 
   // Uploaded files (resume / linkedin-pdf) — extracted to text up front; the

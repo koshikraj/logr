@@ -204,7 +204,7 @@ model ImportSource {
   id         String             @id @default(cuid())
   jobId      String
   job        ImportJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  kind       String // github | rss | devto | youtube | site | linkedin | resume | linkedin-pdf
+  kind       String // github | rss | devto | youtube | site | linkedin | twitter | resume | linkedin-pdf
   url        String? // null for uploaded files
   label      String // chip label, e.g. "github.com/rishi"
   status     ImportSourceStatus @default(queued)
