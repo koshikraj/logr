@@ -1,174 +1,109 @@
 "use client";
 
-import { useState, useEffect, useTransition, useMemo, useRef, useCallback } from "react";
+// Onboarding v2 (design: Logr Onboarding v2.dc.html) — centered card flow:
+//   01 you → 02 sources → building (agentic loader).
+// "build my page" creates the profile, hands sources to /api/import, and
+// stays on the building screen: extracted events pop into a timeline as
+// sources complete (tap one to leave it out), a terminal narrates the agent's
+// progress, and "open logr.it/handle →" appears when the page is ready.
+
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Portfolio from "@/components/Portfolio";
 import { Mark } from "@/components/Mark";
-import { Button } from "@/components/ui/Button";
-import { LAYOUTS, PALETTES } from "@/lib/theme";
 import {
   narrateEventsAction,
   createProfileAction,
   insertEventsAction,
-  updateThemeAction,
   checkHandleAction,
+  getImportJobAction,
+  removeImportedEventsAction,
   type ReviewEvent,
+  type ImportJobView,
 } from "@/lib/actions";
-import type { ProfileDTO, MediaItem } from "@/lib/profile";
-
-const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const disp = (iso: string, full: boolean) => {
-  const [y, mo, d] = iso.split("-").map(Number);
-  return full ? `${M[mo - 1]} ${d}, ${y}` : `${M[mo - 1]} ${y}`;
-};
+import { SourcesInput, type ImportFile } from "./SourcesInput";
 
 type HandleState = "" | "checking" | "ok" | "taken" | "invalid";
+type Screen = "you" | "sources" | "building";
 
-const LAYOUT_SVGS: Record<string, React.ReactElement> = {
-  timeline: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <line x1="14" y1="6" x2="14" y2="52" />
-      <circle cx="14" cy="14" r="2.5" fill="currentColor" />
-      <circle cx="14" cy="30" r="2" fill="currentColor" />
-      <circle cx="14" cy="44" r="1.5" fill="currentColor" />
-      <line x1="22" y1="14" x2="100" y2="14" />
-      <line x1="22" y1="18" x2="80" y2="18" opacity="0.4" />
-      <line x1="22" y1="30" x2="92" y2="30" />
-      <line x1="22" y1="34" x2="72" y2="34" opacity="0.4" />
-      <line x1="22" y1="44" x2="86" y2="44" />
-    </svg>
-  ),
-  journal: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <line x1="8" y1="12" x2="32" y2="12" />
-      <line x1="38" y1="12" x2="108" y2="12" />
-      <line x1="38" y1="17" x2="98" y2="17" opacity="0.5" />
-      <line x1="8" y1="28" x2="32" y2="28" />
-      <line x1="38" y1="28" x2="104" y2="28" />
-      <line x1="38" y1="33" x2="90" y2="33" opacity="0.5" />
-      <line x1="8" y1="44" x2="32" y2="44" />
-      <line x1="38" y1="44" x2="100" y2="44" />
-      <line x1="38" y1="49" x2="86" y2="49" opacity="0.5" />
-    </svg>
-  ),
-  magazine: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <rect x="8" y="6" width="60" height="22" fill="currentColor" stroke="none" opacity="0.85" />
-      <line x1="72" y1="10" x2="108" y2="10" />
-      <line x1="72" y1="15" x2="104" y2="15" opacity="0.5" />
-      <line x1="72" y1="20" x2="100" y2="20" opacity="0.5" />
-      <line x1="8" y1="36" x2="108" y2="36" strokeWidth="1.2" />
-      <line x1="8" y1="42" x2="92" y2="42" />
-      <line x1="8" y1="47" x2="80" y2="47" opacity="0.5" />
-      <line x1="8" y1="52" x2="86" y2="52" opacity="0.5" />
-    </svg>
-  ),
-  terminal: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <rect x="6" y="6" width="108" height="46" strokeDasharray="1.5 1.5" />
-      <text x="12" y="18" fontFamily="monospace" fontSize="6" fill="currentColor">&gt; logr</text>
-      <text x="12" y="28" fontFamily="monospace" fontSize="5" fill="currentColor" opacity="0.7">2026.05 milestone</text>
-      <text x="12" y="38" fontFamily="monospace" fontSize="5" fill="currentColor" opacity="0.5">2023.04 win</text>
-      <text x="12" y="47" fontFamily="monospace" fontSize="5" fill="currentColor" opacity="0.4">2019.--- founded</text>
-    </svg>
-  ),
-  feed: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <line x1="8" y1="10" x2="108" y2="10" />
-      <line x1="8" y1="14" x2="88" y2="14" opacity="0.4" />
-      <line x1="8" y1="23" x2="108" y2="23" />
-      <line x1="8" y1="27" x2="78" y2="27" opacity="0.4" />
-      <line x1="8" y1="36" x2="102" y2="36" />
-      <line x1="8" y1="40" x2="82" y2="40" opacity="0.4" />
-      <line x1="8" y1="49" x2="95" y2="49" />
-    </svg>
-  ),
-  card: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <rect x="8" y="8" width="48" height="42" />
-      <line x1="16" y1="20" x2="46" y2="20" />
-      <line x1="16" y1="25" x2="40" y2="25" opacity="0.5" />
-      <line x1="16" y1="30" x2="44" y2="30" opacity="0.4" />
-      <rect x="64" y="8" width="48" height="42" />
-      <line x1="72" y1="20" x2="102" y2="20" />
-      <line x1="72" y1="25" x2="96" y2="25" opacity="0.5" />
-      <line x1="72" y1="30" x2="100" y2="30" opacity="0.4" />
-    </svg>
-  ),
-  centered: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <line x1="60" y1="4" x2="60" y2="54" strokeWidth="0.5" />
-      <line x1="16" y1="14" x2="54" y2="14" />
-      <line x1="18" y1="18" x2="52" y2="18" opacity="0.4" />
-      <circle cx="60" cy="14" r="2" fill="currentColor" />
-      <line x1="66" y1="28" x2="104" y2="28" />
-      <line x1="68" y1="32" x2="104" y2="32" opacity="0.4" />
-      <circle cx="60" cy="28" r="2" fill="currentColor" />
-      <line x1="16" y1="44" x2="54" y2="44" />
-      <line x1="20" y1="48" x2="52" y2="48" opacity="0.4" />
-      <circle cx="60" cy="44" r="2" fill="currentColor" />
-    </svg>
-  ),
-  polaroid: (
-    <svg viewBox="0 0 120 58" fill="none" stroke="currentColor" strokeWidth="0.8" aria-hidden="true">
-      <rect x="8" y="6" width="26" height="26" fill="currentColor" stroke="none" opacity="0.15" />
-      <rect x="8" y="6" width="26" height="26" />
-      <line x1="8" y1="38" x2="34" y2="38" opacity="0.6" />
-      <line x1="10" y1="42" x2="30" y2="42" opacity="0.4" />
-      <rect x="47" y="12" width="26" height="26" fill="currentColor" stroke="none" opacity="0.15" />
-      <rect x="47" y="12" width="26" height="26" />
-      <line x1="47" y1="44" x2="73" y2="44" opacity="0.6" />
-      <rect x="86" y="8" width="26" height="26" fill="currentColor" stroke="none" opacity="0.15" />
-      <rect x="86" y="8" width="26" height="26" />
-      <line x1="86" y1="40" x2="112" y2="40" opacity="0.6" />
-    </svg>
-  ),
+const M = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const monthYear = (iso: string) => `${M[Number(iso.slice(5, 7)) - 1]} ${iso.slice(0, 4)}`;
+const evKey = (e: ReviewEvent) => `${e.dateOn}|${e.title}`;
+const viaOf = (e: ReviewEvent) => {
+  if (!e.sourceUrl) return "resume";
+  try {
+    return new URL(e.sourceUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return "source";
+  }
 };
 
-export function Onboarding({ name: initialName, image, suggestedHandle }: { name: string; image: string; suggestedHandle: string }) {
+const POLL_MS = 1200;
+const SLOTS = 6;
+
+function AgentMascot() {
+  return (
+    <span className="onb2-mascot" aria-hidden="true">
+      <span className="onb2-mascot__ring" />
+      <span className="onb2-mascot__mark">
+        <span className="onb2-mascot__head">
+          <span className="onb2-mascot__eyes"><span /><span /></span>
+        </span>
+        <span className="onb2-mascot__dot" />
+      </span>
+    </span>
+  );
+}
+
+export function Onboarding({
+  name: initialName,
+  image,
+  suggestedHandle,
+  scraperEnabled = false,
+}: {
+  name: string;
+  image: string;
+  suggestedHandle: string;
+  scraperEnabled?: boolean;
+}) {
   const router = useRouter();
+  const [screen, setScreen] = useState<Screen>("you");
   const [name, setName] = useState(initialName);
   const [handle, setHandle] = useState(suggestedHandle);
   const [bio, setBio] = useState("");
+  const [hstate, setHState] = useState<HandleState>("");
+  const [herror, setHError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // manual "or just type your story" fallback
+  const [storyOpen, setStoryOpen] = useState(false);
   const [story, setStory] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [events, setEvents] = useState<ReviewEvent[]>([]);
-  const [palette, setPalette] = useState("paper");
-  const [layout, setLayout] = useState("timeline");
-  const [hstate, setHState] = useState<HandleState>("");
-  const [herror, setHError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [publishing, startPublish] = useTransition();
 
-  // stepper
-  const [step, setStep] = useState(0);
-  const [dir, setDir] = useState<"fwd" | "bck">("fwd");
-  const publishBtnRef = useRef<HTMLButtonElement>(null);
-  const previewFrameRef = useRef<HTMLDivElement>(null);
-  const [timelineTop, setTimelineTop] = useState(280);
+  // sources collected by SourcesInput
+  const pendingRef = useRef<{ urls: string[]; files: ImportFile[] }>({ urls: [], files: [] });
+  const [pendingCount, setPendingCount] = useState(0);
+  const onSourcesChange = useCallback((urls: string[], files: ImportFile[]) => {
+    pendingRef.current = { urls, files };
+    setPendingCount(urls.length + files.length);
+  }, []);
 
-  useEffect(() => {
-    const measure = () => {
-      const frame = previewFrameRef.current;
-      if (!frame) return;
-      const tl = frame.querySelector<HTMLElement>(".timeline");
-      if (!tl) return;
-      setTimelineTop(tl.getBoundingClientRect().top - frame.getBoundingClientRect().top);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (previewFrameRef.current) ro.observe(previewFrameRef.current);
-    return () => ro.disconnect();
-  }, [events]);
+  // building screen state
+  const [job, setJob] = useState<ImportJobView | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const [fin, setFin] = useState(false);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [opening, setOpening] = useState(false);
+  const chipStatusRef = useRef<Map<string, string>>(new Map());
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const usernameRef = useRef("");
 
-  const goTo = useCallback((n: number) => {
-    setDir(n >= step ? "fwd" : "bck");
-    setStep(n);
-  }, [step]);
+  const pushLog = useCallback((line: string) => {
+    setLogs((prev) => [...prev, line].slice(-5));
+  }, []);
 
-  const nextStep = useCallback(() => goTo(Math.min(step + 1, 2)), [goTo, step]);
-  const prevStep = useCallback(() => goTo(Math.max(step - 1, 0)), [goTo, step]);
+  useEffect(() => () => { if (pollRef.current) clearTimeout(pollRef.current); }, []);
 
   // handle availability debounce
   useEffect(() => {
@@ -188,7 +123,6 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
   }, [handle]);
 
   const lastNarratedRef = useRef("");
-
   async function narrate() {
     const text = story.trim();
     if (!text || reading || text === lastNarratedRef.current) return;
@@ -204,384 +138,391 @@ export function Onboarding({ name: initialName, image, suggestedHandle }: { name
       setReading(false);
     }
   }
-
-  // Keep a stable ref to narrate so the debounce timer always calls the latest closure
   const narrateRef = useRef(narrate);
   useEffect(() => { narrateRef.current = narrate; });
-
-  // Auto-narrate: 2 s after the user stops typing, once they've written 3+ words
   useEffect(() => {
     if (wordCount < 3 || reading) return;
     const t = setTimeout(() => narrateRef.current(), 2000);
     return () => clearTimeout(t);
   }, [wordCount, reading]);
 
-  function publish() {
+  // ---- building: poll the job and narrate chip-status transitions ----
+  const poll = useCallback(async () => {
+    try {
+      const next = await getImportJobAction();
+      // Auto-publish consumes the job at completion, after which the action
+      // returns null — from the building screen that MEANS "done".
+      if (!next || next.status !== "running") {
+        if (next) setJob(next);
+        pushLog(`page ready — logr.it/${usernameRef.current}`);
+        setFin(true);
+        return;
+      }
+      for (const c of next.sources) {
+        const prev = chipStatusRef.current.get(c.id);
+        if (prev !== c.status) {
+          chipStatusRef.current.set(c.id, c.status);
+          if (c.status === "fetching") pushLog(`reading ${c.label}`);
+          if (c.status === "extracting") pushLog(`extracting events from ${c.label}`);
+          if (c.status === "done") pushLog(`${c.label} done — ${c.eventCount} event${c.eventCount === 1 ? "" : "s"}`);
+          if (c.status === "error") pushLog(`${c.label} skipped — ${c.error ?? "couldn't read it"}`);
+        }
+      }
+      setJob(next);
+      pollRef.current = setTimeout(poll, POLL_MS);
+    } catch {
+      pollRef.current = setTimeout(poll, POLL_MS * 2);
+    }
+  }, [pushLog]);
+
+  // Create the profile, hand sources to the background import, and watch it
+  // assemble the page. The building screen shows instantly — the setup steps
+  // narrate themselves into the terminal.
+  function startBuild() {
+    const { urls, files } = pendingRef.current;
+    const hasSources = urls.length > 0 || files.length > 0;
     setError(null);
-    startPublish(async () => {
+
+    if (!hasSources) {
+      // nothing to parse — create and go straight to the page
+      void (async () => {
+        const res = await createProfileAction({ handle, name, bio, avatarUrl: image || null });
+        if (!res.ok) { setError(res.error); return; }
+        if (events.length) await insertEventsAction(events);
+        router.push(`/${res.username}?tour=1`); // arm the first-run page tour
+      })();
+      return;
+    }
+
+    setScreen("building");
+    setJob(null);
+    setLogs([]);
+    setFin(false);
+    setExcluded(new Set());
+    chipStatusRef.current.clear();
+
+    void (async () => {
+      pushLog(`creating logr.it/${handle}`);
       const res = await createProfileAction({ handle, name, bio, avatarUrl: image || null });
-      if (!res.ok) { setError(res.error); return; }
-      if (events.length) await insertEventsAction(events);
-      await updateThemeAction({ palette, layout, accentOverride: null });
-      router.push(`/${res.username}`);
-    });
+      if (!res.ok) {
+        setError(res.error);
+        setScreen("sources");
+        return;
+      }
+      usernameRef.current = res.username;
+      if (events.length) {
+        await insertEventsAction(events);
+        pushLog(`${events.length} event${events.length === 1 ? "" : "s"} from your story added`);
+      }
+      const fd = new FormData();
+      fd.set("sources", JSON.stringify(urls.map((url) => ({ url }))));
+      fd.set("fileKinds", JSON.stringify(files.map((f) => f.kind)));
+      for (const f of files) fd.append("file", f.file);
+      try {
+        const r = await fetch("/api/import", { method: "POST", body: fd });
+        if (!r.ok && r.status !== 409) {
+          const msg = (await r.json().catch(() => null))?.error ?? "import couldn't start";
+          pushLog(`${msg} — your page is up, add events from the dashboard`);
+          setFin(true);
+          return;
+        }
+      } catch {
+        pushLog("import couldn't start — your page is up, add events from the dashboard");
+        setFin(true);
+        return;
+      }
+      pushLog("agent dispatched — reading your sources");
+      void poll();
+    })();
   }
 
-  const preview: ProfileDTO = useMemo(() => ({
-    id: "preview",
-    username: handle || "you",
-    claimStatus: "owned",
-    name: name || "Your name",
-    bio: bio || "a line about you.",
-    status: "",
-    location: "",
-    about: null,
-    avatarUrl: image || null,
-    socials: [],
-    updatedAt: new Date(0).toISOString(), // preview-only; never rendered
-    theme: { palette, layout, accentOverride: null, defaultView: "newest" },
-    events: events.map((e, i) => ({
-      id: `p${i}`,
-      dateOn: e.dateOn,
-      date: disp(e.dateOn, e.fullDate),
-      year: Number(e.dateOn.slice(0, 4)),
-      title: e.title,
-      tags: e.tags,
-      featured: e.featured,
-      fullDate: e.fullDate,
-      body: e.body,
-      icon: null,
-      link: null,
-      sourceUrl: null,
-      media: e.media as MediaItem[],
-    })),
-  }), [handle, name, bio, image, palette, layout, events]);
+  function openPage() {
+    if (opening) return;
+    setOpening(true);
+    void (async () => {
+      const keys = (job?.events ?? [])
+        .filter((e) => excluded.has(evKey(e)))
+        .map((e) => ({ dateOn: e.dateOn, title: e.title }));
+      if (keys.length) await removeImportedEventsAction(keys).catch(() => {});
+      router.push(`/${usernameRef.current || handle}?tour=1`); // arm the first-run page tour
+    })();
+  }
 
-  const canGoNext0 = hstate === "ok" && !!name.trim();
-  const canPublish = hstate === "ok" && !!name.trim() && !publishing;
+  // ---- derived building view ----
+  const jobEvents = job?.events ?? [];
+  const droppedCount = jobEvents.filter((e) => excluded.has(evKey(e))).length;
+  const slots = Array.from({ length: Math.max(SLOTS, Math.min(jobEvents.length, 8)) }, (_, i) => jobEvents[i] ?? null)
+    .slice(0, Math.max(SLOTS, Math.min(jobEvents.length, 8)));
+  const canNextYou = hstate === "ok" && !!name.trim();
+  const buildCta = pendingCount > 0 || events.length > 0 ? "build my page →" : "start with an empty page →";
 
   return (
-    <div className="onb">
+    <div className="onb" style={{ minHeight: "100dvh", height: "auto" }}>
 
-      {/* ---- publish loading overlay ---- */}
-      {publishing && (
-        <div className="onb__pub-overlay" role="status" aria-live="polite">
-          <div className="onb__pub-descent" aria-hidden="true">
-            <span className="onb__pd-dd onb__pd-dd--1" />
-            <span className="onb__pd-row onb__pd-row--1">
-              <span className="onb__pd-sk onb__pd-sk--date" />
-              <span className="onb__pd-sk onb__pd-sk--title" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-a" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-b" />
-            </span>
-            <span className="onb__pd-dd onb__pd-dd--2" />
-            <span className="onb__pd-row onb__pd-row--2">
-              <span className="onb__pd-sk onb__pd-sk--date" />
-              <span className="onb__pd-sk onb__pd-sk--title" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-a" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-b" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-c" />
-            </span>
-            <span className="onb__pd-dd onb__pd-dd--3" />
-            <span className="onb__pd-row onb__pd-row--3">
-              <span className="onb__pd-sk onb__pd-sk--date" />
-              <span className="onb__pd-sk onb__pd-sk--title" />
-              <span className="onb__pd-sk onb__pd-sk--line onb__pd-sk--line-a" />
-            </span>
-            <span className="onb__pd-label">events incoming</span>
-          </div>
-          <p className="onb__pub-msg">your page is getting ready.</p>
-          <span className="onb__pub-handle">logr.it/<span>{handle}</span></span>
-        </div>
-      )}
-
-      {/* ---- top bar ---- */}
-      <header className="onb__topbar">
-        <div className="onb__topbar__inner">
-          <div className="onb__brand"><Mark />logr</div>
-          <nav className="onb__steprail" aria-label="onboarding steps">
-            {([["01", "you"], ["02", "story"], ["03", "look"]] as const).map(([num, label], i) => (
-              <button
-                key={i}
-                type="button"
-                aria-current={step === i ? true : undefined}
-                data-done={step > i ? true : undefined}
-                onClick={() => goTo(i)}
-              >
-                <span className="onb__steprail__n">{num}</span>
-                {label}
-              </button>
-            ))}
-            <span className="onb__steprail__sep" aria-hidden="true" />
-            <button type="button" className="onb__steprail__publish" onClick={() => publishBtnRef.current?.focus()}>publish</button>
-          </nav>
-          <div className="onb__topbar__util">
-            <span className="onb__saving">
-              <span className="onb__saving__dot" aria-hidden="true" />
-              draft saved
-            </span>
-          </div>
-        </div>
+      {/* ---- slim top bar ---- */}
+      <header className="onb2-bar">
+        <span className="onb2-bar__brand"><Mark />logr</span>
+        <nav className="onb2-bar__crumbs" aria-label="onboarding steps">
+          <button
+            type="button"
+            className={`onb2-crumb${screen === "you" ? " onb2-crumb--active" : " onb2-crumb--done"}`}
+            onClick={() => screen !== "building" && setScreen("you")}
+          >
+            <span className="onb2-crumb__mark">{screen === "you" ? "01" : "✓"}</span>you
+          </button>
+          <button
+            type="button"
+            className={`onb2-crumb${screen === "sources" ? " onb2-crumb--active" : screen === "building" ? " onb2-crumb--done" : ""}`}
+            onClick={() => screen !== "building" && canNextYou && setScreen("sources")}
+          >
+            <span className="onb2-crumb__mark">02</span>sources
+          </button>
+        </nav>
+        <span className="onb2-bar__status">
+          <span className="onb2-bar__status-dot" aria-hidden="true" />
+          {screen !== "building" ? "draft saved" : fin ? "page ready" : "agent working"}
+        </span>
       </header>
 
-      {/* ---- main shell ---- */}
-      <div className="onb__shell">
+      <main className="onb2-main">
 
-        {/* LEFT: FORM + NAV */}
-        <div className="onb__left">
-        <section className="onb__form" aria-label="build your logr">
-          <div key={step} className={`onb__step-content onb__step-content--${dir}`}>
-
-            {/* ── step 0: you ── */}
-            {step === 0 && (
-              <div className="onb__fsec">
-                <div className="onb__fsec__head">
-                  <h2 className="onb__fsec__title">
-                    <span className="onb__fsec__num"><span className="onb__ac">01</span></span>
-                    you
-                  </h2>
+        {/* ═══ step 1 · you ═══ */}
+        {screen === "you" && (
+          <div className="onb2-frame">
+            <div className="onb2-card">
+              <div className="onb2-card__progress"><span /></div>
+              <div className="onb2-card__body">
+                <div className="onb2-step-head">
+                  <div className="onb2-step-head__left">
+                    <span className="onb2-step-head__num">01</span>
+                    <span className="onb2-step-head__title">you</span>
+                  </div>
+                  <span className="onb2-step-head__count">1 / 2</span>
                 </div>
 
-                <div className="onb__you">
-                  <span className="onb__avatar-wrap">
+                <div className="onb2-you-row">
+                  <span className="onb2-polaroid">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={image} alt="" />
                     ) : (
-                      <span className="onb__avatar-letter">{(name || "·").charAt(0).toLowerCase()}</span>
+                      <span className="onb2-polaroid__letter">{(name || "·").charAt(0).toLowerCase()}</span>
                     )}
                   </span>
-
-                  <input
-                    className="onb__box-input"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="your name"
-                    autoFocus
-                  />
-
-                  <div className="onb__handle-row">
-                    <span className="onb__handle-prefix">logr.it<span className="onb__slash">/</span></span>
+                  <div className="onb2-name-col">
                     <input
-                      className="onb__handle-input"
-                      value={handle}
-                      onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                      placeholder="handle"
+                      className="onb2-name-input"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="your name"
+                      autoFocus
                     />
-                    <span className={`onb__field__status onb__handle-status onb__field__status--${hstate}`}>
-                      {hstate === "checking" ? (
-                        <><span className="onb__field__status__dot" /> checking…</>
-                      ) : hstate === "ok" ? (
-                        <><span className="onb__field__status__dot" /> available</>
-                      ) : hstate === "taken" ? "taken" : herror ?? ""}
-                    </span>
+                    <span className="onb2-hint">this is the big type on your page</span>
                   </div>
-
-                  <textarea
-                    className="onb__bio__field"
-                    rows={2}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="one line about you"
-                  />
                 </div>
-              </div>
-            )}
 
-            {/* ── step 1: story ── */}
-            {step === 1 && (
-              <div className="onb__fsec">
-                <div className="onb__fsec__head">
-                  <h2 className="onb__fsec__title">
-                    <span className="onb__fsec__num"><span className="onb__ac">02</span></span>
-                    story
-                  </h2>
-                  <span className="onb__fsec__badge">type it like a friend asked — we&apos;ll find the dates</span>
+                <div className="onb2-handle-row">
+                  <span className="onb2-handle-row__prefix">logr.it<em>/</em></span>
+                  <input
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase())}
+                    placeholder="handle"
+                  />
+                  <span className={`onb2-handle-status${hstate === "ok" ? " onb2-handle-status--ok" : hstate === "taken" || hstate === "invalid" ? " onb2-handle-status--bad" : ""}`}>
+                    {hstate === "checking" && <><span className="onb2-handle-status__dot" />checking…</>}
+                    {hstate === "ok" && <><span className="onb2-handle-status__dot" />available</>}
+                    {hstate === "taken" && "taken"}
+                    {hstate === "invalid" && (herror ?? "invalid")}
+                  </span>
                 </div>
 
                 <textarea
-                  className="onb__story__field"
-                  rows={6}
-                  value={story}
-                  onChange={(e) => {
-                    setStory(e.target.value);
-                    setWordCount(e.target.value.trim().split(/\s+/).filter(Boolean).length);
-                  }}
-                  placeholder="Founded Consenso Labs in 2019. Won the AA hackathon in April 2023 with ZenGuard. Launched brewit in April 2025…"
-                  autoFocus
+                  className="onb2-bio"
+                  rows={2}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="one line about you (we'll draft one from your sources if you skip it)"
                 />
 
-                {reading && (
-                  <div className="onb__dots-loader" aria-hidden="true">
-                    <span className="onb__dots"><span /><span /><span /></span>
-                    <span className="onb__dots-label">thinking it over</span>
-                  </div>
-                )}
-
-                <div className="onb__story__readout">
-                  {events.length > 0 ? (
-                    <span className="onb__story__readout__count">
-                      <strong>{events.length}</strong> event{events.length > 1 ? "s" : ""} drafted
-                    </span>
-                  ) : null}
-                  <span className="onb__dim">{wordCount > 0 ? `${wordCount} words` : "write your story above"}</span>
-                </div>
-
-                <div className="onb__story__actions">
-                  <button type="button" className="onb__story__btn" onClick={narrate} disabled={reading || !story.trim()}>
-                    {reading ? "reading…" : wordCount >= 3 ? "build now →" : "build my timeline →"}
+                <div className="onb2-actions onb2-actions--end">
+                  <button type="button" className="onb2-btn" onClick={() => setScreen("sources")} disabled={!canNextYou}>
+                    next →
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ step 2 · sources ═══ */}
+        {screen === "sources" && (
+          <div className="onb2-frame">
+            <div className="onb2-card">
+              <div className="onb2-card__progress onb2-card__progress--full"><span /></div>
+              <div className="onb2-card__body">
+                <div className="onb2-step-head">
+                  <div className="onb2-step-head__left">
+                    <span className="onb2-step-head__num">02</span>
+                    <span className="onb2-step-head__title">sources</span>
+                  </div>
+                  <span className="onb2-step-head__count">2 / 2</span>
+                </div>
+                <p className="onb2-sub">paste your links — we&apos;ll build the page from them.</p>
+
+                <SourcesInput scraperEnabled={scraperEnabled} onChange={onSourcesChange} />
+
+                <button type="button" className="onb2-story-link" onClick={() => setStoryOpen((v) => !v)}>
+                  {storyOpen ? "hide the typing box" : "or just type your story →"}
+                </button>
+                {storyOpen && (
+                  <>
+                    <textarea
+                      className="onb2-bio"
+                      rows={5}
+                      value={story}
+                      onChange={(e) => {
+                        setStory(e.target.value);
+                        setWordCount(e.target.value.trim().split(/\s+/).filter(Boolean).length);
+                      }}
+                      placeholder="Founded Consenso Labs in 2019. Won the AA hackathon in April 2023 with ZenGuard. Launched brewit in April 2025…"
+                      autoFocus
+                    />
+                    <span className="onb2-hint">
+                      {reading ? "reading your story…" : events.length ? `${events.length} event${events.length > 1 ? "s" : ""} drafted from your story` : "we'll find the dates"}
+                    </span>
+                  </>
+                )}
 
                 {error && <p className="onb__error">{error}</p>}
 
-                {events.length > 0 && (
-                  <div className="onb__chips">
-                    {events.slice(0, 6).map((e, i) => (
-                      <span key={i} className="onb__chip">
-                        <span className="onb__chip__year">{e.dateOn.slice(0, 4)}</span>
-                        <span>{e.title.length > 32 ? e.title.slice(0, 32) + "…" : e.title}</span>
-                      </span>
-                    ))}
-                    {events.length > 6 && (
-                      <span className="onb__chip onb__chip--more">+{events.length - 6} more</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── step 2: look ── */}
-            {step === 2 && (
-              <div className="onb__fsec">
-                <div className="onb__fsec__head">
-                  <h2 className="onb__fsec__title">
-                    <span className="onb__fsec__num"><span className="onb__ac">03</span></span>
-                    look
-                  </h2>
-                </div>
-
-                <div className="onb__look">
-                  <div>
-                    <div className="onb__look__subhead">layout</div>
-                    <div className="onb__layouts">
-                      {Object.entries(LAYOUTS).map(([k, l]) => (
-                        <button key={k} type="button" className="onb__layout-card" aria-pressed={layout === k} onClick={() => setLayout(k)}>
-                          {LAYOUT_SVGS[k] ?? LAYOUT_SVGS.timeline}
-                          <div>
-                            <div className="onb__layout-card__name">{l.name}</div>
-                            <div className="onb__layout-card__note">{l.note}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="onb__look__subhead">palette</div>
-                    <div className="onb__palettes">
-                      {Object.entries(PALETTES).map(([k, p]) => (
-                        <button key={k} type="button" className="onb__palette-card" aria-pressed={palette === k} onClick={() => setPalette(k)}>
-                          <span className="onb__palette-card__swatch" style={{ background: p.paper }}>
-                            <span className="onb__swatch__ink" style={{ background: p.ink }} />
-                            <span className="onb__swatch__acc" style={{ background: p.accent }} />
-                          </span>
-                          <span>
-                            <span className="onb__palette-card__name">{p.name}</span>
-                            <br />
-                            <span className="onb__palette-card__note">{p.note}</span>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                <div className="onb2-actions">
+                  <button type="button" className="onb2-back" onClick={() => setScreen("you")}>← back</button>
+                  <button type="button" className="onb2-btn onb2-btn--accent" onClick={startBuild} disabled={!canNextYou}>
+                    {buildCta}
+                  </button>
                 </div>
               </div>
-            )}
-
-          </div>
-        </section>
-
-        {/* NAV BAR — bottom of left column */}
-        <footer className="onb__actionbar">
-          <div className="onb__actionbar__left">
-            {step > 0 && (
-              <Button variant="ghost" size="sm" onClick={prevStep}>← back</Button>
-            )}
-          </div>
-
-          <div className="onb__actionbar__right">
-            <span className="onb__step-ind">{step + 1} / 3</span>
-
-            {step < 2 ? (
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={nextStep}
-                disabled={step === 0 && !canGoNext0}
-              >
-                next →
-              </Button>
-            ) : (
-              <Button
-                ref={publishBtnRef}
-                variant="accent"
-                size="lg"
-                onClick={publish}
-                disabled={!canPublish}
-              >
-                {publishing ? "publishing…" : "publish & go live →"}
-              </Button>
-            )}
-          </div>
-        </footer>
-        </div>{/* end .onb__left */}
-
-        <div className="onb__shell__divider" aria-hidden="true" />
-
-        {/* RIGHT: LIVE PREVIEW — full height, no nav bar */}
-        <aside className="onb__preview" aria-label="live preview">
-          <div className="onb__preview__head">
-            <span>logr.it/{handle || "you"}</span>
-            <span className="onb__live">
-              <span className="onb__live__dot" aria-hidden="true" />
-              LIVE
-            </span>
-          </div>
-          <div className="onb__preview__frame" ref={previewFrameRef}>
-            <div className="preview-zoom">
-              <Portfolio profile={preview} chatEnabled={false} previewMode />
             </div>
-            {reading && (
-              <div
-                className="onb__preview__sk"
-                aria-hidden="true"
-                style={{ background: `linear-gradient(to bottom, transparent ${timelineTop - 20}px, var(--paper) ${timelineTop + 4}px)` }}
-              >
-                <div className="onb__preview__sk__page" style={{ paddingTop: timelineTop + 4 }}>
-                  <div className="onb__preview__sk__tl">
-                    {[
-                      { title: "78%", b1: "92%", b2: "60%", accent: true },
-                      { title: "64%", b1: "84%", b2: undefined, accent: false },
-                      { title: "54%", b1: undefined,  b2: undefined, accent: false },
-                    ].map((e, i) => (
-                      <div key={i} className="onb__sk-entry">
-                        <span className={`onb__sk-entry__dot${e.accent ? "" : " onb__sk-entry__dot--ink"}`} />
-                        <span className="onb__sk onb__sk-entry__date" style={{ width: "38%" }} />
-                        <span className="onb__sk onb__sk-entry__title" style={{ width: e.title }} />
-                        {e.b1 && <span className="onb__sk onb__sk-entry__b1" style={{ width: e.b1 }} />}
-                        {e.b2 && <span className="onb__sk onb__sk-entry__b2" style={{ width: e.b2 }} />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
-        </aside>
+        )}
 
-      </div>
+        {/* ═══ building · agentic loader ═══ */}
+        {screen === "building" && (
+          <div className={`onb2-bld${fin ? " onb2-bld--done" : ""}`}>
+            <div className="onb2-bld__top">
+              <AgentMascot />
+              <span className="onb2-bld__headline">
+                {fin ? "your page is ready." : "the agent is reading your sources…"}
+              </span>
+              <span className="onb2-bld__count">
+                <em>{String(jobEvents.length).padStart(2, "0")}</em> events drafted · logr.it/{handle || "you"}
+              </span>
+              {fin && (
+                <button type="button" className="onb2-open__btn onb2-open__btn--top" onClick={openPage} disabled={opening}>
+                  <span>{opening ? "opening…" : `open logr.it/${handle || "you"}`}</span><span>→</span>
+                </button>
+              )}
+            </div>
 
+            {/* timeline fills in */}
+            <div className="onb2-tlcard">
+              <div className="onb2-tl">
+                <span className="onb2-tl__rail" aria-hidden="true" />
+                {slots.map((e, i) => {
+                  if (!e) {
+                    return (
+                      <div key={`sk-${i}`} className="onb2-slot">
+                        <span className="onb2-slot__dot" />
+                        <div className="onb2-slot__sk">
+                          <span className="onb2-slot__bar" style={{ width: `${62 - i * 6}%` }}><span /></span>
+                          <span className="onb2-slot__bar onb2-slot__bar--dim" style={{ width: `${38 - i * 4}%` }} />
+                        </div>
+                      </div>
+                    );
+                  }
+                  const off = excluded.has(evKey(e));
+                  return (
+                    <div
+                      key={evKey(e)}
+                      className={`onb2-slot onb2-slot--filled${off ? " onb2-slot--off" : ""}`}
+                      title={off ? "tap to keep" : "tap to leave out"}
+                      onClick={() =>
+                        setExcluded((prev) => {
+                          const next = new Set(prev);
+                          const k = evKey(e);
+                          if (next.has(k)) next.delete(k);
+                          else next.add(k);
+                          return next;
+                        })
+                      }
+                    >
+                      <span className="onb2-slot__dot" />
+                      <div className="onb2-slot__in">
+                        <div className="onb2-slot__meta">
+                          <em>{monthYear(e.dateOn)}</em> · {e.tags[0] ?? "work"} <i>— via {viaOf(e)}</i>
+                        </div>
+                        <div className="onb2-slot__title">{e.icon ? `${e.icon} ` : ""}{e.title}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="onb2-tl__foot">
+                <span>tap an event to leave it out — the agent keeps going</span>
+                <em>
+                  {jobEvents.length > slots.length ? `+${jobEvents.length - slots.length} more · ` : ""}
+                  {droppedCount ? `${droppedCount} left out` : ""}
+                </em>
+              </div>
+            </div>
+
+            {/* agent terminal */}
+            <div className="onb2-term">
+              <div className="onb2-term__head">
+                <span className="onb2-term__title">
+                  <span className="onb2-term__mini" aria-hidden="true">
+                    <span className="onb2-term__mini-head">
+                      <span className="onb2-term__mini-eyes"><span /><span /></span>
+                    </span>
+                    <span className="onb2-term__mini-dot" />
+                  </span>
+                  building this page
+                </span>
+                <span className="onb2-term__stats">
+                  {(job?.sources ?? []).map((c) => (
+                    <span
+                      key={c.id}
+                      className={`onb2-term__stat${
+                        c.status === "done" ? " onb2-term__stat--done"
+                        : c.status === "error" ? " onb2-term__stat--err"
+                        : c.status === "queued" ? "" : " onb2-term__stat--live"
+                      }`}
+                    >
+                      {c.label.split("/")[0]} {c.status === "done" ? `✓ ${c.eventCount}` : c.status === "error" ? "✗" : c.status}
+                    </span>
+                  ))}
+                </span>
+              </div>
+              <div className="onb2-term__lines">
+                {logs.map((l, i) => (
+                  <div key={`${i}-${l}`} className={`onb2-term__line${i === logs.length - 1 ? " onb2-term__line--last" : ""}`} style={{ opacity: 0.45 + 0.55 * ((i + 1) / logs.length) }}>
+                    ▸ {l}
+                  </div>
+                ))}
+                <span className="onb2-term__cursor" aria-hidden="true" />
+              </div>
+            </div>
+
+            <div className="onb2-open">
+              {fin && (
+                <button type="button" className="onb2-open__btn" onClick={openPage} disabled={opening}>
+                  <span>{opening ? "opening…" : `open logr.it/${handle || "you"}`}</span><span>→</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

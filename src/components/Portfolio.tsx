@@ -23,6 +23,7 @@ import { Mark } from "@/components/Mark";
 import { LAYOUT_ICONS } from "@/components/layout-icons";
 import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
+import { ProfileTour } from "@/components/ProfileTour";
 import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
 import { SeededBanner } from "@/components/SeededBanner";
@@ -575,13 +576,15 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
             <nav className="bar__util" aria-label="utilities">
               {chatEnabled && (
-                <AskLauncher
-                  name={profile.name}
-                  suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
-                  onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
-                />
+                <span data-tour="ask" style={{ display: "inline-flex" }}>
+                  <AskLauncher
+                    name={profile.name}
+                    suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
+                    onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
+                  />
+                </span>
               )}
-              <button type="button" onClick={() => setShareOpen(true)} aria-label="share">
+              <button type="button" onClick={() => setShareOpen(true)} aria-label="share" data-tour="share">
                 <svg className="bar__util__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
                   <path d="M8 10V2.5M8 2.5L5.5 5M8 2.5L10.5 5" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M3 8v4.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8" strokeLinecap="round" />
@@ -589,7 +592,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
                 <span className="bar__util__label">share</span>
               </button>
               {loggedIn && (
-                <Link href="/dashboard" aria-label="dashboard">
+                <Link href="/dashboard" aria-label="dashboard" data-tour="dashboard">
                   <svg className="bar__util__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
                     <rect x="2.5" y="2.5" width="4.6" height="4.6" rx="0.8" />
                     <rect x="8.9" y="2.5" width="4.6" height="4.6" rx="0.8" />
@@ -803,6 +806,12 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
           />
         )}
         {!previewMode && <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />}
+        {!previewMode && (
+          <ProfileTour
+            suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
+            onAsk={chatEnabled ? (q) => { setPendingAsk(q); setChatOpen(true); } : undefined}
+          />
+        )}
       </div>
     </MotionConfig>
   );

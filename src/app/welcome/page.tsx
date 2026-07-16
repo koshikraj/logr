@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
-import type { CSSProperties } from "react";
 import { auth, isXAuthEnabled } from "@/auth";
 import { prisma } from "@/lib/db";
 import { currentProfileId } from "@/lib/session";
 import { findClaimable } from "@/lib/claim";
 import { claimProfileAction } from "@/lib/actions";
-import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
+import { ClaimButton } from "@/components/ClaimButton";
 import { Onboarding } from "@/components/onboarding/Onboarding";
+import { isBrightDataEnabled } from "@/lib/import-sources";
 
 export const metadata = { title: "welcome", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -26,51 +26,59 @@ export default async function WelcomePage({
   // A verified X handle matching a seeded profile → offer the claim first.
   const claimable = fresh ? null : await findClaimable(session.user.id);
   if (claimable) {
-    const vars = themeCssVars(DEFAULT_THEME) as CSSProperties;
     return (
-      <div className="dash" style={{ ...vars, display: "flex", minHeight: "100dvh", alignItems: "center", justifyContent: "center", padding: 24 }}>
-        <div className="card" style={{ width: "100%", maxWidth: 440, marginBottom: 0 }}>
-          <div className="card__head" style={{ marginBottom: 20 }}>
-            <span style={{ fontFamily: "var(--serif)", fontSize: 24, letterSpacing: "-0.03em", color: "var(--ink)" }}>
-              <Mark />logr
-            </span>
-          </div>
+      <div className="onb" style={{ minHeight: "100dvh", height: "auto" }}>
+        <main className="onb2-main">
+          <div className="onb2-login-frame">
+            <div className="onb2-card">
+              <div className="onb2-login-strip" />
+              <div className="onb2-login-body">
+                <div className="onb2-login-head">
+                  <span className="onb2-login-brand"><Mark />logr</span>
+                  <span className="onb2-login-beta">claim</span>
+                </div>
 
-          <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 16 }}>
-            {claimable.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={claimable.avatarUrl} alt="" style={{ width: 56, height: 56, borderRadius: "50%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--rule)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--serif)", fontSize: 24 }}>
-                {claimable.name.trim()[0]?.toLowerCase() ?? "·"}
-              </span>
-            )}
-            <div>
-              <div style={{ fontFamily: "var(--serif)", fontSize: 19, color: "var(--ink)" }}>{claimable.name}</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--muted)" }}>
-                logr.it/{claimable.username} · {claimable.eventCount} events
+                <div className="onb2-you-row" style={{ marginBottom: 14 }}>
+                  <span className="onb2-polaroid">
+                    {claimable.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={claimable.avatarUrl} alt="" />
+                    ) : (
+                      <span className="onb2-polaroid__letter">{claimable.name.trim()[0]?.toLowerCase() ?? "·"}</span>
+                    )}
+                  </span>
+                  <div className="onb2-name-col">
+                    <span style={{ fontSize: 24, letterSpacing: "-0.02em", color: "var(--ink)" }}>{claimable.name}</span>
+                    <span className="onb2-hint">logr.it/{claimable.username} · {claimable.eventCount} events</span>
+                  </div>
+                </div>
+
+                <p className="onb2-login-tag" style={{ fontSize: 14 }}>{claimable.bio}</p>
+                <p className="onb2-login-sub" style={{ marginBottom: 22 }}>
+                  we prepared this profile from public sources. you&apos;re verified as{" "}
+                  <strong>𝕏 @{claimable.xHandle}</strong> — so it&apos;s yours to claim: the unverified banner
+                  comes off, and every entry becomes editable.
+                </p>
+
+                {claim === "failed" && (
+                  <p className="onb2-login-err" style={{ margin: "0 0 12px" }}>
+                    that claim didn&apos;t go through — try again.
+                  </p>
+                )}
+                <form action={claimProfileAction}>
+                  <ClaimButton username={claimable.username} />
+                </form>
+              </div>
+              <div className="onb2-login-foot">
+                <span>read by humans</span>
+                <span>ingested by machines</span>
               </div>
             </div>
+            <p className="onb2-login-note">
+              <a href="/welcome?fresh=1" style={{ color: "inherit" }}>not you, or want a fresh start? →</a>
+            </p>
           </div>
-
-          <p className="modal__sub" style={{ marginBottom: 8 }}>{claimable.bio}</p>
-          <p className="modal__sub" style={{ marginBottom: 20 }}>
-            we prepared this profile from public sources. you&apos;re verified as{" "}
-            <strong>𝕏 @{claimable.xHandle}</strong> — so it&apos;s yours to claim: the unverified banner
-            comes off, and every entry becomes editable.
-          </p>
-
-          <form action={claimProfileAction}>
-            <button type="submit" className="btn btn--primary" style={{ width: "100%", justifyContent: "center" }}>
-              claim @{claimable.username} →
-            </button>
-          </form>
-          <p style={{ textAlign: "center", marginTop: 14 }}>
-            <a href="/welcome?fresh=1" style={{ fontFamily: "var(--mono)", fontSize: 12, color: "var(--muted)" }}>
-              not you, or want a fresh start? →
-            </a>
-          </p>
-        </div>
+        </main>
       </div>
     );
   }
@@ -97,9 +105,10 @@ export default async function WelcomePage({
         name={session.user.name ?? ""}
         image={session.user.image ?? ""}
         suggestedHandle={suggested}
+        scraperEnabled={isBrightDataEnabled()}
       />
       {(claim === "failed" || x === "error" || showXHint) && (
-        <div style={{ position: "fixed", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 50, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
+        <div data-welcome-hint style={{ position: "fixed", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 50, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>
           {claim === "failed" && <span style={{ color: "#b3402a" }}>couldn&apos;t claim that profile — it may have just been claimed. </span>}
           {x === "error" && <span style={{ color: "#b3402a" }}>𝕏 verification didn&apos;t complete — try again. </span>}
           {showXHint && (

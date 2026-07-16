@@ -46,11 +46,14 @@ export function AdminShell({
   profile,
   events,
   xConnected = null,
+  banner,
 }: {
   profile: ProfileDTO;
   events: EditableEvent[];
   /** true = linked, false = offer connect, null = X auth not configured */
   xConnected?: boolean | null;
+  /** optional notice rendered above the tabs (e.g. pending import pickup) */
+  banner?: React.ReactNode;
 }) {
   const [tab, setTab] = useState("profile");
   // owner's theme draft — drives the dashboard's own look + the live preview
@@ -111,6 +114,8 @@ export function AdminShell({
                     <p className="hero__sub">edit on the left — watch it live on the right.</p>
                   </div>
                 </section>
+
+                {banner}
 
                 <nav className="tabs" role="tablist" aria-label="dashboard sections">
                   {TABS.map((t) => (

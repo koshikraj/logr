@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import type { CSSProperties } from "react";
 import { googleSignInAction, xSignInAction } from "@/lib/actions";
 import { auth, isXAuthEnabled } from "@/auth";
-import { DEFAULT_THEME, themeCssVars } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
+
+// Login screen (design: Logr Onboarding v2.dc.html) — centered card with the
+// split top strip, blinking-cursor tagline, and mono sign-in buttons.
 
 export const metadata = { title: "sign in", robots: { index: false, follow: false } };
 
@@ -14,31 +15,42 @@ export default async function LoginPage({
 }) {
   if ((await auth())?.user) redirect("/dashboard"); // already signed in
   const { error } = await searchParams;
-  const vars = themeCssVars(DEFAULT_THEME) as CSSProperties;
 
   return (
-    <div className="dash" style={{ ...vars, display: "flex", minHeight: "100dvh", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div className="card" style={{ width: "100%", maxWidth: 380, marginBottom: 0 }}>
-        <div className="card__head" style={{ marginBottom: 24 }}>
-          <span className="login-brand" style={{ fontFamily: "var(--serif)", fontSize: 24, letterSpacing: "-0.03em", color: "var(--ink)" }}>
-            <Mark />logr
-          </span>
+    <div className="onb" style={{ minHeight: "100dvh", height: "auto" }}>
+      <main className="onb2-main">
+        <div className="onb2-login-frame">
+          <div className="onb2-card">
+            <div className="onb2-login-strip" />
+            <div className="onb2-login-body">
+              <div className="onb2-login-head">
+                <span className="onb2-login-brand"><Mark />logr</span>
+                <span className="onb2-login-beta">beta</span>
+              </div>
+              <p className="onb2-login-tag">
+                one timeline, kept once<span className="onb2-login-caret" aria-hidden="true" />
+              </p>
+              <p className="onb2-login-sub">sign in to build and edit your logr.</p>
+              <div className="onb2-login-btns">
+                <form action={googleSignInAction}>
+                  <button type="submit" className="onb2-login-btn">continue with Google →</button>
+                </form>
+                {isXAuthEnabled() && (
+                  <form action={xSignInAction}>
+                    <button type="submit" className="onb2-login-btn onb2-login-btn--ghost">continue with 𝕏 →</button>
+                  </form>
+                )}
+              </div>
+              {error && <p className="onb2-login-err">sign-in didn&apos;t complete — try again.</p>}
+            </div>
+            <div className="onb2-login-foot">
+              <span>read by humans</span>
+              <span>ingested by machines</span>
+            </div>
+          </div>
+          <p className="onb2-login-note">no password. no feed. just your log.</p>
         </div>
-        <p className="modal__sub" style={{ marginBottom: 24 }}>sign in to build and edit your logr.</p>
-        <form action={googleSignInAction}>
-          <button type="submit" className="btn btn--primary" style={{ width: "100%", justifyContent: "center" }}>continue with Google →</button>
-        </form>
-        {isXAuthEnabled() && (
-          <form action={xSignInAction} style={{ marginTop: 10 }}>
-            <button type="submit" className="btn btn--ghost" style={{ width: "100%", justifyContent: "center" }}>continue with 𝕏 →</button>
-          </form>
-        )}
-        {error && (
-          <p className="modal__sub" style={{ marginTop: 16, color: "var(--user-accent)" }}>
-            sign-in didn&apos;t complete — try again.
-          </p>
-        )}
-      </div>
+      </main>
     </div>
   );
 }
