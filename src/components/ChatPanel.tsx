@@ -5,6 +5,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AnimatePresence } from "framer-motion";
 import { Lightbox } from "@/components/ui/Lightbox";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { SOCIAL_ICONS } from "@/components/social-icons";
 import { detectPlatform } from "@/lib/socials";
 import { parseVideoUrl } from "@/lib/video";
@@ -202,6 +203,7 @@ export function ChatPanel({
       <div className="ask__msgs" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="ask__empty">
+            <AgentAvatar state="idle" size={28} entrance className="agv-empty" />
             <p>ask anything about {name}&apos;s log — grounded only in what&apos;s recorded.</p>
             {/* tap = ask: pills submit straight away, same as follow-up chips */}
             <div className="ask__suggest">
@@ -225,13 +227,16 @@ export function ChatPanel({
             return (
               <div key={i} className="ask__msg ask__msg--assistant">
                 {loading ? (
-                  <span className="ask__thinking">
-                    <span className="ask__dots3"><span /><span /><span /></span>
-                    <span className="ask__thinking__text">thinking it over</span>
+                  <span className="agv-thinking" role="status" aria-label="thinking it over">
+                    <AgentAvatar state="typing" size={22} />
+                    <span className="agv-bubble"><span /><span /><span /></span>
                   </span>
                 ) : m.error ? (
                   <>
-                    <p className="ask__error">{text}</p>
+                    <div className="agv-errrow">
+                      <AgentAvatar state="confused" size={20} />
+                      <p className="ask__error">{text}</p>
+                    </div>
                     <div className="ask__actions">
                       <button className="ask__action" onClick={retry}>↻ try again</button>
                     </div>

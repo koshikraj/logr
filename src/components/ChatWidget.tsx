@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import { useSheetDrag } from "@/components/ui/useSheetDrag";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { ChatPanel } from "@/components/ChatPanel";
 
 /**
@@ -57,7 +58,10 @@ export function ChatWidget({
     <div className="ask__scrim" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="ask__panel" ref={panelRef} role="dialog" aria-modal="true" aria-label={`ask about ${name}`}>
         <div className="ask__head">
-          <span>ask <span className="accent">/</span> {name.toLowerCase()}</span>
+          <span className="ask__head__brand">
+            <AgentAvatar state="idle" size={14} />
+            ask <span className="accent">/</span> {name.toLowerCase()}
+          </span>
           <Link
             className="ask__expand"
             href={`/${username}/ask`}
