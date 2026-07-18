@@ -259,3 +259,16 @@
   position: absolute; bottom: 16px; left: 50%; margin-left: -11px;
   animation: agv-wander 10s ease-in-out infinite alternate;
 }
+
+/* accent surfaces (ask-launcher pill): invert — paper head, accent eyes */
+.agv-onaccent .agv__head { background: var(--agv-paper); }
+.agv-onaccent .agv__eyes span { background: var(--agv-accent); }
+.agv-onaccent .agv__body { display: none; }
+
+/* top-bar wanderer: pops in at a random spot, paces, pops away */
+@keyframes agv-barwander { 0%, 12% { transform: translateX(-34px); } 44%, 58% { transform: translateX(0); } 88%, 100% { transform: translateX(34px); } }
+.agv-barwander {
+  position: absolute; bottom: 0; z-index: 0; pointer-events: none;
+}
+.agv-barwander__walk { display: inline-flex; animation: agv-barwander 9s ease-in-out infinite alternate; }
+.agv-barwander .agv__body { display: none; } /* feet on the bar's baseline */

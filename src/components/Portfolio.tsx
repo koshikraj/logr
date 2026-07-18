@@ -24,6 +24,7 @@ import { LAYOUT_ICONS } from "@/components/layout-icons";
 import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
 import { ProfileTour } from "@/components/ProfileTour";
+import { WanderingAgent } from "@/components/WanderingAgent";
 import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
 import { SeededBanner } from "@/components/SeededBanner";
@@ -572,6 +573,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
         {/* bar — full-width sticky, line spans the viewport (hidden in preview) */}
         {!previewMode && (
         <header className="bar" ref={barRef}>
+          <WanderingAgent />
           <div className="bar__inner">
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
             <nav className="bar__util" aria-label="utilities">
