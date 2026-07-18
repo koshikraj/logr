@@ -8,6 +8,7 @@
 // burn the one showing.
 
 import { useEffect, useRef, useState } from "react";
+import { AgentAvatar } from "@/components/AgentAvatar";
 
 const TOUR_DONE_KEY = "logr-tour-done";
 const PAD = 5;
@@ -150,12 +151,7 @@ export function ProfileTour({
           <div className="tour-card__strip" />
           <div className="tour-card__body">
             <div className="tour-card__row">
-              <span className="tour-mascot" aria-hidden="true">
-                <span className="tour-mascot__head">
-                  <span className="tour-mascot__eyes"><span /><span /></span>
-                </span>
-                <span className="tour-mascot__dot" />
-              </span>
+              <AgentAvatar state="explaining" size={22} entrance className="tour-card__agent" />
               <div className="tour-card__copy">
                 <div className="tour-card__title-row">
                   <span className="tour-card__title">{current.title}</span>
