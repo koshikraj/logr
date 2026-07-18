@@ -265,10 +265,15 @@
 .agv-onaccent .agv__eyes span { background: var(--agv-accent); }
 .agv-onaccent .agv__body { display: none; }
 
-/* profile tabs wanderer: pops onto the filter row's baseline at a random
-   spot, paces like the landing wanderer (same agv-wander walk), pops away.
-   Free to crawl over the tab labels — pointer-events pass through. */
+/* profile tabs wanderer: pops onto the filter row's baseline and walks the
+   whole row end to end, crawling over the tab labels, then exits off the far
+   edge. Direction/duration randomized inline; pointer-events pass through. */
 .logr .filters { position: relative; }
 .agv-tabwander { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.agv-tabwander__pos { position: absolute; bottom: 1px; }
-.agv-tabwander__walk { display: inline-flex; animation: agv-wander 10s ease-in-out infinite alternate; }
+@keyframes agv-cross { 0% { left: -8px; } 100% { left: calc(100% + 12px); } }
+.agv-tabwander__cross {
+  position: absolute; bottom: 1px; display: inline-flex;
+  animation-name: agv-cross;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
