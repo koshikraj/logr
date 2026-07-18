@@ -57,6 +57,15 @@ export function ChatPanel({
   onViewerOpenChange?: (open: boolean) => void;
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
+  // Synchronous source of truth for the thread. State updates flush later
+  // than mount-effect order, so anything that builds on "current messages"
+  // during mount (the launcher auto-ask racing the sessionStorage restore)
+  // must read/write through this ref via apply() — never the closure state.
+  const messagesRef = useRef<Msg[]>([]);
+  const apply = (next: Msg[] | ((m: Msg[]) => Msg[])) => {
+    messagesRef.current = typeof next === "function" ? next(messagesRef.current) : next;
+    setMessages(messagesRef.current);
+  };
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
@@ -78,6 +87,9 @@ export function ChatPanel({
   // assistant bubble (closed mid-"thinking") is dropped on restore.
   const storageKey = `logr-ask:${username}`;
   useEffect(() => {
+    // run-once: StrictMode re-invokes mount effects, and a second restore
+    // would clobber a question the auto-ask already appended to the ref
+    if (hydrated.current) return;
     try {
       const raw = sessionStorage.getItem(storageKey);
       if (raw) {
@@ -89,10 +101,11 @@ export function ChatPanel({
         // setState-in-effect is deliberate: storage is client-only, so the
         // restore must happen after hydration (one extra render on mount)
         // eslint-disable-next-line react-hooks/set-state-in-effect
-        if (msgs.length) setMessages(msgs);
+        if (msgs.length && messagesRef.current.length === 0) apply(msgs);
       }
     } catch { /* fresh start */ }
     hydrated.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
   useEffect(() => {
     if (!hydrated.current || messages.length === 0) return;
@@ -137,8 +150,8 @@ export function ChatPanel({
     if (!sessionRef.current) sessionRef.current = crypto.randomUUID();
     lastQRef.current = q;
 
-    const next: Msg[] = [...(base ?? messages), { role: "user", content: q }];
-    setMessages([...next, { role: "assistant", content: "" }]);
+    const next: Msg[] = [...(base ?? messagesRef.current), { role: "user", content: q }];
+    apply([...next, { role: "assistant", content: "" }]);
     setInput("");
     setStreaming(true);
 
@@ -153,7 +166,7 @@ export function ChatPanel({
       });
       if (!res.ok || !res.body) {
         const err = await res.json().catch(() => ({ error: "Something went wrong." }));
-        setMessages((m) => replaceLast(m, err.error || "Sorry, something went wrong.", true));
+        apply((m) => replaceLast(m, err.error || "Sorry, something went wrong.", true));
         return;
       }
       const reader = res.body.getReader();
@@ -163,12 +176,12 @@ export function ChatPanel({
         const { done, value } = await reader.read();
         if (done) break;
         acc += dec.decode(value, { stream: true });
-        setMessages((m) => replaceLast(m, acc));
+        apply((m) => replaceLast(m, acc));
       }
       const { suggestions: dyn } = parseAnswer(acc, false);
       if (dyn.length) onSuggestions?.(dyn);
     } catch {
-      setMessages((m) => replaceLast(m, "Sorry, the connection dropped.", true));
+      apply((m) => replaceLast(m, "Sorry, the connection dropped.", true));
     } finally {
       setStreaming(false);
     }
@@ -177,7 +190,7 @@ export function ChatPanel({
   /** drop the failed user/answer pair and resend the same question */
   function retry() {
     if (!lastQRef.current || streaming) return;
-    void send(lastQRef.current, messages.slice(0, -2));
+    void send(lastQRef.current, messagesRef.current.slice(0, -2));
   }
 
   function copyAnswer(i: number, content: string) {
