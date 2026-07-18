@@ -573,7 +573,6 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
         {/* bar — full-width sticky, line spans the viewport (hidden in preview) */}
         {!previewMode && (
         <header className="bar" ref={barRef}>
-          <WanderingAgent />
           <div className="bar__inner">
             <span className="bar__brand"><Link href="/"><Mark />logr</Link></span>
             <nav className="bar__util" aria-label="utilities">
@@ -722,6 +721,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
           {/* tag filter */}
           {tags.length > 2 && (
             <nav className="filters" aria-label="filter by tag">
+              <WanderingAgent />
               {tags.map((t) => (
                 <button
                   key={t}
