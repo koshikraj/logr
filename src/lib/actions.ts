@@ -52,7 +52,8 @@ export async function claimProfileAction() {
   if (!res.ok) redirect("/welcome?claim=failed");
   revalidatePath("/");
   revalidatePath(`/${res.username}`);
-  redirect("/dashboard");
+  // land on their own page, running the same first-run tour new users get
+  redirect(`/${res.username}?tour=1`);
 }
 
 // ---------- ONBOARDING ----------

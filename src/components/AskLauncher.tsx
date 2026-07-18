@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { TypingLabel } from "@/components/TypingLabel";
+import { AgentAvatar } from "@/components/AgentAvatar";
 
 /** The top-bar "ask" affordance. Collapsed, it's an accent pill that types
  *  through the suggested questions. Clicked, it morphs in place into a wider
@@ -40,15 +41,7 @@ export function AskLauncher({ name, suggestions, onAsk }: { name: string; sugges
     onAsk(t);
   }
 
-  const robot = (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-      <rect x="3" y="5.5" width="10" height="7.6" rx="2.2" />
-      <circle cx="6.1" cy="9.3" r="0.95" fill="currentColor" stroke="none" />
-      <circle cx="9.9" cy="9.3" r="0.95" fill="currentColor" stroke="none" />
-      <line x1="8" y1="3" x2="8" y2="5.5" strokeLinecap="round" />
-      <circle cx="8" cy="2.4" r="1" fill="currentColor" stroke="none" />
-    </svg>
-  );
+  const robot = <AgentAvatar state="idle" size={14} className="agv-onaccent" />;
 
   return (
     <div className={`ask-launch${expanded ? " is-open" : ""}`} ref={wrapRef}>

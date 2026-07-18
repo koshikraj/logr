@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Reorder, useDragControls } from "framer-motion";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import {
   saveEventAction,
   deleteEventAction,
@@ -210,6 +211,12 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
           </div>
         </div>
 
+        {items.length === 0 && (
+          <div className="agv-sleepy">
+            <AgentAvatar state="sleeping" size={26} />
+            <span>no events yet — the log is napping. add a moment, or let ai draft from your story or sources.</span>
+          </div>
+        )}
         <Reorder.Group as="div" axis="y" values={items} onReorder={setItems} className="hl-list">
           {items.map((e) => (
             <EventRow

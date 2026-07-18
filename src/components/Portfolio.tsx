@@ -24,6 +24,7 @@ import { LAYOUT_ICONS } from "@/components/layout-icons";
 import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
 import { ProfileTour } from "@/components/ProfileTour";
+import { WanderingAgent } from "@/components/WanderingAgent";
 import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
 import { SeededBanner } from "@/components/SeededBanner";
@@ -720,6 +721,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
           {/* tag filter */}
           {tags.length > 2 && (
             <nav className="filters" aria-label="filter by tag">
+              <WanderingAgent />
               {tags.map((t) => (
                 <button
                   key={t}

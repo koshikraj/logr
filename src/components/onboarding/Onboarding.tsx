@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Mark } from "@/components/Mark";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import {
   narrateEventsAction,
   createProfileAction,
@@ -40,19 +41,6 @@ const viaOf = (e: ReviewEvent) => {
 const POLL_MS = 1200;
 const SLOTS = 6;
 
-function AgentMascot() {
-  return (
-    <span className="onb2-mascot" aria-hidden="true">
-      <span className="onb2-mascot__ring" />
-      <span className="onb2-mascot__mark">
-        <span className="onb2-mascot__head">
-          <span className="onb2-mascot__eyes"><span /><span /></span>
-        </span>
-        <span className="onb2-mascot__dot" />
-      </span>
-    </span>
-  );
-}
 
 export function Onboarding({
   name: initialName,
@@ -250,6 +238,15 @@ export function Onboarding({
 
   // ---- derived building view ----
   const jobEvents = job?.events ?? [];
+  // phase-aware mascot: dispatch → reading sources → writing (merge) → ready
+  const jobChips = job?.sources ?? [];
+  const allSettled = jobChips.length > 0 && jobChips.every((c) => c.status === "done" || c.status === "error");
+  const bldState = fin ? "success" : allSettled ? "notes" : jobChips.some((c) => c.status !== "queued") ? "reading" : "working";
+  const bldHeadline = fin
+    ? "your page is ready."
+    : allSettled
+      ? "writing your page…"
+      : "the agent is reading your sources…";
   const droppedCount = jobEvents.filter((e) => excluded.has(evKey(e))).length;
   const slots = Array.from({ length: Math.max(SLOTS, Math.min(jobEvents.length, 8)) }, (_, i) => jobEvents[i] ?? null)
     .slice(0, Math.max(SLOTS, Math.min(jobEvents.length, 8)));
@@ -410,10 +407,8 @@ export function Onboarding({
         {screen === "building" && (
           <div className={`onb2-bld${fin ? " onb2-bld--done" : ""}`}>
             <div className="onb2-bld__top">
-              <AgentMascot />
-              <span className="onb2-bld__headline">
-                {fin ? "your page is ready." : "the agent is reading your sources…"}
-              </span>
+              <AgentAvatar state={bldState} size={26} entrance />
+              <span className="onb2-bld__headline">{bldHeadline}</span>
               <span className="onb2-bld__count">
                 <em>{String(jobEvents.length).padStart(2, "0")}</em> events drafted · logr.it/{handle || "you"}
               </span>
@@ -480,12 +475,7 @@ export function Onboarding({
             <div className="onb2-term">
               <div className="onb2-term__head">
                 <span className="onb2-term__title">
-                  <span className="onb2-term__mini" aria-hidden="true">
-                    <span className="onb2-term__mini-head">
-                      <span className="onb2-term__mini-eyes"><span /><span /></span>
-                    </span>
-                    <span className="onb2-term__mini-dot" />
-                  </span>
+                  <AgentAvatar state={fin ? "idle" : allSettled ? "notes" : "reading"} size={12} className="agv-ondark" />
                   building this page
                 </span>
                 <span className="onb2-term__stats">

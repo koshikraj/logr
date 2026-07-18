@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState, type CSSProperties } from "react";
 import { themeCssVars, PALETTES } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ShareModal } from "@/components/ShareModal";
 import { seedQuestions } from "@/lib/suggest";
@@ -81,6 +82,9 @@ export function AskPage({ profile }: { profile: ProfileDTO }) {
               a grounded conversation — answers come only from {first}&apos;s recorded log, never invented.
             </p>
           </div>
+          <span className="ask-page__agent">
+            <AgentAvatar state="idle" size={30} entrance />
+          </span>
         </section>
 
         <div className="ask-page__panel" role="region" aria-label={`ask about ${profile.name}`}>
