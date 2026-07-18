@@ -51,6 +51,12 @@ export function AgentAvatar({
         {state === "working" && (
           <span className="agv__orbit"><span /></span>
         )}
+        {state === "reading" && (
+          <span className="agv__doc">
+            <span /><span /><span /><span />
+            <span className="agv__sweep" />
+          </span>
+        )}
         <span className="agv__mark">
           <span className="agv__head">
             <span className="agv__eyes"><span /><span /></span>
@@ -63,6 +69,7 @@ export function AgentAvatar({
             <span className="agv__pencil" />
           </span>
         )}
+        {state === "explaining" && <span className="agv__point">▸</span>}
       </span>
     </span>
   );

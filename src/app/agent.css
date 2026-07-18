@@ -93,8 +93,31 @@
   border-radius: 50%; background: var(--agv-accent); opacity: 0.85;
 }
 
+/* reading sources — a scan line sweeps the doc while the eyes track it (card 2c) */
+@keyframes agv-sweep { 0% { top: 13%; opacity: 0; } 12%, 88% { opacity: 1; } 100% { top: 83%; opacity: 0; } }
+.agv--reading .agv__pose { align-items: center; gap: calc(var(--agv-head) * 0.44); }
 .agv--reading .agv__mark { animation: agv-bob 3.4s ease-in-out infinite; }
 .agv--reading .agv__eyes { animation: agv-scan 1.4s ease-in-out infinite; }
+.agv__doc {
+  position: relative;
+  width: calc(var(--agv-head) * 1.5); height: calc(var(--agv-head) * 1.875);
+  background: var(--agv-paper);
+  border: 0.5px solid var(--rule-strong, rgba(26, 26, 26, 0.28));
+  border-radius: calc(var(--agv-head) * 0.16);
+  padding: calc(var(--agv-head) * 0.28) calc(var(--agv-head) * 0.22);
+  display: flex; flex-direction: column; gap: calc(var(--agv-head) * 0.16);
+  box-sizing: border-box; overflow: hidden; flex-shrink: 0;
+}
+.agv__doc > span:not(.agv__sweep) { height: 2.5px; border-radius: 2px; background: var(--agv-ink); opacity: 0.18; }
+.agv__doc > span:nth-child(1) { width: 100%; }
+.agv__doc > span:nth-child(2) { width: 85%; }
+.agv__doc > span:nth-child(3) { width: 95%; }
+.agv__doc > span:nth-child(4) { width: 70%; }
+.agv__sweep {
+  position: absolute; left: calc(var(--agv-head) * 0.16); right: calc(var(--agv-head) * 0.16);
+  height: 2px; border-radius: 2px; background: var(--agv-accent);
+  animation: agv-sweep 2.4s ease-in-out infinite;
+}
 
 /* taking notes — the agent writes the log line by line (design card 2b) */
 @keyframes agv-linegrow { 0% { transform: scaleX(0); } 45%, 88% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
@@ -130,8 +153,16 @@
 .agv--typing .agv__mark { animation: agv-bob 3.4s ease-in-out infinite; }
 .agv--typing .agv__eyes { transform: translate(2px, -1px); }
 
+/* explaining — leans and points at the UI it's guiding (card 2e) */
+.agv--explaining .agv__pose { align-items: center; gap: calc(var(--agv-head) * 0.31); }
 .agv--explaining .agv__mark { animation: agv-nudge 1.4s ease-in-out infinite; }
 .agv--explaining .agv__eyes { transform: translateX(2.5px); }
+.agv__point {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: calc(var(--agv-head) * 0.44); line-height: 1;
+  color: var(--agv-accent);
+  animation: agv-nudge 1.4s ease-in-out infinite 0.1s;
+}
 
 .agv--success .agv__mark { animation: agv-hop 1.8s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
 .agv--success .agv__eyes span {
