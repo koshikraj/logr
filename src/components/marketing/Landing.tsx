@@ -9,6 +9,7 @@ import { LooksFlip } from "./LooksFlip";
 import { ProfileDeck, type FeaturedProfile } from "./ProfileDeck";
 import { ProfileMarquee, type LiveProfile } from "./ProfileMarquee";
 import { Mark } from "@/components/Mark";
+import { AgentAvatar } from "@/components/AgentAvatar";
 
 // The logr marketing landing, cut to the launch promo's rhythm:
 // log anything (entries stamp in) → for anyone (real profiles) →
@@ -162,6 +163,13 @@ export function Landing({
           </div>
           <p className="closing__note">free forever · ninety seconds to the first entry</p>
         </section>
+
+        {/* the agent paces along a baseline above the footer — ambient life */}
+        <div className="agv-wanderline" aria-hidden="true">
+          <span className="agv-wanderer">
+            <AgentAvatar state="idle" size={22} />
+          </span>
+        </div>
 
         {/* footer */}
         <footer className="foot">

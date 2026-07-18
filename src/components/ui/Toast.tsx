@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { useStyleVars } from "./StyleVars";
 
 type ToastKind = "success" | "error";
@@ -50,12 +51,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   t.kind === "success" ? "text-[var(--ink,#18181b)]" : "text-red-600"
                 )}
               >
-                <span
-                  aria-hidden
-                  className={t.kind === "success" ? "text-[var(--accent,#7a4ee0)]" : ""}
-                >
-                  {t.kind === "success" ? "✓" : "⚠"}
-                </span>
+                <AgentAvatar
+                  state={t.kind === "success" ? "success" : "confused"}
+                  size={15}
+                  className="agv-intoast"
+                />
                 {t.message}
               </div>
             ))}

@@ -10,6 +10,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Mark } from "@/components/Mark";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import {
   narrateEventsAction,
   createProfileAction,
@@ -40,19 +41,6 @@ const viaOf = (e: ReviewEvent) => {
 const POLL_MS = 1200;
 const SLOTS = 6;
 
-function AgentMascot() {
-  return (
-    <span className="onb2-mascot" aria-hidden="true">
-      <span className="onb2-mascot__ring" />
-      <span className="onb2-mascot__mark">
-        <span className="onb2-mascot__head">
-          <span className="onb2-mascot__eyes"><span /><span /></span>
-        </span>
-        <span className="onb2-mascot__dot" />
-      </span>
-    </span>
-  );
-}
 
 export function Onboarding({
   name: initialName,
@@ -410,7 +398,7 @@ export function Onboarding({
         {screen === "building" && (
           <div className={`onb2-bld${fin ? " onb2-bld--done" : ""}`}>
             <div className="onb2-bld__top">
-              <AgentMascot />
+              <AgentAvatar state={fin ? "success" : "working"} size={26} entrance />
               <span className="onb2-bld__headline">
                 {fin ? "your page is ready." : "the agent is reading your sources…"}
               </span>
@@ -480,12 +468,7 @@ export function Onboarding({
             <div className="onb2-term">
               <div className="onb2-term__head">
                 <span className="onb2-term__title">
-                  <span className="onb2-term__mini" aria-hidden="true">
-                    <span className="onb2-term__mini-head">
-                      <span className="onb2-term__mini-eyes"><span /><span /></span>
-                    </span>
-                    <span className="onb2-term__mini-dot" />
-                  </span>
+                  <AgentAvatar state={fin ? "idle" : "reading"} size={12} className="agv-ondark" />
                   building this page
                 </span>
                 <span className="onb2-term__stats">

@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Portfolio from "@/components/Portfolio";
+import { AgentAvatar } from "@/components/AgentAvatar";
 import { profileBuildStatusAction, type ImportJobView } from "@/lib/actions";
 import type { ProfileDTO, EventDTO, MediaItem } from "@/lib/profile";
 import type { ReviewEvent, SourceChip } from "@/lib/import-types";
@@ -100,7 +101,7 @@ export function LiveBuilding({ profile, initial }: { profile: ProfileDTO; initia
 
       <div className="bld" role="status" aria-live="polite">
         <div className="bld__head">
-          <span className="bld__dots" aria-hidden="true"><span /><span /><span /></span>
+          <AgentAvatar state="reading" size={14} className="agv-ondark" />
           <span className="bld__title">
             building this page
             {active ? ` — ${active.status === "fetching" ? "reading" : "extracting"} ${active.label}` : "…"}
