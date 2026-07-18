@@ -8,6 +8,7 @@ export type AgentState =
   | "idle" // bob + look + blink
   | "working" // orbit ring + fast eye scan (loaders)
   | "reading" // eyes tracking a scan (ingest states)
+  | "notes" // writing the log line by line on a notepad
   | "typing" // paired with a speech-bubble dots adornment
   | "explaining" // leaning toward whatever it points at
   | "success" // hop, happy closed eyes, confetti
@@ -56,6 +57,12 @@ export function AgentAvatar({
           </span>
           <span className="agv__body" />
         </span>
+        {state === "notes" && (
+          <span className="agv__pad">
+            <span /><span /><span /><span />
+            <span className="agv__pencil" />
+          </span>
+        )}
       </span>
     </span>
   );

@@ -94,6 +94,8 @@ export function LiveBuilding({ profile, initial }: { profile: ProfileDTO; initia
   }, [profile, job.events]);
 
   const active = job.sources.find((s) => s.status === "fetching" || s.status === "extracting");
+  // all sources settled but the job still running = the merge/write phase
+  const writing = !active && job.sources.length > 0 && job.sources.every((s) => s.status === "done" || s.status === "error");
 
   return (
     <>
@@ -101,10 +103,12 @@ export function LiveBuilding({ profile, initial }: { profile: ProfileDTO; initia
 
       <div className="bld" role="status" aria-live="polite">
         <div className="bld__head">
-          <AgentAvatar state="reading" size={14} className="agv-ondark" />
+          <AgentAvatar state={writing ? "notes" : "reading"} size={14} className="agv-ondark" />
           <span className="bld__title">
             building this page
-            {active ? ` — ${active.status === "fetching" ? "reading" : "extracting"} ${active.label}` : "…"}
+            {active
+              ? ` — ${active.status === "fetching" ? "reading" : "extracting"} ${active.label}`
+              : writing ? " — writing the page" : "…"}
           </span>
         </div>
         <ul className="bld__list">

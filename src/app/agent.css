@@ -96,6 +96,37 @@
 .agv--reading .agv__mark { animation: agv-bob 3.4s ease-in-out infinite; }
 .agv--reading .agv__eyes { animation: agv-scan 1.4s ease-in-out infinite; }
 
+/* taking notes — the agent writes the log line by line (design card 2b) */
+@keyframes agv-linegrow { 0% { transform: scaleX(0); } 45%, 88% { transform: scaleX(1); } 100% { transform: scaleX(0); } }
+@keyframes agv-pencil { 0%, 100% { transform: rotate(40deg) translateY(0); } 50% { transform: rotate(47deg) translateY(2px); } }
+.agv--notes .agv__pose { align-items: center; gap: calc(var(--agv-head) * 0.44); }
+.agv--notes .agv__mark { animation: agv-bob 3.4s ease-in-out infinite; }
+.agv--notes .agv__eyes { transform: translateX(2px); }
+.agv__pad {
+  position: relative;
+  width: calc(var(--agv-head) * 1.44); height: calc(var(--agv-head) * 1.75);
+  background: var(--agv-paper);
+  border: 0.5px solid var(--rule-strong, rgba(26, 26, 26, 0.28));
+  border-radius: calc(var(--agv-head) * 0.16);
+  padding: calc(var(--agv-head) * 0.25) calc(var(--agv-head) * 0.22);
+  display: flex; flex-direction: column; gap: calc(var(--agv-head) * 0.16);
+  box-sizing: border-box;
+}
+.agv__pad > span:not(.agv__pencil) {
+  height: 2.5px; border-radius: 2px; background: var(--agv-ink); opacity: 0.4;
+  transform-origin: left; animation: agv-linegrow 4s ease-out infinite;
+}
+.agv__pad > span:nth-child(1) { width: 100%; }
+.agv__pad > span:nth-child(2) { width: 80%; animation-delay: 0.5s; }
+.agv__pad > span:nth-child(3) { width: 92%; animation-delay: 1s; }
+.agv__pad > span:nth-child(4) { width: 58%; background: var(--agv-accent); opacity: 0.8; animation-delay: 1.5s; }
+.agv__pencil {
+  position: absolute; top: calc(var(--agv-head) * -0.25); right: calc(var(--agv-head) * -0.12);
+  width: 3.5px; height: calc(var(--agv-head) * 0.5);
+  border-radius: 2px; background: var(--agv-accent);
+  transform-origin: bottom center; animation: agv-pencil 0.5s ease-in-out infinite;
+}
+
 .agv--typing .agv__mark { animation: agv-bob 3.4s ease-in-out infinite; }
 .agv--typing .agv__eyes { transform: translate(2px, -1px); }
 
