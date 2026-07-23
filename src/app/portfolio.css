@@ -1261,3 +1261,37 @@
   animation: tour-pop 320ms ease both;
 }
 .logr .tour-chip:hover { color: var(--paper); background: var(--user-accent); border-color: var(--user-accent); }
+
+/* visitor "ask" intro (AskIntro.tsx) — single-card variant of the tour's
+   final step, shown to people viewing someone else's profile */
+@keyframes ask-intro-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.logr .ask-intro__badge {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--faint);
+}
+.logr .ask-intro__dot {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--user-accent);
+  animation: ask-intro-pulse 2.2s ease-in-out infinite;
+}
+.logr .ask-intro__meta {
+  margin: 4px 0 0; font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.05em; color: var(--faint);
+}
+.logr .ask-intro__meta::before { content: "● "; color: var(--user-accent); font-size: 7px; vertical-align: 1px; }
+.logr .ask-intro__own {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  color: var(--muted); border: 0; background: transparent; cursor: pointer;
+  padding: 6px 0; transition: color 140ms ease;
+}
+.logr .ask-intro__own:hover { color: var(--user-accent); }
+/* phone: the visitor card runs near full-width, so let it breathe a little */
+@media (max-width: 600px) {
+  .logr .tour-card-wrap--ask .tour-card__body { padding: 20px 22px 18px; }
+  .logr .tour-card-wrap--ask .tour-card__title { font-size: 13px; }
+  .logr .tour-card-wrap--ask .tour-card__text { font-size: 14px; }
+  .logr .tour-card-wrap--ask .tour-chips { gap: 7px; }
+  .logr .tour-card-wrap--ask .tour-chip { font-size: 11.5px; padding: 7px 13px; }
+  .logr .tour-card-wrap--ask .ask-intro__meta { font-size: 10.5px; }
+  .logr .tour-card-wrap--ask .ask-intro__own { font-size: 12px; }
+}

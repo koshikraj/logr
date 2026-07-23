@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { after } from "next/server";
 import { createHash } from "crypto";
-import { streamText, smoothStream, type ModelMessage } from "ai";
+import { streamText, generateText, smoothStream, type ModelMessage } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { prisma } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
@@ -55,6 +55,94 @@ async function cachedSystemPrompt(username: string, origin: string) {
   return entry;
 }
 
+function visitorHash(req: NextRequest): string {
+  const ipRaw = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+  return createHash("sha256").update(ipRaw).digest("hex").slice(0, 16);
+}
+
+// Personalized ask suggestions: one small LLM call per profile per TTL,
+// grounded by construction (the model only sees the log). Made against the
+// SAME cached system prompt with the SAME cacheControl marker as POST, so
+// generating suggestions doubles as writing the provider's prompt cache —
+// the visitor's first real question then reads it. Failures aren't cached:
+// suggestions are a bonus, the warmup already did its job.
+const SUGGEST_TTL_MS = 10 * 60_000;
+const SUGGEST_COUNT = 2;
+const SUGGEST_GEN = 3; // over-generate: the length/shape filter eats some
+const suggestCache = new Map<string, { list: string[]; at: number }>();
+const suggestInflight = new Map<string, Promise<string[]>>();
+
+const SUGGEST_PROMPT = [
+  `Write ${SUGGEST_GEN} short questions a first-time visitor could ask, answerable entirely from the log above.`,
+  "Make them specific — name actual projects, events, or milestones from the log (prefer recent or featured ones). No generic questions.",
+  "Each under 40 characters, all lowercase, ending with a question mark.",
+  "Output the questions only, one per line — no numbering, bullets, or quotes.",
+].join(" ");
+
+function parseSuggestions(text: string): string[] {
+  return text
+    .split("\n")
+    .map((l) => l.replace(/^[\s\d.\-•*>]+/, "").replace(/^["']|["']$/g, "").trim().toLowerCase())
+    .filter((l) => l.length >= 8 && l.length <= 48 && l.endsWith("?"))
+    .slice(0, SUGGEST_COUNT);
+}
+
+async function cachedSuggestions(prompt: { system: string; profileId: string }): Promise<string[]> {
+  const hit = suggestCache.get(prompt.profileId);
+  if (hit && Date.now() - hit.at < SUGGEST_TTL_MS) return hit.list;
+  const inflight = suggestInflight.get(prompt.profileId);
+  if (inflight) return inflight; // concurrent visitors share one generation
+  const job = (async () => {
+    try {
+      const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
+      const { text } = await generateText({
+        model: openrouter.chat(CHAT_MODEL),
+        messages: [
+          {
+            role: "system",
+            content: prompt.system,
+            providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } },
+          },
+          { role: "user", content: SUGGEST_PROMPT },
+        ],
+        maxOutputTokens: 100,
+        temperature: 0.8,
+      });
+      const list = parseSuggestions(text);
+      if (list.length) suggestCache.set(prompt.profileId, { list, at: Date.now() });
+      return list;
+    } catch {
+      return [];
+    } finally {
+      suggestInflight.delete(prompt.profileId);
+    }
+  })();
+  suggestInflight.set(prompt.profileId, job);
+  return job;
+}
+
+/**
+ * Warmup + personalized suggestions. The profile page fires this on load so
+ * the visitor's FIRST question streams against warm caches — profile/prompt
+ * cache, DB connection, provider prompt cache — instead of paying for all
+ * three. Returns a couple of log-specific questions the client mixes in
+ * ahead of the templated seeds.
+ */
+export async function GET(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
+  if (!isChatEnabled()) return Response.json({ suggestions: [] });
+
+  // separate bucket from POST so warmups never eat into the chat budget
+  if (rateLimited(`warm:${visitorHash(req)}`)) {
+    return Response.json({ suggestions: [] }, { status: 429 });
+  }
+
+  const { username } = await params;
+  const prompt = await cachedSystemPrompt(username, req.nextUrl.origin);
+  if (!prompt) return Response.json({ error: "Not found" }, { status: 404 });
+
+  return Response.json({ suggestions: await cachedSuggestions(prompt) });
+}
+
 type InMsg = { role: "user" | "assistant"; content: string };
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ username: string }> }) {
@@ -62,8 +150,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
     return Response.json({ error: "Chat is not configured." }, { status: 503 });
   }
 
-  const ipRaw = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
-  const visitor = createHash("sha256").update(ipRaw).digest("hex").slice(0, 16);
+  const visitor = visitorHash(req);
   if (rateLimited(visitor)) {
     return Response.json({ error: "Too many messages. Try again in a minute." }, { status: 429 });
   }

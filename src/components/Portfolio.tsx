@@ -24,6 +24,7 @@ import { LAYOUT_ICONS } from "@/components/layout-icons";
 import { ChatWidget } from "@/components/ChatWidget";
 import { ShareModal } from "@/components/ShareModal";
 import { ProfileTour } from "@/components/ProfileTour";
+import { AskIntro } from "@/components/AskIntro";
 import { WanderingAgent } from "@/components/WanderingAgent";
 import { AskLauncher } from "@/components/AskLauncher";
 import { TweetEmbed } from "@/components/TweetEmbed";
@@ -366,6 +367,31 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
   // model's own follow-ups take over the launcher for the rest of the visit
   const askSeeds = useMemo(() => seedQuestions(profile), [profile]);
   const [liveAsk, setLiveAsk] = useState<string[]>([]);
+  // chat warmup: one early GET pre-builds the system prompt and seeds the
+  // provider's prompt cache so the first real question streams fast. It also
+  // returns a couple of AI-personalized questions (server-cached per profile)
+  // that lead the suggestion feeds ahead of the templated seeds.
+  const [aiAsk, setAiAsk] = useState<string[]>([]);
+  useEffect(() => {
+    if (previewMode || !chatEnabled) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/${profile.username}/chat`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: { suggestions?: unknown } | null) => {
+          const list = Array.isArray(d?.suggestions)
+            ? d.suggestions.filter((s): s is string => typeof s === "string")
+            : [];
+          if (list.length) setAiAsk(list);
+        })
+        .catch(() => { /* warmup is best-effort */ });
+    }, 400); // let first paint win the connection
+    return () => { ctrl.abort(); clearTimeout(t); };
+  }, [profile.username, previewMode, chatEnabled]);
+  const askDefaults = useMemo(() => {
+    const merged = [...aiAsk, ...askSeeds];
+    return merged.filter((q, i) => merged.indexOf(q) === i);
+  }, [aiAsk, askSeeds]);
   const [activeId, setActiveId] = useState<string | null>(null);
   // open on the owner's preferred order; falls back to "newest" by default.
   const [sort, setSort] = useState<SortKey>(profile.theme.defaultView ?? "newest");
@@ -580,7 +606,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
                 <span data-tour="ask" style={{ display: "inline-flex" }}>
                   <AskLauncher
                     name={profile.name}
-                    suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
+                    suggestions={liveAsk.length > 0 ? liveAsk : askDefaults}
                     onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
                   />
                 </span>
@@ -803,15 +829,28 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
             onClose={() => setChatOpen(false)}
             ask={pendingAsk}
             onAskHandled={() => setPendingAsk(null)}
-            suggestions={askSeeds}
+            suggestions={askDefaults}
             onSuggestions={setLiveAsk}
           />
         )}
         {!previewMode && <ShareModal username={profile.username} name={profile.name} open={shareOpen} onClose={() => setShareOpen(false)} />}
         {!previewMode && (
           <ProfileTour
-            suggestions={liveAsk.length > 0 ? liveAsk : askSeeds}
+            suggestions={liveAsk.length > 0 ? liveAsk : askDefaults}
             onAsk={chatEnabled ? (q) => { setPendingAsk(q); setChatOpen(true); } : undefined}
+          />
+        )}
+        {/* plain visitors never get the ?tour=1 tour — this one card is their
+            intro to the grounded chat. Signed-in viewers are the owner (or a
+            fellow logr user) and don't need the pitch. */}
+        {!previewMode && chatEnabled && !loggedIn && (
+          <AskIntro
+            name={profile.name}
+            eventCount={profile.events.length}
+            suggestions={liveAsk.length > 0 ? liveAsk : askDefaults}
+            onAsk={(q) => { setPendingAsk(q); setChatOpen(true); }}
+            onOpenChat={() => setChatOpen(true)}
+            chatOpen={chatOpen}
           />
         )}
       </div>
