@@ -53,6 +53,8 @@ In priority order:
 - [x] Grounded answers — system prompt embeds the profile's `llm.txt`; facts-only, no fabrication
 - [x] Rate limiting — 12/min/visitor *(in-memory, per instance; swap for Redis in production)*
 - [x] Session-based chat logging — both turns stored per `sessionId`, visitor IPs hashed
+- [x] Visitor "ask" intro — one-time popover on the ask pill introducing the grounded chat, with live suggestion chips
+- [x] Chat warmup + personalized suggestions — profile view pre-warms prompt/provider/DB caches via `GET /api/[username]/chat`, which also generates 2 AI questions from the log *(cached per profile, 10 min, in-memory per instance)*
 - [ ] RAG — index events into pgvector for long profiles ([#11](https://github.com/koshikraj/logr/issues/11))
 - [ ] Owner analytics UI — "what visitors asked" view in the dashboard
 - [ ] Dedicated shareable `/[username]/ask` page ([#9](https://github.com/koshikraj/logr/issues/9))
