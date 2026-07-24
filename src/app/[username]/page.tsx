@@ -4,7 +4,7 @@ import { PortfolioPage } from "@/components/PortfolioPage";
 import { LiveBuilding } from "@/components/LiveBuilding";
 import { profileBuildStatusAction } from "@/lib/actions";
 import { getProfile } from "@/lib/profile";
-import { profileJsonLd, snippet } from "@/lib/seo";
+import { profileJsonLd, snippet, hasIndexSubstance } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +47,10 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
   // unclaimed seeded profiles stay out of search indexes until claimed
   if (profile.claimStatus === "published") meta.robots = { index: false, follow: false };
+  // thin/test profiles are noindexed (still followable) until they have
+  // an identity line and a real log — mirrors the sitemap's filter
+  else if (!hasIndexSubstance({ bio: profile.bio, status: profile.status, eventCount: profile.events.length }))
+    meta.robots = { index: false, follow: true };
   return meta;
 }
 

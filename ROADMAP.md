@@ -43,6 +43,7 @@ In priority order:
 - [ ] Email — welcome, view-count notifications
 - [ ] Analytics — view counts per profile *(visitor chat questions are logged, but no owner UI yet)*
 - [x] SEO — per-profile meta tags + dynamic `og:image` *(JSON-LD structured data still open)*
+- [x] Index hygiene — thin/test profiles (no bio/status or <2 events) noindexed and dropped from the sitemap until substantial; www → apex 308
 
 ## Phase 3 — AI chat interface ✅ (core shipped)
 
