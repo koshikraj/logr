@@ -1,6 +1,23 @@
 import type { ProfileDTO } from "@/lib/profile";
 import { SITE_URL } from "@/lib/site";
 
+/**
+ * Substance gate shared by the sitemap and per-page robots meta: a profile
+ * earns search indexing once it has an identity line (bio or status) AND at
+ * least MIN_INDEX_EVENTS logged events. Below that it reads as a thin/test/
+ * duplicate page and drags the whole site's quality signal — so it stays
+ * live and crawlable but noindexed, and flips indexable the moment the
+ * owner gives it substance. (Seeded-unclaimed pages are gated separately.)
+ */
+export const MIN_INDEX_EVENTS = 2;
+export function hasIndexSubstance(p: {
+  bio: string | null;
+  status: string | null;
+  eventCount: number;
+}): boolean {
+  return p.eventCount >= MIN_INDEX_EVENTS && Boolean(p.bio?.trim() || p.status?.trim());
+}
+
 /** Trim to a search-snippet-friendly length on a word boundary. */
 export function snippet(text: string, max: number): string {
   const flat = text.replace(/\s+/g, " ").trim();
