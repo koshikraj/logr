@@ -139,13 +139,13 @@ export function AskIntro({
               <AgentAvatar state="explaining" size={24} entrance className="tour-card__agent" />
               <div className="tour-card__copy">
                 <div className="tour-card__title-row">
-                  <span className="tour-card__title">ask about {first}</span>
+                  <span className="tour-card__title">meet loggy</span>
                   <span className="ask-intro__badge"><span className="ask-intro__dot" />ai · live</span>
                 </div>
                 <p className="tour-card__text">
                   {/* seam spaces as explicit strings — the bundled Next's JSX
                       transform trims edge whitespace off multiline text nodes */}
-                  This page has its own AI. Ask anything about {first}
+                  Loggy is this page&apos;s AI agent. Ask it anything about {first}
                   {" — "}answers come straight from what&apos;s logged here, nothing invented. Try one:
                 </p>
                 <span className="tour-chips">

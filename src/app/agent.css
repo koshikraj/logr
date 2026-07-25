@@ -225,8 +225,9 @@
 .ask__head__brand { display: inline-flex; align-items: center; gap: 8px; }
 .ask__head__brand .agv__body { display: none; } /* head-only at header scale */
 /* ask page hero: agent hangs out on the right */
-.ask-page__agent { margin-left: auto; align-self: center; padding-right: 4px; }
-@media (max-width: 640px) { .ask-page__agent { display: none; } }
+.ask-page__agent { margin-left: auto; align-self: center; flex-shrink: 0; padding-right: 26px; }
+/* loggy stays on phones too — just tighter against the edge */
+@media (max-width: 640px) { .ask-page__agent { padding-right: 10px; } }
 
 /* toast: compact head-only agent inside the pill */
 .agv-intoast .agv__body { display: none; }

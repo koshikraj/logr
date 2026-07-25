@@ -769,24 +769,49 @@
   display: inline-block; width: 5px; height: 0.72em;
   background: var(--user-accent); margin-left: 8px; vertical-align: -0.04em;
 }
+/* the hero loggy's placement lives with the avatar styles in agent.css */
 .ask-page__sub { margin-top: 8px; font-family: var(--serif); font-size: 14.5px; line-height: 1.5; color: var(--muted); max-width: 56ch; }
 .ask-page__panel {
-  flex: 1 1 0; min-height: 240px; display: flex; flex-direction: column;
+  flex: 1 1 0; min-height: 240px; max-height: min(72vh, 720px);
+  display: flex; flex-direction: column;
   margin-top: 18px; overflow: hidden;
   background: var(--paper); border: 0.5px solid var(--rule-strong); border-radius: 16px;
   box-shadow: 0 30px 70px -44px rgba(0, 0, 0, 0.4);
 }
+/* pre-conversation, the empty state floats centered instead of hugging the top */
+.ask-page__panel .ask__empty { margin-top: auto; margin-bottom: auto; text-align: center; }
+.ask-page__panel .ask__empty .ask__suggest { justify-content: center; }
 .ask-page__foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 4px 12px;
   padding-top: 14px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--faint);
 }
 .ask-page__foot .mark { font-size: 9px; margin-right: 4px; }
 @media (max-width: 600px) {
   .ask-page { padding: 6px 14px 14px; }
-  .ask-page__hero { padding-top: 14px; gap: 14px; }
+  .ask-page__hero { padding-top: 10px; gap: 14px; }
   .ask-page__ava { width: 58px; height: 66px; padding: 4px 4px 11px; }
   .ask-page__ava img { width: 50px; height: 50px; }
-  .ask-page__sub { font-size: 13.5px; }
+  /* every saved pixel matters once the keyboard is up: drop the sub — the
+     chat empty state repeats the grounding line */
+  .ask-page__sub { display: none; }
+  .ask-page__panel { max-height: none; }
+  .ask-page__panel .ask__msg--withava { gap: 8px; }
+  /* chips: one thumb-scrollable row instead of a tall wrapped stack.
+     the width bounds keep the nowrap row from widening the page — without
+     them the hero (and its loggy) gets pushed past the viewport edge */
+  .ask-page__panel .ask__empty { min-width: 0; max-width: 100%; }
+  .ask-page__panel .ask__suggest,
+  .ask-page__panel .ask__followups {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    min-width: 0; max-width: 100%;
+  }
+  .ask-page__panel .ask__suggest::-webkit-scrollbar,
+  .ask-page__panel .ask__followups::-webkit-scrollbar { display: none; }
+  .ask-page__panel .ask__suggest button,
+  .ask-page__panel .ask__followups button { flex-shrink: 0; white-space: nowrap; }
+  .ask-page__panel .ask__empty .ask__suggest { justify-content: flex-start; }
 }
 
 /* centered modal window */
@@ -933,6 +958,13 @@
   padding: 8px 12px; border-radius: 12px 12px 3px 12px; font-family: var(--sans); font-size: 13.5px;
 }
 .ask__msg--assistant { align-self: flex-start; color: var(--ink); white-space: normal; width: 100%; max-width: 100%; }
+/* /ask page: head-only loggy holds the left column beside answers — the same
+   spot as the thinking row's head, from first token through finished answer */
+.ask__ava--headonly .agv__body { display: none; }
+.ask__msg--withava { display: flex; align-items: flex-start; gap: 12px; }
+.ask__msg--withava .ask__msg__ava { flex-shrink: 0; margin-top: 2px; }
+.ask__msg__ava .agv__body { display: none; }
+.ask__msg__body { min-width: 0; flex: 1; }
 /* "thinking it over" — three dots walking (first dot is the accent) */
 .ask__thinking { display: inline-flex; align-items: center; gap: 12px; }
 .ask__dots3 { display: inline-flex; align-items: center; gap: 7px; }
