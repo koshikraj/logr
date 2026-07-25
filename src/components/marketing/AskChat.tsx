@@ -5,6 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "./useInView";
+import { AgentAvatar } from "@/components/AgentAvatar";
 
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const reduced = () =>
@@ -81,7 +82,9 @@ export function AskChat() {
       <div className="mv-chat__messages">
         {history.map((m, i) => (
           <div key={i} className={`mv-msg mv-msg--${m.role}`}>
-            <span className="mv-msg__label">{m.role === "user" ? "you" : "logr.ai"}</span>
+            <span className="mv-msg__label">
+              {m.role === "user" ? "you" : <><AgentAvatar state="idle" size={11} />loggy</>}
+            </span>
             <div className="mv-msg__bubble">{m.text}</div>
           </div>
         ))}

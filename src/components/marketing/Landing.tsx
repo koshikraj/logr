@@ -19,7 +19,7 @@ import { AgentAvatar } from "@/components/AgentAvatar";
 
 const STEPS = [
   ["claim a handle.", "logr.it/you — free forever."],
-  ["log a line.", "a date and a sentence. ai drafts the rest."],
+  ["log a line.", "a date and a sentence. loggy drafts the rest."],
   ["every reader follows.", "timeline · llm.txt · /ask — all update at once."],
 ];
 
@@ -125,7 +125,10 @@ export function Landing({
           <div className="ask">
             <div className="ask__window">
               <div className="ask__bar">
-                <span>ask <span className="accent">/</span> vitalik</span>
+                <span className="ask__bar__brand">
+                  <AgentAvatar state="idle" size={14} />
+                  <span>ask <span className="accent">/</span> vitalik</span>
+                </span>
                 <span className="ask__url">logr.it/vitalik</span>
               </div>
               <div className="ask__body">

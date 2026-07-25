@@ -33,8 +33,8 @@ const STEPS: Step[] = [
   },
   {
     key: "ask",
-    title: "ask me anything",
-    body: "Visitors — and their AIs — can ask questions about you here. Answers come only from what's in your log. Try one:",
+    title: "meet loggy",
+    body: "Loggy, your AI buddy, answers questions from visitors — and their AIs — right here. Answers come only from what's in your log. Try one:",
   },
 ];
 

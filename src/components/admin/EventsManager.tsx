@@ -214,7 +214,7 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
         {items.length === 0 && (
           <div className="agv-sleepy">
             <AgentAvatar state="sleeping" size={26} />
-            <span>no events yet — the log is napping. add a moment, or let ai draft from your story or sources.</span>
+            <span>no events yet — loggy is napping. add a moment, or let it draft from your story or sources.</span>
           </div>
         )}
         <Reorder.Group as="div" axis="y" values={items} onReorder={setItems} className="hl-list">

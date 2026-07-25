@@ -43,6 +43,7 @@ export function ChatPanel({
   suggestions: seedSuggestions,
   onSuggestions,
   onViewerOpenChange,
+  variant,
 }: {
   username: string;
   name: string;
@@ -55,6 +56,9 @@ export function ChatPanel({
   onSuggestions?: (qs: string[]) => void;
   /** lets a modal host defer its Escape handling while the Lightbox is up */
   onViewerOpenChange?: (open: boolean) => void;
+  /** "page" = the full-bleed /ask surface: larger head-only loggy beside
+      answers, promo-video style. Default is the compact modal look. */
+  variant?: "page";
 }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   // Synchronous source of truth for the thread. State updates flush later
@@ -217,7 +221,7 @@ export function ChatPanel({
         {messages.length === 0 ? (
           <div className="ask__empty">
             <AgentAvatar state="idle" size={28} entrance className="agv-empty" />
-            <p>ask anything about {name}&apos;s log — grounded only in what&apos;s recorded.</p>
+            <p>ask loggy anything about {name} — grounded only in what&apos;s recorded.</p>
             {/* tap = ask: pills submit straight away, same as follow-up chips */}
             <div className="ask__suggest">
               {suggestions.map((s) => (
@@ -237,11 +241,16 @@ export function ChatPanel({
             const { text, gallery, links, suggestions: dynamicFollowups } = parseAnswer(m.content, streamingThis);
             // model-suggested follow-ups when it produced them, static otherwise
             const chips = dynamicFollowups.length > 0 ? dynamicFollowups : followups.slice(0, 2);
+            // /ask page only: the promo-video look — a head-only loggy that
+            // appears with the thinking bubble and stays beside the answer
+            const page = variant === "page";
+            const withAva = page && !loading && !m.error;
             return (
-              <div key={i} className="ask__msg ask__msg--assistant">
+              <div key={i} className={`ask__msg ask__msg--assistant${withAva ? " ask__msg--withava" : ""}`}>
+                {withAva && <AgentAvatar state="idle" size={26} className="ask__msg__ava" />}
                 {loading ? (
                   <span className="agv-thinking" role="status" aria-label="thinking it over">
-                    <AgentAvatar state="typing" size={22} />
+                    <AgentAvatar state="typing" size={page ? 26 : 22} className={page ? "ask__ava--headonly" : undefined} />
                     <span className="agv-bubble"><span /><span /><span /></span>
                   </span>
                 ) : m.error ? (
@@ -255,7 +264,7 @@ export function ChatPanel({
                     </div>
                   </>
                 ) : (
-                  <>
+                  <div className="ask__msg__body">
                     <div className="ask__md">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
                         {text}
@@ -318,7 +327,7 @@ export function ChatPanel({
                         ))}
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             );

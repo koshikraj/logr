@@ -219,7 +219,7 @@ export function Onboarding({
         setFin(true);
         return;
       }
-      pushLog("agent dispatched — reading your sources");
+      pushLog("loggy dispatched — reading your sources");
       void poll();
     })();
   }
@@ -246,7 +246,7 @@ export function Onboarding({
     ? "your page is ready."
     : allSettled
       ? "writing your page…"
-      : "the agent is reading your sources…";
+      : "loggy is reading your sources…";
   const droppedCount = jobEvents.filter((e) => excluded.has(evKey(e))).length;
   const slots = Array.from({ length: Math.max(SLOTS, Math.min(jobEvents.length, 8)) }, (_, i) => jobEvents[i] ?? null)
     .slice(0, Math.max(SLOTS, Math.min(jobEvents.length, 8)));
@@ -364,7 +364,7 @@ export function Onboarding({
                   </div>
                   <span className="onb2-step-head__count">2 / 2</span>
                 </div>
-                <p className="onb2-sub">paste your links — we&apos;ll build the page from them.</p>
+                <p className="onb2-sub">paste your links — loggy, your ai buddy, builds the page from them.</p>
 
                 <SourcesInput scraperEnabled={scraperEnabled} onChange={onSourcesChange} />
 
@@ -463,7 +463,7 @@ export function Onboarding({
                 })}
               </div>
               <div className="onb2-tl__foot">
-                <span>tap an event to leave it out — the agent keeps going</span>
+                <span>tap an event to leave it out — loggy keeps going</span>
                 <em>
                   {jobEvents.length > slots.length ? `+${jobEvents.length - slots.length} more · ` : ""}
                   {droppedCount ? `${droppedCount} left out` : ""}

@@ -297,8 +297,10 @@
 /* 04 — ask: the grounded chat, one window */
 .mkt .ask { max-width: 560px; margin: 0 auto; }
 .mkt .ask__window { border: 0.5px solid var(--rule); border-radius: 14px; background: var(--paper); overflow: hidden; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 32px 70px -36px rgba(0, 0, 0, 0.3); }
-.mkt .ask__bar { display: flex; justify-content: space-between; align-items: baseline; padding: 12px 18px; border-bottom: 0.5px solid var(--rule); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted); }
+.mkt .ask__bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 0.5px solid var(--rule); font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--muted); }
 .mkt .ask__bar .accent { color: var(--user-accent); }
+.mkt .ask__bar__brand { display: inline-flex; align-items: center; gap: 8px; }
+.mkt .ask__bar__brand .agv__body { display: none; }
 .mkt .ask__url { color: var(--faint); }
 .mkt .ask__body { padding: 20px 20px 16px; min-height: 300px; display: flex; flex-direction: column; }
 .mkt .ask__caption { margin-top: 22px; text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--muted); }
@@ -310,7 +312,8 @@
 .mkt .mv-msg { display: flex; flex-direction: column; gap: 3px; }
 .mkt .mv-msg--user { align-items: flex-end; }
 .mkt .mv-msg--ai { align-items: flex-start; }
-.mkt .mv-msg__label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--faint); }
+.mkt .mv-msg__label { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em; color: var(--faint); }
+.mkt .mv-msg__label .agv__body { display: none; }
 .mkt .mv-msg__bubble { padding: 7px 12px; max-width: 92%; font-family: var(--serif); font-size: 13px; line-height: 1.45; }
 .mkt .mv-msg--user .mv-msg__bubble { background: var(--ink); color: var(--paper); }
 .mkt .mv-msg--ai .mv-msg__bubble { background: rgba(0, 0, 0, 0.04); color: var(--ink); border: 0.5px solid var(--rule); }
