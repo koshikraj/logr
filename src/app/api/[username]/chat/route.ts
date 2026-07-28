@@ -74,7 +74,7 @@ const suggestInflight = new Map<string, Promise<string[]>>();
 
 const SUGGEST_PROMPT = [
   `Write ${SUGGEST_GEN} short questions a first-time visitor could ask, answerable entirely from the log above.`,
-  "Make them specific — name actual projects, events, or milestones from the log (prefer recent or featured ones). No generic questions.",
+  "Make them specific — name actual projects, events, or milestones from the log (prefer pinned, recent, or featured ones). No generic questions.",
   "Each under 40 characters, all lowercase, ending with a question mark.",
   "Output the questions only, one per line — no numbering, bullets, or quotes.",
 ].join(" ");

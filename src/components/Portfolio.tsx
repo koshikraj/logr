@@ -181,8 +181,17 @@ function EntryIcon({ h }: { h: EventDTO }) {
   );
 }
 
+// ---------- PIN GLYPH (rail label, phone strip, entry marker) ----------
+function PinGlyph({ px = 11, className }: { px?: number; className?: string }) {
+  return (
+    <svg className={className} width={px} height={px} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+      <path d="M6 2.5h4l-.6 3.2 2.6 2.3v.5H4v-.5l2.6-2.3L6 2.5zM8 8.5V13" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 // ---------- ENTRY ----------
-function Entry({ h, recency, active, spotlight, popOrigin }: { h: EventDTO; recency: string; active?: boolean; spotlight?: boolean; popOrigin?: string }) {
+function Entry({ h, recency, active, spotlight, popOrigin, pinned }: { h: EventDTO; recency: string; active?: boolean; spotlight?: boolean; popOrigin?: string; pinned?: boolean }) {
   // milestone takes the accent dot/style if present; otherwise the first tag.
   const primaryTag = h.tags.includes("milestone") ? "milestone" : h.tags[0] ?? "work";
   const tagLabel = h.tags.map((t) => TAG_META[t]?.label ?? t).join(" · ");
@@ -213,6 +222,7 @@ function Entry({ h, recency, active, spotlight, popOrigin }: { h: EventDTO; rece
       <div className="entry__date">
         {h.date}
         <span className="entry__tag">{tagLabel}</span>
+        {pinned && <span className="entry__pin" title="pinned entry"><PinGlyph px={10} /></span>}
         {h.sourceUrl && (
           <a className="entry__source" href={h.sourceUrl} target="_blank" rel="noopener noreferrer" title="source for this entry">
             source ↗
@@ -518,6 +528,44 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
     [activeId, profile.events, recentEvents]
   );
 
+  // owner-pinned events, newest-first (order derived, keeping the dot-size
+  // gradient meaningful); empty when nothing is pinned
+  const pinnedSet = useMemo(() => new Set(profile.pinnedIds), [profile.pinnedIds]);
+  const pinnedEvents = useMemo(() => {
+    return pinnedSet.size === 0
+      ? []
+      : profile.events.filter((e) => pinnedSet.has(e.id)).sort((a, b) => dateKey(b).localeCompare(dateKey(a)));
+  }, [profile.events, pinnedSet]);
+
+  // the rail shows pins when they exist, else the newest 7
+  const railEvents = pinnedEvents.length > 0 ? pinnedEvents : recentEvents;
+  const railLabel = pinnedEvents.length > 0 ? "pinned" : "recent";
+
+  // rail/strip links whose target the active filter tab hides (e.g. an
+  // unfeatured pin under "highlights") widen the filter to "all" first, then
+  // jump once the timeline has re-rendered with the entry in the DOM. The
+  // anchor rides a ref so the filter change alone drives the effect.
+  const pendingAnchor = useRef<string | null>(null);
+  useEffect(() => {
+    const id = pendingAnchor.current;
+    if (!id) return;
+    pendingAnchor.current = null;
+    const el = document.getElementById(id);
+    if (el) {
+      window.history.replaceState(null, "", `#${id}`);
+      el.scrollIntoView({ block: "start" });
+    }
+  }, [filter]);
+  function navToEntry(ev: { preventDefault: () => void }, e: EventDTO) {
+    // mirror the timeline's filter predicate: intercept only when the current
+    // tab would hide the target entry
+    const hidden = filter !== "all" && (filter === "highlights" ? !e.featured : !e.tags.includes(filter));
+    if (!hidden) return;
+    ev.preventDefault();
+    pendingAnchor.current = `e-${e.id}`;
+    setFilter("all");
+  }
+
   const hasFeatured = useMemo(() => profile.events.some((e) => e.featured), [profile.events]);
 
   // filter tabs: highlights (featured) + all + each distinct tag.
@@ -636,17 +684,27 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
         <div className="page">
           {/* shell: sticky recent rail (left) + main column (right) */}
           <div className="shell">
-            {/* recent — its own card, sticky in the left gutter */}
-            <aside className="recent-card" aria-label="recent entries">
-              <p className="recent-card__label">recent</p>
-              {recentEvents.length > 0 ? (
+            {/* recent/pinned — its own card, sticky in the left gutter */}
+            <aside className="recent-card" aria-label={`${railLabel} entries`}>
+              <p className="recent-card__label">
+                {pinnedEvents.length > 0 ? (
+                  <PinGlyph className="recent-card__label__ico" />
+                ) : (
+                  <svg className="recent-card__label__ico" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
+                    <circle cx="8" cy="8" r="5.5" />
+                    <path d="M8 5.2V8l1.9 1.3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {railLabel}
+              </p>
+              {railEvents.length > 0 ? (
                 <ol className="recent-card__list">
-                  {recentEvents.map((e, i) => {
-                    const last = i === recentEvents.length - 1;
+                  {railEvents.map((e, i) => {
+                    const last = i === railEvents.length - 1;
                     const size = RC_DOT_SIZES[i] ?? 4;
                     return (
                       <li key={e.id}>
-                        <a className="rc" href={`#e-${e.id}`}>
+                        <a className="rc" href={`#e-${e.id}`} onClick={(ev) => navToEntry(ev, e)}>
                           <span className="rc__rail">
                             <span
                               className={`rc__dot${i === 0 ? " rc__dot--now" : ""}`}
@@ -744,6 +802,27 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
                 </div>
               </section>
 
+          {/* pinned — phone-only horizontal strip standing in for the side
+              rail, which is hidden below 860px */}
+          {pinnedEvents.length > 0 && (
+            <nav className="pin-strip" aria-label="pinned entries">
+              <span className="pin-strip__label"><PinGlyph px={10} />pinned</span>
+              <div className="pin-strip__row">
+                {pinnedEvents.map((e) => (
+                  <a key={e.id} className="pin-chip" href={`#e-${e.id}`} onClick={(ev) => navToEntry(ev, e)}>
+                    {e.icon && (isImageIcon(e.icon) ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img className="pin-chip__ico" src={e.icon} alt="" />
+                    ) : (
+                      <span className="pin-chip__ico pin-chip__ico--emoji">{e.icon}</span>
+                    ))}
+                    <span className="pin-chip__t">{e.title}</span>
+                  </a>
+                ))}
+              </div>
+            </nav>
+          )}
+
           {/* tag filter */}
           {tags.length > 2 && (
             <nav className="filters" aria-label="filter by tag">
@@ -789,7 +868,7 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
                   <span className="year__line" />
                 </div>
               ) : (
-                <Entry key={row.h.id} h={row.h} recency={row.recency} active={activeId === row.h.id} spotlight={spotlight} popOrigin={popOrigin} />
+                <Entry key={row.h.id} h={row.h} recency={row.recency} active={activeId === row.h.id} spotlight={spotlight} popOrigin={popOrigin} pinned={pinnedSet.has(row.h.id)} />
               )
             )}
           </main>

@@ -54,11 +54,13 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
   );
   lines.push("");
 
+  const pinnedSet = new Set(profile.pinnedIds);
   for (const e of profile.events) {
     const tagLabels = e.tags.map((t) => TAG_META[t]?.label ?? t).join(", ");
     lines.push(`### ${e.title}`);
     lines.push(`- Date: ${e.date} (${e.dateOn})`);
     if (tagLabels) lines.push(`- Type: ${tagLabels}`);
+    if (pinnedSet.has(e.id)) lines.push(`- Pinned: yes`);
     if (e.featured) lines.push(`- Highlight: yes`);
     lines.push(`- Details: ${e.body.replace(/\n/g, " ")}`);
     if (e.sourceUrl) lines.push(`- Source: ${e.sourceUrl}`);
