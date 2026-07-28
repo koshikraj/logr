@@ -164,6 +164,29 @@ export async function updateThemeAction(theme: Partial<Theme>) {
   await revalidateForProfile(profileId);
 }
 
+/** Persist the owner's pinned rail: up to 7 of their own event ids (display
+ *  order is derived newest-first, so only membership is stored). */
+export async function updatePinnedAction(ids: string[]) {
+  const profileId = await requireProfileId();
+  let pinned = Array.from(
+    new Set((Array.isArray(ids) ? ids : []).filter((v): v is string => typeof v === "string"))
+  ).slice(0, 7);
+  if (pinned.length) {
+    // only ids that belong to this profile's events survive
+    const owned = await prisma.event.findMany({
+      where: { profileId, id: { in: pinned } },
+      select: { id: true },
+    });
+    const ownedIds = new Set(owned.map((e) => e.id));
+    pinned = pinned.filter((id) => ownedIds.has(id));
+  }
+  await prisma.profile.update({
+    where: { id: profileId },
+    data: { pinned: JSON.stringify(pinned) },
+  });
+  await revalidateForProfile(profileId);
+}
+
 // ---------- EVENTS ----------
 export type { MediaInput, ReviewEvent } from "@/lib/import-types";
 

@@ -29,6 +29,7 @@ model Profile {
   avatarUrl String?
   socials   String // JSON: [{ label, href }]
   theme     String // JSON: { palette, fonts, rounded, accentOverride, postStyle, dotStyle, photoHover, dark }
+  pinned    String   @default("[]") // JSON: event ids pinned to the public rail (max 7; display order derived newest-first)
 
   // Seeded-profile lifecycle (PLAN-seeded-profiles.md). `status` above is the
   // display tagline — this is the claim/publish state machine.

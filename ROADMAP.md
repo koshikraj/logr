@@ -6,11 +6,10 @@ Status reflects what's actually in the repo. Where the implementation diverged f
 
 In priority order:
 
-1. **Pinned events** — let the owner pin selected events to a strip at the top of the public timeline, presented like the "recent" rail component.
-2. **MCP endpoint** — a Model Context Protocol server so AI agents can read a user's log and, after authenticating as the owner, update it (add/edit events programmatically).
-3. **Comments** — signed-in users can comment on another profile's events.
-4. **Mentions** — tag other logr users on events (groundwork for cross-profile verified collaborations, [#10](https://github.com/koshikraj/logr/issues/10)).
-5. **Custom domains** — bring-your-own domain (`koshik.me` → same page) with logr branding removal.
+1. **MCP endpoint** — a Model Context Protocol server so AI agents can read a user's log and, after authenticating as the owner, update it (add/edit events programmatically).
+2. **Comments** — signed-in users can comment on another profile's events.
+3. **Mentions** — tag other logr users on events (groundwork for cross-profile verified collaborations, [#10](https://github.com/koshikraj/logr/issues/10)).
+4. **Custom domains** — bring-your-own domain (`koshik.me` → same page) with logr branding removal.
 
 ## Phase 1 — Single user, personal portfolio ✅
 
@@ -44,6 +43,7 @@ In priority order:
 - [ ] Analytics — view counts per profile *(visitor chat questions are logged, but no owner UI yet)*
 - [x] SEO — per-profile meta tags + dynamic `og:image` *(JSON-LD structured data still open)*
 - [x] Index hygiene — thin/test profiles (no bio/status or <2 events) noindexed and dropped from the sitemap until substantial; www → apex 308
+- [x] Pinned events — owner pins up to 7 events (events tab → pins dialog); the public "recent" rail + OG image switch to a "pinned" rail; marked `Pinned: yes` in `llm.txt`
 
 ## Phase 3 — AI chat interface ✅ (core shipped)
 

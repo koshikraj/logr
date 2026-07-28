@@ -50,10 +50,15 @@ export default async function OgImage({ params }: Props) {
   const bio    = profile.bio.length > 130    ? profile.bio.slice(0, 130) + "…"    : profile.bio;
   const status = profile.status.length > 110 ? profile.status.slice(0, 110) + "…" : profile.status;
 
-  // last 7 events, newest first
-  const recentEvents = [...profile.events]
+  // rail mirror: pinned events when pins exist (newest first), else last 7
+  const pinnedSet = new Set(profile.pinnedIds);
+  const railEvents = (pinnedSet.size
+    ? profile.events.filter((e) => pinnedSet.has(e.id))
+    : [...profile.events]
+  )
     .sort((a, b) => b.dateOn.localeCompare(a.dateOn))
     .slice(0, 7);
+  const railLabel = pinnedSet.size ? "pinned" : "recent";
 
   // polaroid: compact, sits inline next to the name
   const IMG   = 68;
@@ -273,19 +278,19 @@ export default async function OgImage({ params }: Props) {
               flexShrink: 0,
             }}
           >
-            {/* "recent" label */}
+            {/* "recent"/"pinned" label */}
             <div style={{ fontFamily: "monospace", fontSize: 11, color: FAINT, letterSpacing: "0.1em", marginBottom: 24 }}>
-              recent
+              {railLabel}
             </div>
 
             {/* timeline entries */}
-            {recentEvents.length > 0 ? (
+            {railEvents.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column" }}>
-                {recentEvents.map((e, i) => {
+                {railEvents.map((e, i) => {
                   const dotSize = DOT_SIZES[i] ?? 4;
                   const opacity = DOT_OPACITIES[i] ?? 0.4;
                   const isAccent = i === 0;
-                  const isLast = i === recentEvents.length - 1;
+                  const isLast = i === railEvents.length - 1;
                   return (
                     <div key={e.id} style={{ display: "flex", gap: 14 }}>
                       {/* dot + connecting line */}

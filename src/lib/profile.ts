@@ -51,6 +51,7 @@ export type ProfileDTO = {
   avatarUrl: string | null;
   socials: Social[];
   theme: Theme;
+  pinnedIds: string[]; // owner-pinned event ids (healed on read: existing events only, max 7)
   events: EventDTO[];
   updatedAt: string; // ISO timestamp of the last profile edit (SEO dateModified)
 };
@@ -79,6 +80,15 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
   // admin app reads the DB directly and is unaffected.
   if (row.claimStatus === "draft" || row.claimStatus === "takedown") return null;
 
+  // Heal pins on read: drop non-strings, ids whose event was deleted, and
+  // duplicates; cap at 7. The next pins save writes the healed list back.
+  const eventIds = new Set(row.events.map((e) => e.id));
+  const rawPinned = parseJSON<unknown>(row.pinned, []);
+  const pinnedIds = (Array.isArray(rawPinned) ? rawPinned : [])
+    .filter((v): v is string => typeof v === "string" && eventIds.has(v))
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 7);
+
   return {
     id: row.id,
     username: row.username,
@@ -91,6 +101,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     avatarUrl: row.avatarUrl,
     socials: healSocials(parseJSON<Social[]>(row.socials, [])),
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
+    pinnedIds,
     updatedAt: row.updatedAt.toISOString(),
     events: row.events.map((e) => ({
       id: e.id,

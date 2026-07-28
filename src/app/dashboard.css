@@ -208,7 +208,11 @@
 .dash .sw--auto { display: inline-flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 9px; color: var(--muted); background: transparent; }
 
 /* checkbox */
-.dash .check { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 15.5px; color: var(--ink); cursor: pointer; user-select: none; }
+/* position: relative keeps the hidden input inside its own label — without it
+   the absolutely-positioned input resolves against the modal card, doesn't
+   travel with a scrolled checklist, and focusing it on click yanks the card's
+   scroll position to the input's phantom pre-scroll location. */
+.dash .check { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-size: 15.5px; color: var(--ink); cursor: pointer; user-select: none; position: relative; }
 .dash .check input { position: absolute; opacity: 0; pointer-events: none; }
 .dash .check__box { width: 16px; height: 16px; border: 0.5px solid var(--rule-strong); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color 160ms ease; }
 .dash .check__box::after { content: ""; width: 8px; height: 8px; background: var(--user-accent); opacity: 0; transition: opacity 160ms ease; }
@@ -556,6 +560,11 @@
 
 /* review checklist — extracted events, same row grammar as the detail rows */
 .dash .rev { display: flex; flex-direction: column; }
+
+/* pins modal — flex column so only the checklist scrolls, never the card */
+.dash .modal__card--pins { display: flex; flex-direction: column; overflow-y: hidden; }
+.dash .rev--pins { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.dash .modal__card--pins .modal__foot { flex-shrink: 0; }
 .dash .rev__row { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 0.5px solid var(--rule); transition: opacity 160ms ease; }
 .dash .rev__row.is-off { opacity: 0.4; }
 .dash .rev__check { flex-shrink: 0; }

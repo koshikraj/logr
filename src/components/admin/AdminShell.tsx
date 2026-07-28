@@ -135,7 +135,7 @@ export function AdminShell({
 
                 {tab === "profile" && <ProfileForm profile={profile} onDraftChange={(p) => setDraft((d) => ({ ...d, ...p }))} />}
                 {tab === "appearance" && <ThemeEditor theme={theme} onChange={setTheme} />}
-                {tab === "events" && <EventsManager events={events} username={profile.username} onItemsChange={setItems} />}
+                {tab === "events" && <EventsManager events={events} username={profile.username} pinnedIds={profile.pinnedIds} onItemsChange={setItems} />}
               </div>
             </div>
 

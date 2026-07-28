@@ -16,6 +16,7 @@ See **[ROADMAP.md](ROADMAP.md)** for what's built and what's next.
 - **AI import** — paste your story, upload a resume (PDF/DOCX), or point at a URL; AI structures it into timeline events you review and confirm before anything is saved.
 - **Grounded chat** — the visitor chat is prompted with your `llm.txt` (same generator as the public route), streams via OpenRouter, and is rate-limited. Facts-only: if it's not in your log, it says so.
 - **Theming** — 9 palettes (incl. dark `ink`) × 8 layouts (`timeline`, `journal`, `magazine`, `terminal`, `feed`, `card`, `centered`, `polaroid`), persisted per profile, previewable live.
+- **Pinned events** — pin up to 7 events from the dashboard events tab (pins dialog); they replace the "recent" side rail (and the OG image's rail) and are marked in `llm.txt`.
 - **Media** — image upload (S3, or local FS in dev), video/tweet embeds, unfurled link cards, dynamic OG image per profile.
 
 Chat, S3, and Google auth are each feature-gated on their env vars and degrade gracefully when unset.

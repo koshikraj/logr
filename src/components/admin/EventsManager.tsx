@@ -10,6 +10,7 @@ import {
   saveEventAction,
   deleteEventAction,
   reorderEventsAction,
+  updatePinnedAction,
   type EventInput,
 } from "@/lib/actions";
 import { TAG_META } from "@/lib/theme";
@@ -143,11 +144,61 @@ function EventRow({
   );
 }
 
-export function EventsManager({ events, username, onItemsChange }: { events: EditableEvent[]; username: string; onItemsChange?: (items: EditableEvent[]) => void }) {
+// ---------- PINS MODAL (choose up to 7 events for the public "pinned" rail) ----------
+function PinsDialog({ items, initial, onClose, onSaved }: { items: EditableEvent[]; initial: string[]; onClose: () => void; onSaved: () => void }) {
+  // seed only with pins whose event still exists (deleted-in-session events drop out)
+  const [pinned, setPinned] = useState(() => initial.filter((id) => items.some((e) => e.id === id)));
+  const [pending, start] = useTransition();
+
+  // newest-first — mirrors the rail's derived display order
+  const pinnable = [...items].sort((a, b) => (b.dateOn || "").localeCompare(a.dateOn || ""));
+  const pinnedSet = new Set(pinned);
+
+  function toggle(id: string, on: boolean) {
+    setPinned(on ? [...pinned, id] : pinned.filter((p) => p !== id));
+  }
+  function save() {
+    start(async () => { await updatePinnedAction(pinned); onSaved(); });
+  }
+
+  return (
+    <Dialog onClose={onClose} label="pinned events" className="modal__card--pins">
+      <h2 className="modal__title">pinned events<span className="colon">:</span></h2>
+      <p className="modal__sub">pin up to 7 — they replace “recent” on your page’s side rail, newest first.</p>
+      <div className="rev rev--pins">
+        {pinnable.map((e) => {
+          const checked = pinnedSet.has(e.id);
+          const atCap = !checked && pinnedSet.size >= 7;
+          return (
+            <div key={e.id} className={`rev__row${atCap ? " is-off" : ""}`}>
+              <label className="check rev__check">
+                <input type="checkbox" checked={checked} disabled={atCap} onChange={(ev) => toggle(e.id, ev.target.checked)} />
+                <span className="check__box" />
+              </label>
+              <span className="rev__date">{e.date}</span>
+              <span className="rev__title">{e.title || "untitled"}</span>
+              <span className="rev__tags">{e.tags.map((t) => TAG_META[t]?.label ?? t).join(", ")}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="modal__foot">
+        <span className="hl-stat" style={{ marginRight: "auto" }}><span className="accent">{pinnedSet.size}</span> / 7 pinned</span>
+        <button type="button" className="btn btn--ghost" onClick={onClose}>cancel</button>
+        <button type="button" className="btn btn--primary" disabled={pending} onClick={save}>
+          {pending ? "saving…" : "save pins →"}
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
+export function EventsManager({ events, username, pinnedIds = [], onItemsChange }: { events: EditableEvent[]; username: string; pinnedIds?: string[]; onItemsChange?: (items: EditableEvent[]) => void }) {
   const router = useRouter();
   const toast = useToast();
   const [editing, setEditing] = useState<EventInput | null>(null);
   const [adding, setAdding] = useState<AddMode | null>(null);
+  const [pinsOpen, setPinsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<EditableEvent | null>(null);
   const [pending, start] = useTransition();
 
@@ -164,6 +215,7 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
 
   const nextPosition = items.length ? Math.min(...items.map((e) => e.position)) - 1 : 0;
   const featuredCount = items.filter((e) => e.featured).length;
+  const pinnedCount = pinnedIds.filter((id) => items.some((e) => e.id === id)).length;
   // built-ins + customs found on this profile's events — a saved custom tag
   // becomes a searchable chip for every event after that
   const tagOptions = [...TAG_OPTIONS, ...Array.from(new Set(items.flatMap((e) => e.tags))).filter((t) => !TAG_OPTIONS.includes(t))];
@@ -188,6 +240,8 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
               <span className="hl-stat"><span className="accent">{items.length}</span> events</span>
               <span className="hl-stat-sep" aria-hidden="true" />
               <span className="hl-stat"><span className="accent">{featuredCount}</span> in highlights</span>
+              <span className="hl-stat-sep" aria-hidden="true" />
+              <span className="hl-stat"><span className="accent">{pinnedCount}</span> pinned</span>
             </div>
             <div className="hl-head__hints">
               <span className="hl-head__guide">add a moment manually, or let ai draft events from your story, resume, or a link.</span>
@@ -195,6 +249,17 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
             </div>
           </div>
           <div className="hl-head__actions">
+            {items.length > 0 && (
+              <>
+                <button type="button" className="btn btn--small" onClick={() => setPinsOpen(true)}>
+                  <svg className="btn__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                    <path d="M6 2.5h4l-.6 3.2 2.6 2.3v.5H4v-.5l2.6-2.3L6 2.5zM8 8.5V13" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  pins
+                </button>
+                <span className="hl-head__actions-sep" aria-hidden="true" />
+              </>
+            )}
             <button type="button" className="btn btn--small" onClick={() => setAdding("narrate")}>
               <svg className="btn__ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
                 <path d="M11.5 2.5l2 2L5 13H3v-2L11.5 2.5z" strokeLinecap="round" strokeLinejoin="round" />
@@ -229,6 +294,15 @@ export function EventsManager({ events, username, onItemsChange }: { events: Edi
           ))}
         </Reorder.Group>
       </div>
+
+      {pinsOpen && (
+        <PinsDialog
+          items={items}
+          initial={pinnedIds}
+          onClose={() => setPinsOpen(false)}
+          onSaved={() => { setPinsOpen(false); toast("Pins saved"); router.refresh(); }}
+        />
+      )}
 
       {adding && (
         <AddEventsDialog
