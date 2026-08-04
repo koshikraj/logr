@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     alternates: {
       canonical: `/${username}`,
       // the machine-readable twin — linked for agents, noindexed for crawlers
-      types: { "text/plain": `/${username}/llm.txt` },
+      types: { "text/markdown": `/${username}/llms.txt` },
     },
     openGraph: {
       type: "profile",
