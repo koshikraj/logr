@@ -41,7 +41,7 @@ In priority order:
 - [x] User data ingestion — resume upload (PDF/DOCX) and URL import (SSRF-guarded)
 - [ ] Email — welcome, view-count notifications
 - [ ] Analytics — view counts per profile *(visitor chat questions are logged, but no owner UI yet)*
-- [x] SEO — per-profile meta tags + dynamic `og:image` *(JSON-LD structured data still open)*
+- [x] SEO — per-profile meta tags, dynamic `og:image`, and owner-verified Person JSON-LD
 - [x] Index hygiene — thin/test profiles (no bio/status or <2 events) noindexed and dropped from the sitemap until substantial; www → apex 308
 - [x] Pinned events — owner pins up to 7 events (events tab → pins dialog); the public "recent" rail + OG image switch to a "pinned" rail; marked `Pinned: yes` in `llm.txt`
 
@@ -50,7 +50,7 @@ In priority order:
 *Goal: visitors can ask questions about any portfolio.*
 
 - [x] Chat widget embedded on each portfolio page
-- [x] Chat API — streams via OpenRouter (Vercel AI SDK), default `anthropic/claude-3.5-haiku`
+- [x] Chat API — streams via OpenRouter (Vercel AI SDK), default `anthropic/claude-haiku-4.5`
 - [x] Grounded answers — system prompt embeds the profile's `llm.txt`; facts-only, no fabrication
 - [x] Rate limiting — 12/min/visitor *(in-memory, per instance; swap for Redis in production)*
 - [x] Session-based chat logging — both turns stored per `sessionId`, visitor IPs hashed
@@ -58,7 +58,7 @@ In priority order:
 - [x] Chat warmup + personalized suggestions — profile view pre-warms prompt/provider/DB caches via `GET /api/[username]/chat`, which also generates 2 AI questions from the log *(cached per profile, 10 min, in-memory per instance)*
 - [ ] RAG — index events into pgvector for long profiles ([#11](https://github.com/koshikraj/logr/issues/11))
 - [ ] Owner analytics UI — "what visitors asked" view in the dashboard
-- [ ] Dedicated shareable `/[username]/ask` page ([#9](https://github.com/koshikraj/logr/issues/9))
+- [x] Dedicated shareable `/[username]/ask` page with profile-grounded follow-up suggestions ([#9](https://github.com/koshikraj/logr/issues/9))
 
 ## Phase 4 — Prompt-based auto population ✅ (mostly)
 
