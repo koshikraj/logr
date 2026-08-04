@@ -27,6 +27,7 @@ Chat, S3, and Google auth are each feature-gated on their env vars and degrade g
 |-------|------|
 | `/` | Marketing landing |
 | `/[username]` | Public timeline (e.g. `/koshik`) |
+| `/[username]/ask` | Dedicated, shareable grounded-chat page |
 | `/[username]/llm.txt` | Machine-readable context file |
 | `/api/[username]/chat` | Streaming grounded chat API |
 | `/dashboard` | Owner editor (auth-gated) — profile · events · appearance · import |
