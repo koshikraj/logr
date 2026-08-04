@@ -21,7 +21,7 @@ In priority order:
 - [x] Timeline UI from `design/` — all layouts, recreated pixel-perfectly
 - [x] Theming system — palettes × layouts × accent as CSS variables, persisted per profile
 - [x] Profile header — avatar, name, handle, bio, status, location, socials
-- [x] Auto-generate `llm.txt` — served at `/llm.txt` and `/[username]/llm.txt`, absolute media URLs
+- [x] Auto-generate Markdown context — primary `llms.txt`, unabridged `llms-full.txt`, clean `[username].md`, and legacy `llm.txt`; absolute media URLs
 - [x] Seed with real data + responsive design
 - [x] Auth — *shipped as Google OAuth (Auth.js/NextAuth v5 + Prisma adapter), replacing the interim password login*
 - [x] Event CRUD — `/dashboard` editor *(the old `/admin` route)* with drag reorder + live preview

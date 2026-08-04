@@ -5,7 +5,7 @@
 You log your story once. It becomes three things:
 
 - a **timeline** at `logr.it/you` — year-grouped, hover-to-expand, in your choice of 9 palettes × 8 layouts,
-- a machine-readable **`llm.txt`** any AI agent can ingest — the real moat, and
+- machine-readable **Markdown context** any AI agent can ingest — the real moat, and
 - a grounded **AI chat widget** where visitors ask questions answered strictly from your log.
 
 See **[ROADMAP.md](ROADMAP.md)** for what's built and what's next.
@@ -14,9 +14,9 @@ See **[ROADMAP.md](ROADMAP.md)** for what's built and what's next.
 
 - **Multi-user** — sign in with Google, claim a handle at `/welcome`, edit at `/dashboard` with a live preview.
 - **AI import** — paste your story, upload a resume (PDF/DOCX), or point at a URL; AI structures it into timeline events you review and confirm before anything is saved.
-- **Grounded chat** — the visitor chat is prompted with your `llm.txt` (same generator as the public route), streams via OpenRouter, and is rate-limited. Facts-only: if it's not in your log, it says so.
+- **Grounded chat** — the visitor chat is prompted with the same complete Markdown context as the public routes, streams via OpenRouter, and is rate-limited. Facts-only: if it's not in your log, it says so.
 - **Theming** — 9 palettes (incl. dark `ink`) × 8 layouts (`timeline`, `journal`, `magazine`, `terminal`, `feed`, `card`, `centered`, `polaroid`), persisted per profile, previewable live.
-- **Pinned events** — pin up to 7 events from the dashboard events tab (pins dialog); they replace the "recent" side rail (and the OG image's rail) and are marked in `llm.txt`.
+- **Pinned events** — pin up to 7 events from the dashboard events tab (pins dialog); they replace the "recent" side rail (and the OG image's rail) and are marked in the Markdown context.
 - **Media** — image upload (S3, or local FS in dev), video/tweet embeds, unfurled link cards, dynamic OG image per profile.
 
 Chat, S3, and Google auth are each feature-gated on their env vars and degrade gracefully when unset.
@@ -28,7 +28,10 @@ Chat, S3, and Google auth are each feature-gated on their env vars and degrade g
 | `/` | Marketing landing |
 | `/[username]` | Public timeline (e.g. `/koshik`) |
 | `/[username]/ask` | Dedicated, shareable grounded-chat page |
-| `/[username]/llm.txt` | Machine-readable context file |
+| `/[username]/llms.txt` | Primary Markdown context; full unless the profile is oversized |
+| `/[username]/llms-full.txt` | Complete, unabridged Markdown context |
+| `/[username].md` | Clean Markdown counterpart to the public profile |
+| `/[username]/llm.txt` | Legacy-compatible complete context URL |
 | `/api/[username]/chat` | Streaming grounded chat API |
 | `/dashboard` | Owner editor (auth-gated) — profile · events · appearance · import |
 | `/welcome` | Onboarding — claim a handle, seed your timeline |
@@ -67,7 +70,7 @@ src/
   app/
     page.tsx                    # marketing landing
     [username]/page.tsx         # public timeline (SSR)
-    [username]/llm.txt/route.ts # machine-readable context
+    [username]/llms.txt/route.ts # primary machine-readable context
     [username]/opengraph-image.tsx
     dashboard/page.tsx          # owner editor (auth-gated)
     welcome/page.tsx            # onboarding / handle claim
@@ -86,4 +89,4 @@ JSON-shaped fields (`socials`, `theme`, event `link`) are stored as serialized s
 
 ## Domain
 
-Product domain `logr.it`; portfolios at `logr.it/<handle>`. `llm.txt` at `logr.it/<handle>/llm.txt`.
+Product domain `logr.it`; portfolios at `logr.it/<handle>`. Primary agent context lives at `logr.it/<handle>/llms.txt`, with complete Markdown at `logr.it/<handle>/llms-full.txt` and `logr.it/<handle>.md`.

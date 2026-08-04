@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { profileMarkdownResponse } from "@/lib/markdown-context";
 
-// Legacy compatibility URL for consumers of the original singular filename.
+// Always serves the complete, unabridged Markdown profile.
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ username: string }> }
