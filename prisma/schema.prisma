@@ -229,3 +229,54 @@ model ChatMessage {
 
   @@index([profileId, createdAt])
 }
+
+// ---------- MCP OAuth 2.1 (issue #58 phase 2) ----------
+// logr's /mcp endpoint is an OAuth resource server; these tables back the
+// minimal in-house authorization server (auth-code + PKCE only, public
+// clients, dynamic client registration). Codes and tokens are stored as
+// sha256 hashes — raw secrets never touch the database.
+
+model OAuthClient {
+  id           String   @id @default(cuid()) // the client_id
+  name         String // human-readable, shown on the consent screen
+  redirectUris String // JSON array of registered redirect URIs
+  createdAt    DateTime @default(now())
+
+  codes  OAuthCode[]
+  tokens OAuthToken[]
+}
+
+model OAuthCode {
+  id            String    @id @default(cuid())
+  codeHash      String    @unique // sha256 of the authorization code
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId        String
+  profileId     String // the profile consented to (the user's own at consent time)
+  redirectUri   String
+  scope         String // space-separated granted scopes
+  codeChallenge String // PKCE S256 challenge
+  resource      String? // RFC 8707 resource indicator, when the client sent one
+  expiresAt     DateTime
+  consumedAt    DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model OAuthToken {
+  id               String    @id @default(cuid())
+  clientId         String
+  client           OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId           String
+  profileId        String
+  scope            String
+  accessTokenHash  String    @unique
+  refreshTokenHash String    @unique
+  accessExpiresAt  DateTime
+  refreshExpiresAt DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([profileId])
+}

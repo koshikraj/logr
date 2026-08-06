@@ -7,6 +7,7 @@ import { StyleVarsProvider } from "@/components/ui/StyleVars";
 import { ProfileForm } from "./ProfileForm";
 import { ThemeEditor } from "./ThemeEditor";
 import { EventsManager, type EditableEvent } from "./EventsManager";
+import { ConnectedAgents } from "./ConnectedAgents";
 import { logoutAction } from "@/lib/actions";
 import { themeCssVars, type Theme } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
@@ -17,6 +18,7 @@ const TABS = [
   { value: "profile", glyph: "01", label: "profile" },
   { value: "events", glyph: "02", label: "events" },
   { value: "appearance", glyph: "03", label: "appearance" },
+  { value: "agents", glyph: "04", label: "agents" },
 ];
 
 function initial(name: string) {
@@ -136,6 +138,7 @@ export function AdminShell({
                 {tab === "profile" && <ProfileForm profile={profile} onDraftChange={(p) => setDraft((d) => ({ ...d, ...p }))} />}
                 {tab === "appearance" && <ThemeEditor theme={theme} onChange={setTheme} />}
                 {tab === "events" && <EventsManager events={events} username={profile.username} pinnedIds={profile.pinnedIds} onItemsChange={setItems} />}
+                {tab === "agents" && <ConnectedAgents />}
               </div>
             </div>
 

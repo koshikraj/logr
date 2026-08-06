@@ -1,7 +1,14 @@
 import { NextRequest } from "next/server";
-import { createMcpHandler } from "@modelcontextprotocol/server";
+import {
+  createMcpHandler,
+  verifyBearerToken,
+  bearerAuthChallengeResponse,
+  type AuthInfo,
+} from "@modelcontextprotocol/server";
 import { createLogrMcpServer } from "@/lib/mcp";
+import { tokenVerifier } from "@/lib/oauth";
 import { rateLimited, visitorHash } from "@/lib/ratelimit";
+import { originFromRequest } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +32,23 @@ async function serve(req: NextRequest): Promise<Response> {
   if (length > MAX_BODY_BYTES) {
     return new Response("Payload too large", { status: 413 });
   }
-  return handler.fetch(req);
+
+  // Reads are public; a Bearer token (when presented) is verified and unlocks
+  // the owner write tools. Invalid tokens get the RFC 9728 challenge so
+  // spec-compliant clients can discover the authorization server.
+  let authInfo: AuthInfo | undefined;
+  const authorization = req.headers.get("authorization");
+  if (authorization) {
+    try {
+      authInfo = await verifyBearerToken(authorization, { verifier: tokenVerifier });
+    } catch (error) {
+      return bearerAuthChallengeResponse(error, {
+        resourceMetadataUrl: `${originFromRequest(req)}/.well-known/oauth-protected-resource/mcp`,
+      });
+    }
+  }
+
+  return handler.fetch(req, { authInfo });
 }
 
 export async function POST(req: NextRequest) {

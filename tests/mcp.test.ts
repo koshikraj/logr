@@ -8,17 +8,39 @@ vi.mock("@/lib/db", () => ({
     profile: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
+    },
+    event: {
+      aggregate: vi.fn(),
+      create: vi.fn(),
+      updateMany: vi.fn(),
+      deleteMany: vi.fn(),
     },
   },
 }));
 
 import { prisma } from "@/lib/db";
-import { createMcpHandler } from "@modelcontextprotocol/server";
+import { createMcpHandler, type AuthInfo } from "@modelcontextprotocol/server";
 import { Client, StreamableHTTPClientTransport, type FetchLike } from "@modelcontextprotocol/client";
 import { createLogrMcpServer } from "@/lib/mcp";
 
 const findUnique = prisma.profile.findUnique as ReturnType<typeof vi.fn>;
 const findMany = prisma.profile.findMany as ReturnType<typeof vi.fn>;
+const profileUpdate = prisma.profile.update as ReturnType<typeof vi.fn>;
+const eventAggregate = prisma.event.aggregate as ReturnType<typeof vi.fn>;
+const eventCreate = prisma.event.create as ReturnType<typeof vi.fn>;
+const eventUpdateMany = prisma.event.updateMany as ReturnType<typeof vi.fn>;
+const eventDeleteMany = prisma.event.deleteMany as ReturnType<typeof vi.fn>;
+
+function ownerAuth(scopes: string[]): AuthInfo {
+  return {
+    token: "logr_at_test",
+    clientId: "client1",
+    scopes,
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+    extra: { userId: "u1", profileId: "p1" },
+  };
+}
 
 /** A DB row in the exact shape getProfile() selects (profile + events + media). */
 function profileRow(overrides: Record<string, unknown> = {}) {
@@ -83,10 +105,10 @@ function profileRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-async function connect() {
+async function connect(authInfo?: AuthInfo) {
   const handler = createMcpHandler((ctx) => createLogrMcpServer(ctx));
   const fetchLike: FetchLike = (input, init) =>
-    handler.fetch(new Request(input, init));
+    handler.fetch(new Request(input, init), { authInfo });
   const client = new Client({ name: "conformance-test", version: "0.0.0" });
   const transport = new StreamableHTTPClientTransport(new URL("https://logr.it/mcp"), {
     fetch: fetchLike,
@@ -96,8 +118,7 @@ async function connect() {
 }
 
 beforeEach(() => {
-  findUnique.mockReset();
-  findMany.mockReset();
+  vi.clearAllMocks();
 });
 
 describe("global /mcp server", () => {
@@ -257,6 +278,95 @@ describe("global /mcp server", () => {
 
     const where = findMany.mock.calls[0][0].where;
     expect(where.claimStatus).toEqual({ notIn: ["draft", "takedown"] });
+    await client.close();
+  });
+
+  it("write tools appear only for authorized requests, gated by scope", async () => {
+    const anon = await connect();
+    const anonTools = (await anon.listTools()).tools.map((t) => t.name);
+    expect(anonTools).not.toContain("create_event");
+    expect(anonTools).not.toContain("update_profile");
+    await anon.close();
+
+    const eventsOnly = await connect(ownerAuth(["events:write"]));
+    const eventTools = (await eventsOnly.listTools()).tools.map((t) => t.name);
+    expect(eventTools).toEqual(
+      expect.arrayContaining(["create_event", "update_event", "delete_event"])
+    );
+    expect(eventTools).not.toContain("update_profile");
+    await eventsOnly.close();
+
+    const full = await connect(ownerAuth(["events:write", "profile:write"]));
+    const fullTools = (await full.listTools()).tools.map((t) => t.name);
+    expect(fullTools).toContain("update_profile");
+    const del = (await full.listTools()).tools.find((t) => t.name === "delete_event");
+    expect(del?.annotations?.destructiveHint).toBe(true);
+    await full.close();
+  });
+
+  it("create_event writes to the authorized profile at the top slot", async () => {
+    eventAggregate.mockResolvedValue({ _min: { position: -4 } });
+    eventCreate.mockResolvedValue({ id: "new1" });
+    const client = await connect(ownerAuth(["events:write"]));
+    const result = await client.callTool({
+      name: "create_event",
+      arguments: { dateOn: "2026-08-07", title: "Wired up MCP writes", tags: ["work"] },
+    });
+    expect(result.isError).toBeFalsy();
+    const data = eventCreate.mock.calls[0][0].data;
+    expect(data.profileId).toBe("p1");
+    expect(data.position).toBe(-5);
+    expect(data.provenance).toBe("userCreated");
+    await client.close();
+  });
+
+  it("delete_event refuses without confirm and deletes with it", async () => {
+    eventDeleteMany.mockResolvedValue({ count: 1 });
+    const client = await connect(ownerAuth(["events:write"]));
+
+    const refused = await client.callTool({
+      name: "delete_event",
+      arguments: { id: "e1", confirm: false },
+    });
+    expect(refused.isError).toBe(true);
+    expect(eventDeleteMany).not.toHaveBeenCalled();
+
+    const deleted = await client.callTool({
+      name: "delete_event",
+      arguments: { id: "e1", confirm: true },
+    });
+    expect(deleted.isError).toBeFalsy();
+    expect(eventDeleteMany.mock.calls[0][0].where).toEqual({ id: "e1", profileId: "p1" });
+    await client.close();
+  });
+
+  it("update_event scopes the write to the authorized profile", async () => {
+    eventUpdateMany.mockResolvedValue({ count: 0 });
+    const client = await connect(ownerAuth(["events:write"]));
+    const result = await client.callTool({
+      name: "update_event",
+      arguments: { id: "someone-elses", title: "hijack" },
+    });
+    expect(result.isError).toBe(true); // count 0 → not on this profile
+    expect(eventUpdateMany.mock.calls[0][0].where).toEqual({
+      id: "someone-elses",
+      profileId: "p1",
+    });
+    await client.close();
+  });
+
+  it("update_profile updates only the provided fields", async () => {
+    profileUpdate.mockResolvedValue({});
+    const client = await connect(ownerAuth(["profile:write"]));
+    const result = await client.callTool({
+      name: "update_profile",
+      arguments: { status: "building MCP", about: "" },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(profileUpdate.mock.calls[0][0]).toEqual({
+      where: { id: "p1" },
+      data: { status: "building MCP", about: null },
+    });
     await client.close();
   });
 

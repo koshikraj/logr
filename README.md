@@ -32,7 +32,8 @@ Chat, S3, and Google auth are each feature-gated on their env vars and degrade g
 | `/[username]/llms-full.txt` | Complete, unabridged Markdown context |
 | `/[username].md` | Clean Markdown counterpart to the public profile |
 | `/[username]/llm.txt` | Legacy-compatible complete context URL |
-| `/mcp` | Global MCP server (Streamable HTTP) — agents query any public profile |
+| `/mcp` | Global MCP server (Streamable HTTP) — agents query any public profile; OAuth-authorized owner writes |
+| `/oauth/authorize` | OAuth 2.1 consent screen for MCP write access (+ `/api/oauth/token`, `/api/oauth/register`, `/.well-known/*` discovery) |
 | `/api/[username]/chat` | Streaming grounded chat API |
 | `/dashboard` | Owner editor (auth-gated) — profile · events · appearance · import |
 | `/welcome` | Onboarding — claim a handle, seed your timeline |

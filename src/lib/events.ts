@@ -17,6 +17,87 @@ export function sanitizeTags(tags: string[]): string[] {
   ).slice(0, 12);
 }
 
+// ---------- owner-authorized single-event mutations (MCP write tools) ----------
+
+export type OwnedEventFields = {
+  dateOn: string; // validated ISO YYYY-MM-DD
+  title: string;
+  body: string;
+  tags: string[];
+  featured: boolean;
+  fullDate: boolean;
+  linkLabel: string | null;
+  linkHref: string | null;
+};
+
+/** Create one event at the top of the timeline (same slot rule as imports). */
+export async function createEventForProfile(
+  profileId: string,
+  input: OwnedEventFields
+): Promise<{ id: string }> {
+  const agg = await prisma.event.aggregate({ where: { profileId }, _min: { position: true } });
+  return prisma.event.create({
+    data: {
+      profileId,
+      position: (agg._min.position ?? 0) - 1,
+      provenance: "userCreated",
+      ...input,
+      tags: sanitizeTags(input.tags),
+      title: input.title.trim(),
+    },
+    select: { id: true },
+  });
+}
+
+/** Patch an event; the where clause carries the ownership check. */
+export async function updateEventForProfile(
+  profileId: string,
+  id: string,
+  patch: Partial<OwnedEventFields>
+): Promise<boolean> {
+  const data = { ...patch };
+  if (data.tags) data.tags = sanitizeTags(data.tags);
+  if (data.title !== undefined) data.title = data.title.trim();
+  const res = await prisma.event.updateMany({ where: { id, profileId }, data });
+  return res.count > 0;
+}
+
+export async function deleteEventForProfile(profileId: string, id: string): Promise<boolean> {
+  const res = await prisma.event.deleteMany({ where: { id, profileId } });
+  return res.count > 0;
+}
+
+export type OwnedProfileFields = Partial<{
+  bio: string;
+  status: string;
+  location: string;
+  about: string | null;
+}>;
+
+export async function updateProfileFieldsForProfile(
+  profileId: string,
+  fields: OwnedProfileFields
+): Promise<void> {
+  await prisma.profile.update({ where: { id: profileId }, data: fields });
+}
+
+/** Refresh the public pages after an authorized mutation. Lazy-imported and
+ *  guarded: revalidation only exists inside a Next request context (no-op in
+ *  tests) and is best-effort everywhere. */
+export async function revalidateProfilePaths(profileId: string): Promise<void> {
+  try {
+    const { revalidatePath } = await import("next/cache");
+    const p = await prisma.profile.findUnique({
+      where: { id: profileId },
+      select: { username: true },
+    });
+    revalidatePath("/");
+    if (p) revalidatePath(`/${p.username}`);
+  } catch {
+    /* best-effort */
+  }
+}
+
 /** Bulk-insert extracted events (newest get the top slots). */
 export async function insertEventsForProfile(profileId: string, events: ReviewEvent[]) {
   const clean = events
