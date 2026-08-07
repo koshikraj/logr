@@ -11,10 +11,12 @@ export const metadata = { title: "sign in", robots: { index: false, follow: fals
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
-  if ((await auth())?.user) redirect("/dashboard"); // already signed in
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
+  // internal paths only (e.g. back to /oauth/authorize after sign-in)
+  const safeNext = next?.startsWith("/") && !next.startsWith("//") ? next : null;
+  if ((await auth())?.user) redirect(safeNext ?? "/dashboard"); // already signed in
 
   return (
     <div className="onb" style={{ minHeight: "100dvh", height: "auto" }}>
@@ -33,10 +35,12 @@ export default async function LoginPage({
               <p className="onb2-login-sub">sign in to build and edit your logr.</p>
               <div className="onb2-login-btns">
                 <form action={googleSignInAction}>
+                  {safeNext && <input type="hidden" name="next" value={safeNext} />}
                   <button type="submit" className="onb2-login-btn">continue with Google →</button>
                 </form>
                 {isXAuthEnabled() && (
                   <form action={xSignInAction}>
+                    {safeNext && <input type="hidden" name="next" value={safeNext} />}
                     <button type="submit" className="onb2-login-btn onb2-login-btn--ghost">continue with 𝕏 →</button>
                   </form>
                 )}

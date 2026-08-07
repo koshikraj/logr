@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { after } from "next/server";
-import { createHash } from "crypto";
 import { streamText, generateText, smoothStream, type ModelMessage } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { prisma } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
+import { rateLimited, visitorHash } from "@/lib/ratelimit";
 import {
   isChatEnabled,
   buildSystemPrompt,
@@ -16,21 +16,6 @@ import {
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-
-// Best-effort per-instance rate limit (swap for Upstash Redis in production).
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 12;
-const hits = new Map<string, { count: number; reset: number }>();
-function rateLimited(key: string): boolean {
-  const now = Date.now();
-  const e = hits.get(key);
-  if (!e || now > e.reset) {
-    hits.set(key, { count: 1, reset: now + WINDOW_MS });
-    return false;
-  }
-  e.count += 1;
-  return e.count > MAX_PER_WINDOW;
-}
 
 // Per-instance system-prompt cache: the prompt only changes when the profile
 // does, yet building it costs a full profile+events+media query — the single
@@ -53,11 +38,6 @@ async function cachedSystemPrompt(username: string, origin: string) {
   };
   promptCache.set(key, entry);
   return entry;
-}
-
-function visitorHash(req: NextRequest): string {
-  const ipRaw = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
-  return createHash("sha256").update(ipRaw).digest("hex").slice(0, 16);
 }
 
 // Personalized ask suggestions: one small LLM call per profile per TTL,
@@ -132,7 +112,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
   if (!isChatEnabled()) return Response.json({ suggestions: [] });
 
   // separate bucket from POST so warmups never eat into the chat budget
-  if (rateLimited(`warm:${visitorHash(req)}`)) {
+  if (await rateLimited(`warm:${visitorHash(req)}`)) {
     return Response.json({ suggestions: [] }, { status: 429 });
   }
 
@@ -151,7 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   }
 
   const visitor = visitorHash(req);
-  if (rateLimited(visitor)) {
+  if (await rateLimited(`chat:${visitor}`)) {
     return Response.json({ error: "Too many messages. Try again in a minute." }, { status: 429 });
   }
 

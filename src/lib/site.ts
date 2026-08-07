@@ -5,3 +5,17 @@
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://logr.it"
 ).replace(/\/+$/, "");
+
+/** Public origin for a request. Honors the proxy headers Vercel sets;
+ *  falls back to the canonical site URL when no request is available. */
+export function originFromRequest(req: Request | undefined): string {
+  if (!req) return SITE_URL;
+  try {
+    const url = new URL(req.url);
+    const proto = req.headers.get("x-forwarded-proto") ?? url.protocol.replace(/:$/, "");
+    const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? url.host;
+    return `${proto}://${host}`;
+  } catch {
+    return SITE_URL;
+  }
+}

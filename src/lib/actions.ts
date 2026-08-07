@@ -11,6 +11,13 @@ import type { MediaInput, ReviewEvent, SourceChip, SourceKind, SourceStatus } fr
 import { parseSocials } from "@/lib/socials";
 import { requireProfileId, requireSignedIn, getUserId } from "@/lib/session";
 import { signIn, signOut } from "@/auth";
+import {
+  validateAuthorizeRequest,
+  issueAuthorizationCode,
+  listGrantsForProfile,
+  revokeGrantForProfile,
+  type GrantView,
+} from "@/lib/oauth";
 
 async function revalidateForProfile(profileId: string) {
   const p = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true } });
@@ -32,15 +39,21 @@ export async function startSignupAction(formData: FormData) {
   await signIn("google", { redirectTo });
 }
 
+/** Post-login destination: internal paths only (e.g. back to /oauth/authorize). */
+function safeNext(formData?: FormData): string | null {
+  const next = String(formData?.get("next") ?? "");
+  return next.startsWith("/") && !next.startsWith("//") ? next : null;
+}
+
 /** Plain "continue with Google" (login page). */
-export async function googleSignInAction() {
-  await signIn("google", { redirectTo: "/welcome" });
+export async function googleSignInAction(formData?: FormData) {
+  await signIn("google", { redirectTo: safeNext(formData) ?? "/welcome" });
 }
 
 /** "Continue with X" (login page) — existing accounts sign in; unknown X
  *  identities get a fresh User, and /welcome offers any claimable profile. */
-export async function xSignInAction() {
-  await signIn("twitter", { redirectTo: "/welcome" });
+export async function xSignInAction(formData?: FormData) {
+  await signIn("twitter", { redirectTo: safeNext(formData) ?? "/welcome" });
 }
 
 /** Claim the seeded profile matching the user's verified X handle (welcome screen). */
@@ -60,6 +73,7 @@ export async function claimProfileAction() {
 const RESERVED = new Set([
   "admin", "login", "logout", "welcome", "api", "dashboard", "settings", "new",
   "about", "help", "terms", "privacy", "_next", "static", "llm", "robots", "sitemap",
+  "mcp", "oauth", "explore",
 ]);
 
 function validateHandle(u: string): { ok: true } | { ok: false; error: string } {
@@ -404,4 +418,74 @@ export async function reorderEventsAction(orderedIds: string[]) {
     orderedIds.map((id, i) => prisma.event.updateMany({ where: { id, profileId }, data: { position: i } }))
   );
   await revalidateForProfile(profileId);
+}
+
+// ---------- MCP OAUTH (issue #58) ----------
+
+/** Rebuild the original authorize query params from the consent form. */
+function authorizeParamsFromForm(formData: FormData): { [k: string]: string | undefined } {
+  const params: { [k: string]: string | undefined } = {};
+  for (const key of [
+    "client_id",
+    "redirect_uri",
+    "response_type",
+    "scope",
+    "state",
+    "code_challenge",
+    "code_challenge_method",
+    "resource",
+  ]) {
+    const v = formData.get(key);
+    if (typeof v === "string" && v !== "") params[key] = v;
+  }
+  return params;
+}
+
+/** Owner approved the consent screen: re-validate everything server-side,
+ *  mint the code bound to their own profile, and send the agent back. */
+export async function approveOAuthAction(formData: FormData) {
+  const userId = await getUserId();
+  if (!userId) redirect("/login");
+  const profileId = await requireProfileId();
+
+  const result = await validateAuthorizeRequest(authorizeParamsFromForm(formData));
+  if (!result.ok) {
+    if (result.kind === "redirect") {
+      const url = new URL(result.redirectUri);
+      url.searchParams.set("error", result.error);
+      if (result.state) url.searchParams.set("state", result.state);
+      redirect(url.toString());
+    }
+    redirect("/"); // fatal (tampered client/redirect) — never redirect to it
+  }
+
+  const code = await issueAuthorizationCode(result.request, { userId: userId!, profileId });
+  const url = new URL(result.request.redirectUri);
+  url.searchParams.set("code", code);
+  if (result.request.state) url.searchParams.set("state", result.request.state);
+  redirect(url.toString());
+}
+
+/** Owner denied the consent screen. */
+export async function denyOAuthAction(formData: FormData) {
+  const result = await validateAuthorizeRequest(authorizeParamsFromForm(formData));
+  if (result.ok) {
+    const url = new URL(result.request.redirectUri);
+    url.searchParams.set("error", "access_denied");
+    if (result.request.state) url.searchParams.set("state", result.request.state);
+    redirect(url.toString());
+  }
+  redirect("/");
+}
+
+/** Dashboard "connected agents" panel. */
+export async function listConnectedAgentsAction(): Promise<GrantView[]> {
+  const profileId = await requireProfileId();
+  return listGrantsForProfile(profileId);
+}
+
+export async function revokeAgentAction(tokenId: string): Promise<GrantView[]> {
+  const profileId = await requireProfileId();
+  await revokeGrantForProfile(profileId, tokenId);
+  return listGrantsForProfile(profileId);
 }

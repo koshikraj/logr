@@ -6,7 +6,7 @@ Status reflects what's actually in the repo. Where the implementation diverged f
 
 In priority order:
 
-1. **MCP endpoint** — a Model Context Protocol server so AI agents can read a user's log and, after authenticating as the owner, update it (add/edit events programmatically).
+1. **MCP endpoint** ([#58](https://github.com/koshikraj/logr/issues/58)) ✅ — global server at `/mcp` (Streamable HTTP, stateless): six read tools + `logr://profiles/{username}` resource for any public profile, plus OAuth 2.1 (in-house PKCE authorization server on the existing sign-in, dynamic client registration, consent screen, refresh rotation) unlocking owner write tools (`create_event`, `update_event`, `delete_event`, `update_profile`). Grants are revocable from the dashboard's *agents* tab. Conformance- and E2E-tested.
 2. **Comments** — signed-in users can comment on another profile's events.
 3. **Mentions** — tag other logr users on events (groundwork for cross-profile verified collaborations, [#10](https://github.com/koshikraj/logr/issues/10)).
 4. **Custom domains** — bring-your-own domain (`koshik.me` → same page) with logr branding removal.
