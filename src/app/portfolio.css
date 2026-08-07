@@ -1066,8 +1066,39 @@
   display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
   border: 0.5px solid var(--rule); border-radius: 10px; background: color-mix(in srgb, var(--ink) 3%, var(--paper));
 }
-.share__prompt code { flex: 1; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink); }
-@media (max-width: 540px) { .share__scrim { padding: 12px; } .share__prompt { flex-direction: column; } }
+.share__prompt code { flex: 1; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
+
+/* audience tabs — agents (default) · people.
+   `.logr` prefix: must outrank the `.logr button { font: inherit }` reset. */
+.share__tabs { display: flex; gap: 4px; padding: 0 18px; border-bottom: 0.5px solid var(--rule); }
+.logr .share__tab {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--faint); padding: 10px 10px 9px; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px;
+}
+.logr .share__tab:hover { color: var(--ink); }
+.logr .share__tab[aria-current="true"] { color: var(--ink); border-bottom-color: var(--user-accent); }
+.logr .share__tab .accent { color: var(--user-accent); }
+
+/* agent-client switcher — icon chips */
+.share__clients { display: flex; flex-wrap: wrap; gap: 6px; }
+.logr .share__client {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--muted);
+  padding: 5px 10px; border: 0.5px solid var(--rule); border-radius: 999px; background: transparent;
+}
+.logr .share__client svg { width: 13px; height: 13px; display: block; }
+.logr .share__client:hover { color: var(--ink); border-color: var(--ink); }
+.logr .share__client[aria-current="true"] {
+  color: var(--user-accent); border-color: var(--user-accent);
+  background: color-mix(in srgb, var(--user-accent) 8%, var(--paper));
+}
+
+@media (max-width: 540px) {
+  .share__scrim { padding: 12px; }
+  .share__prompt { flex-direction: column; }
+  .logr .share__client span { display: none; } /* icons only on phones */
+  .logr .share__client { padding: 6px 9px; }
+}
 
 /* video media cells + lightbox video */
 .entry__photos__cell--video { position: relative; }
