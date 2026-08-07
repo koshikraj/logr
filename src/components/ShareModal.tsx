@@ -53,7 +53,7 @@ export function ShareModal({
   withAsk?: boolean;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [tab, setTab] = useState<"agents" | "people">("agents");
+  const [tab, setTab] = useState<"agents" | "llmtxt" | "people">("agents");
   const [client, setClient] = useState("claude-code");
   const cardRef = useRef<HTMLDivElement>(null);
   useSheetDrag(cardRef, onClose, open); // phones: swipe the sheet down to dismiss
@@ -143,7 +143,10 @@ export function ShareModal({
 
         <nav className="share__tabs" role="tablist" aria-label="share audience">
           <button type="button" role="tab" className="share__tab" aria-current={tab === "agents"} onClick={() => setTab("agents")}>
-            for agents <span className="accent">·</span> ai
+            for agents <span className="accent">·</span> mcp
+          </button>
+          <button type="button" role="tab" className="share__tab" aria-current={tab === "llmtxt"} onClick={() => setTab("llmtxt")}>
+            llm.txt
           </button>
           <button type="button" role="tab" className="share__tab" aria-current={tab === "people"} onClick={() => setTab("people")}>
             for people
@@ -171,31 +174,33 @@ export function ShareModal({
                     </button>
                   ))}
                 </div>
-                <div className="share__prompt">
+                <div className="share__prompt share__prompt--fixed">
                   <code>{active.snippet}</code>
                   <button type="button" onClick={() => copy(active.snippet, `mcp-${active.key}`)}>{label(`mcp-${active.key}`)}</button>
                 </div>
-                <p className="share__note">{active.note}</p>
+                <p className="share__note share__note--fixed">{active.note}</p>
                 <div className="share__prompt">
                   <code>{askPrompt}</code>
                   <button type="button" onClick={() => copy(askPrompt, "ask-prompt")}>{label("ask-prompt", "copy prompt")}</button>
                 </div>
                 <p className="share__note">one connection reads every logr — the handle rides in the prompt.</p>
               </div>
-
-              <div className="share__block">
-                <span className="share__label">no mcp? <span className="accent">·</span> llm.txt</span>
-                <div className="share__row">
-                  <input readOnly value={agentUrl} onFocus={(e) => e.currentTarget.select()} aria-label="agent link" />
-                  <button type="button" onClick={() => copy(agentUrl, "agent")}>{label("agent")}</button>
-                </div>
-                <p className="share__note">a structured <span className="accent">llm.txt</span> any AI can ingest. paste this into ChatGPT or Claude:</p>
-                <div className="share__prompt">
-                  <code>{examplePrompt}</code>
-                  <button type="button" onClick={() => copy(examplePrompt, "prompt")}>{label("prompt", "copy prompt")}</button>
-                </div>
-              </div>
             </>
+          )}
+
+          {tab === "llmtxt" && (
+            <div className="share__block">
+              <span className="share__label">no mcp? <span className="accent">·</span> llm.txt</span>
+              <div className="share__row">
+                <input readOnly value={agentUrl} onFocus={(e) => e.currentTarget.select()} aria-label="agent link" />
+                <button type="button" onClick={() => copy(agentUrl, "agent")}>{label("agent")}</button>
+              </div>
+              <p className="share__note">a structured <span className="accent">llm.txt</span> any AI can ingest. paste this into ChatGPT or Claude:</p>
+              <div className="share__prompt">
+                <code>{examplePrompt}</code>
+                <button type="button" onClick={() => copy(examplePrompt, "prompt")}>{label("prompt", "copy prompt")}</button>
+              </div>
+            </div>
           )}
 
           {tab === "people" && (

@@ -1068,6 +1068,13 @@
 }
 .share__prompt code { flex: 1; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; color: var(--ink); overflow-wrap: anywhere; }
 
+/* stable dialog: tab and client switches must not resize the modal —
+   the body reserves the tallest pane's height, and the per-client
+   snippet/note reserve two lines each. */
+.share__body { min-height: 359px; }
+.share__prompt--fixed code { min-height: 4.5em; }
+.share__note--fixed { min-height: 2.9em; }
+
 /* audience tabs — agents (default) · people.
    `.logr` prefix: must outrank the `.logr button { font: inherit }` reset. */
 .share__tabs { display: flex; gap: 4px; padding: 0 18px; border-bottom: 0.5px solid var(--rule); }
