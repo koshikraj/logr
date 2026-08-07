@@ -3,41 +3,6 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useSheetDrag } from "@/components/ui/useSheetDrag";
 
-// Small geometric marks for the agent-client switcher (site style: mono,
-// minimal — deliberately not brand logos).
-const ICONS: Record<string, ReactNode> = {
-  "claude-code": (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 4.5 6.5 8 3 11.5" /><path d="M8.5 11.5H13" />
-    </svg>
-  ),
-  "claude-ai": (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-      <path d="M8 2v12M2 8h12M3.8 3.8l8.4 8.4M12.2 3.8l-8.4 8.4" />
-    </svg>
-  ),
-  codex: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 1.8 13.4 5v6L8 14.2 2.6 11V5L8 1.8Z" />
-    </svg>
-  ),
-  vscode: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5.5 4 2 8l3.5 4M10.5 4 14 8l-3.5 4" />
-    </svg>
-  ),
-  hermes: (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M13.5 2.5C9 2.5 4.5 5.5 2.5 13.5c3.5-1 9-4 11-11Z" /><path d="M2.5 13.5 8 8" />
-    </svg>
-  ),
-  other: (
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-      <circle cx="3.5" cy="8" r="1.2" /><circle cx="8" cy="8" r="1.2" /><circle cx="12.5" cy="8" r="1.2" />
-    </svg>
-  ),
-};
-
 export function ShareModal({
   username,
   name,
@@ -169,7 +134,10 @@ export function ShareModal({
                       onClick={() => setClient(c.key)}
                       title={c.label}
                     >
-                      {ICONS[c.key]}
+                      {/* colored brand marks live in public/agents/<key>.svg —
+                          swap the files to change icons, no code involved */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/agents/${c.key}.svg`} alt="" />
                       <span>{c.label}</span>
                     </button>
                   ))}

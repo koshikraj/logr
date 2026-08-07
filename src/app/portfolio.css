@@ -1093,12 +1093,19 @@
   font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--muted);
   padding: 5px 10px; border: 0.5px solid var(--rule); border-radius: 999px; background: transparent;
 }
-.logr .share__client svg { width: 13px; height: 13px; display: block; }
+.logr .share__client img {
+  width: 13px; height: 13px; display: block;
+  /* brand colors stay in the files; resting chips sit back a little */
+  filter: grayscale(0.45) opacity(0.75);
+  transition: filter 140ms ease;
+}
 .logr .share__client:hover { color: var(--ink); border-color: var(--ink); }
+.logr .share__client:hover img { filter: none; }
 .logr .share__client[aria-current="true"] {
-  color: var(--user-accent); border-color: var(--user-accent);
+  color: var(--ink); border-color: var(--user-accent);
   background: color-mix(in srgb, var(--user-accent) 8%, var(--paper));
 }
+.logr .share__client[aria-current="true"] img { filter: none; }
 
 @media (max-width: 540px) {
   .share__scrim { padding: 12px; }
