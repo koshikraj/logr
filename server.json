@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "it.logr/mcp",
+  "title": "logr",
+  "description": "Query any public logr profile — timelines, events, full Markdown context — with owner-authorized write tools via OAuth.",
+  "repository": {
+    "url": "https://github.com/koshikraj/logr",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://logr.it/mcp"
+    }
+  ]
+}
