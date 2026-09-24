@@ -26,6 +26,8 @@ model Profile {
   status    String // current "building X" line
   location  String
   about     String? // longer-form prose for the "A little more" section
+  lore      String? // AI-synthesized cross-source narrative (issue #6); owner-editable
+  loreAt    DateTime? // last synthesis time (null = never synthesized / hand-written)
   avatarUrl String?
   socials   String // JSON: [{ label, href }]
   theme     String // JSON: { palette, fonts, rounded, accentOverride, postStyle, dotStyle, photoHover, dark }

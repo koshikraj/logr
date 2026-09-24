@@ -1,0 +1,474 @@
+diff --git a/prisma/migrations/20260924000000_profile_lore/migration.sql b/prisma/migrations/20260924000000_profile_lore/migration.sql
+new file mode 100644
+index 0000000..670e9e3
+--- /dev/null
++++ b/prisma/migrations/20260924000000_profile_lore/migration.sql
+@@ -0,0 +1,3 @@
++-- AlterTable
++ALTER TABLE "Profile" ADD COLUMN "lore" TEXT;
++ALTER TABLE "Profile" ADD COLUMN "loreAt" TIMESTAMP(3);
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index bdf5736..759e48a 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -26,6 +26,8 @@ model Profile {
+   status    String // current "building X" line
+   location  String
+   about     String? // longer-form prose for the "A little more" section
++  lore      String? // AI-synthesized cross-source narrative (issue #6); owner-editable
++  loreAt    DateTime? // last synthesis time (null = never synthesized / hand-written)
+   avatarUrl String?
+   socials   String // JSON: [{ label, href }]
+   theme     String // JSON: { palette, fonts, rounded, accentOverride, postStyle, dotStyle, photoHover, dark }
+diff --git a/src/components/Portfolio.tsx b/src/components/Portfolio.tsx
+index aa7c0cf..e61fcb0 100644
+--- a/src/components/Portfolio.tsx
++++ b/src/components/Portfolio.tsx
+@@ -859,6 +859,13 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
+             </div>
+           )}
+ 
++          {profile.lore && (
++            <section className="colophon lore" id="lore">
++              <h2>lore<span className="colon">.</span></h2>
++              {profile.lore.split("\n\n").map((p, i) => <p key={i}>{p}</p>)}
++            </section>
++          )}
++
+           {/* timeline */}
+           <main className="timeline" id="log">
+             {rows.map((row) =>
+diff --git a/src/components/admin/AdminShell.tsx b/src/components/admin/AdminShell.tsx
+index 0ac22a9..08054e9 100644
+--- a/src/components/admin/AdminShell.tsx
++++ b/src/components/admin/AdminShell.tsx
+@@ -65,7 +65,7 @@ export function AdminShell({
+   // live drafts that feed the preview without waiting for a save
+   const [draft, setDraft] = useState<Partial<ProfileDTO>>({
+     name: profile.name, username: profile.username, bio: profile.bio, status: profile.status,
+-    location: profile.location, about: profile.about, socials: profile.socials, avatarUrl: profile.avatarUrl,
++    location: profile.location, about: profile.about, lore: profile.lore, socials: profile.socials, avatarUrl: profile.avatarUrl,
+   });
+   const [items, setItems] = useState<EditableEvent[]>(events);
+ 
+diff --git a/src/components/admin/ProfileForm.tsx b/src/components/admin/ProfileForm.tsx
+index 4019f66..06e9d40 100644
+--- a/src/components/admin/ProfileForm.tsx
++++ b/src/components/admin/ProfileForm.tsx
+@@ -3,7 +3,7 @@
+ import { useState, useEffect, useRef, useTransition } from "react";
+ import { useRouter } from "next/navigation";
+ import { useToast } from "@/components/ui/Toast";
+-import { updateProfileAction, checkHandleAction } from "@/lib/actions";
++import { updateProfileAction, checkHandleAction, regenerateLoreAction } from "@/lib/actions";
+ import { uploadImage } from "@/lib/upload";
+ import type { ProfileDTO } from "@/lib/profile";
+ import { serializeSocials, parseSocials } from "@/lib/socials";
+@@ -57,11 +57,28 @@ export function ProfileForm({
+     const s = (k: string) => String(fd.get(k) ?? "");
+     onDraftChange({
+       name: s("name"), username: s("handle").trim().toLowerCase().replace(/^@/, "") || profile.username, bio: s("bio"),
+-      status: s("status"), location: s("location"), about: s("about"),
++      status: s("status"), location: s("location"), about: s("about"), lore: s("lore") || null,
+       socials: parseSocials(s("socials")), avatarUrl: avatar,
+     });
+   }
+ 
++  const loreRef = useRef<HTMLTextAreaElement>(null);
++  const [loreBusy, setLoreBusy] = useState(false);
++  async function regenerateLore() {
++    setLoreBusy(true);
++    try {
++      const r = await regenerateLoreAction();
++      if (!r.ok) return toast(r.error, "error");
++      if (loreRef.current) loreRef.current.value = r.lore;
++      report();
++      toast("Lore regenerated", "success");
++    } catch {
++      toast("Could not generate lore", "error");
++    } finally {
++      setLoreBusy(false);
++    }
++  }
++
+   async function pickAvatar(file: File | undefined) {
+     if (!file) return;
+     setBusy(true);
+@@ -173,6 +190,17 @@ export function ProfileForm({
+           <span className="field__hint">use a blank line between paragraphs.</span>
+         </div>
+ 
++        <div className="field">
++          <label className="field__label" htmlFor="f-lore">lore</label>
++          <textarea id="f-lore" name="lore" rows={8} ref={loreRef} defaultValue={profile.lore ?? ""} />
++          <span className="field__hint">
++            your story, synthesized from everything in your log. edit freely — your edits are kept.{" "}
++            <button type="button" className="btn btn--ghost" onClick={regenerateLore} disabled={loreBusy}>
++              {loreBusy ? "writing…" : "regenerate from log"}
++            </button>
++          </span>
++        </div>
++
+         <div className="field">
+           <label className="field__label" htmlFor="f-socials">socials</label>
+           <textarea
+diff --git a/src/lib/actions.ts b/src/lib/actions.ts
+index a0247eb..b4dafde 100644
+--- a/src/lib/actions.ts
++++ b/src/lib/actions.ts
+@@ -127,8 +127,10 @@ export async function updateProfileAction(
+   formData: FormData
+ ): Promise<{ ok: true; username: string } | { ok: false; error: string }> {
+   const profileId = await requireProfileId();
+-  const current = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true } });
++  const current = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true, lore: true } });
+   if (!current) return { ok: false, error: "Profile not found" };
++  const lore = formData.has("lore") ? String(formData.get("lore") ?? "").trim() || null : current.lore;
++  const loreEdited = lore !== current.lore;
+ 
+   // the "handle" field edits the username (= the public URL slug)
+   const username = String(formData.get("handle") ?? "").trim().toLowerCase().replace(/^@/, "");
+@@ -150,6 +152,7 @@ export async function updateProfileAction(
+       status: String(formData.get("status") ?? ""),
+       location: String(formData.get("location") ?? ""),
+       about: String(formData.get("about") ?? "") || null,
++      ...(loreEdited ? { lore, loreAt: null } : {}),
+       avatarUrl: String(formData.get("avatarUrl") ?? "") || null,
+       socials: JSON.stringify(socials),
+     },
+@@ -159,6 +162,22 @@ export async function updateProfileAction(
+   return { ok: true, username };
+ }
+ 
++export async function regenerateLoreAction(): Promise<{ ok: true; lore: string } | { ok: false; error: string }> {
++  const profileId = await requireProfileId();
++  const { synthesizeLoreForProfile } = await import("@/lib/lore");
++  const res = await synthesizeLoreForProfile(profileId, { force: true });
++  if (!res.ok) {
++    const msg: Record<string, string> = {
++      too_few_events: "Add at least 3 events first",
++      insufficient: "Not enough in your log to write lore yet",
++      not_found: "Profile not found",
++    };
++    return { ok: false, error: msg[res.reason] ?? "Could not generate lore" };
++  }
++  await revalidateForProfile(profileId);
++  return { ok: true, lore: res.lore };
++}
++
+ export async function updateThemeAction(theme: Partial<Theme>) {
+   const profileId = await requireProfileId();
+   const row = await prisma.profile.findUnique({
+diff --git a/src/lib/import-job.ts b/src/lib/import-job.ts
+index df8966d..78d4027 100644
+--- a/src/lib/import-job.ts
++++ b/src/lib/import-job.ts
+@@ -6,6 +6,7 @@ import { generateText } from "ai";
+ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+ import { prisma } from "@/lib/db";
+ import { CHAT_MODEL } from "@/lib/chat";
++import { synthesizeLoreForProfile } from "@/lib/lore";
+ import { extractEvents, extractProfileFacts, EXTRACT_HINTS, type ProfileFacts } from "@/lib/extract";
+ import { insertEventsForProfile } from "@/lib/events";
+ import { crawlSite } from "@/lib/import-crawl";
+@@ -238,6 +239,7 @@ async function autoPublish(
+       socials: JSON.stringify(socials),
+     },
+   });
++  await synthesizeLoreForProfile(profile.id).catch(() => {});
+   return true;
+ }
+ 
+diff --git a/src/lib/llmtxt.ts b/src/lib/llmtxt.ts
+index 3b8d12f..a218d44 100644
+--- a/src/lib/llmtxt.ts
++++ b/src/lib/llmtxt.ts
+@@ -52,6 +52,14 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
+     lines.push("");
+   }
+ 
++  if (profile.lore) {
++    lines.push("## Lore");
++    lines.push("A narrative synthesized from the timeline and linked sources below. Treat the timeline entries as the primary facts.");
++    lines.push("");
++    lines.push(profile.lore.trim());
++    lines.push("");
++  }
++
+   lines.push("## Timeline");
+   lines.push(
+     "A reverse-chronological record of work, milestones, talks, side quests, and writing."
+diff --git a/src/lib/lore.ts b/src/lib/lore.ts
+new file mode 100644
+index 0000000..a2d2ab8
+--- /dev/null
++++ b/src/lib/lore.ts
+@@ -0,0 +1,169 @@
++import "server-only";
++import { generateText } from "ai";
++import { createOpenRouter } from "@openrouter/ai-sdk-provider";
++import { prisma } from "@/lib/db";
++import { CHAT_MODEL } from "@/lib/chat";
++
++export const LORE_MAX_CHARS = 6000;
++const MAX_EVENTS_IN_PROMPT = 120;
++
++type LoreInput = {
++  name: string;
++  bio: string;
++  status: string;
++  location: string;
++  about: string | null;
++  socials: { label: string; href: string }[];
++  events: {
++    dateOn: string;
++    title: string;
++    body: string;
++    tags: string[];
++    featured: boolean;
++    sources: string[];
++  }[];
++};
++
++function hostOf(u: string): string {
++  try {
++    return new URL(u).hostname.replace(/^www\./, "");
++  } catch {
++    return "";
++  }
++}
++
++export function buildLorePrompt(p: LoreInput): string {
++  const events = [...p.events]
++    .sort((a, b) => (a.dateOn < b.dateOn ? -1 : 1))
++    .slice(-MAX_EVENTS_IN_PROMPT)
++    .map((e) => {
++      const src = e.sources.map(hostOf).filter(Boolean);
++      return `- ${e.dateOn} | ${e.title}${e.featured ? " ★" : ""} [${e.tags.join(",")}]${
++        src.length ? ` (via ${[...new Set(src)].join(", ")})` : ""
++      }\n  ${e.body.replace(/\s+/g, " ").slice(0, 300)}`;
++    })
++    .join("\n");
++
++  return [
++    `PERSON: ${p.name}`,
++    p.bio && `BIO: ${p.bio}`,
++    p.status && `CURRENTLY: ${p.status}`,
++    p.location && `LOCATION: ${p.location}`,
++    p.about && `ABOUT (owner-written):\n${p.about}`,
++    p.socials.length && `PROFILES: ${p.socials.map((s) => `${s.label} ${s.href}`).join(" · ")}`,
++    "",
++    "EVENTS (oldest first):",
++    events,
++  ]
++    .filter(Boolean)
++    .join("\n");
++}
++
++const LORE_SYSTEM = [
++  "You write the 'lore' of a person: a short narrative that connects their scattered public work into one story.",
++  "Rules:",
++  "- Use ONLY facts present in the input. Never invent employers, dates, numbers, awards or motives.",
++  "- Find the throughlines: recurring themes, how one project led to the next, what they keep coming back to, how their focus shifted over time.",
++  "- Cite concrete anchors (project names, years) from the events. Mention where the work shows up (GitHub, blog, X…) only when it adds meaning.",
++  "- Third person, present tense for now, past tense for history. Plain, specific, warm; no hype, no buzzwords, no bullet points, no headings.",
++  "- 3 to 5 short paragraphs separated by a blank line, 180–350 words total.",
++  "- If the input is too thin for a story (fewer than 3 meaningful events), output exactly: INSUFFICIENT",
++  "Output only the narrative text.",
++].join("\n");
++
++export async function generateLore(input: LoreInput): Promise<string | null> {
++  if (!process.env.OPENROUTER_API_KEY) return null;
++  if (input.events.length < 3) return null;
++  const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY });
++  const { text } = await generateText({
++    model: openrouter.chat(process.env.OPENROUTER_LORE_MODEL || CHAT_MODEL),
++    system: LORE_SYSTEM,
++    prompt: buildLorePrompt(input),
++    temperature: 0.4,
++  });
++  const out = text
++    .replace(/```[a-z]*/gi, "")
++    .replace(/```/g, "")
++    .replace(/^#+\s.*$/gm, "")
++    .replace(/\n{3,}/g, "\n\n")
++    .trim();
++  if (!out || /^INSUFFICIENT\b/i.test(out)) return null;
++  return out.slice(0, LORE_MAX_CHARS);
++}
++
++async function loadLoreInput(profileId: string): Promise<LoreInput | null> {
++  const row = await prisma.profile.findUnique({
++    where: { id: profileId },
++    select: {
++      name: true,
++      bio: true,
++      status: true,
++      location: true,
++      about: true,
++      socials: true,
++      events: {
++        orderBy: { dateOn: "asc" },
++        select: {
++          dateOn: true,
++          title: true,
++          body: true,
++          tags: true,
++          featured: true,
++          sourceUrl: true,
++          linkHref: true,
++          media: { select: { url: true, kind: true } },
++        },
++      },
++    },
++  });
++  if (!row) return null;
++  let socials: { label: string; href: string }[] = [];
++  try {
++    const v = JSON.parse(row.socials || "[]");
++    if (Array.isArray(v)) socials = v;
++  } catch {
++    /* ignore */
++  }
++  return {
++    name: row.name,
++    bio: row.bio,
++    status: row.status,
++    location: row.location,
++    about: row.about,
++    socials,
++    events: row.events.map((e) => ({
++      dateOn: e.dateOn,
++      title: e.title,
++      body: e.body,
++      tags: e.tags,
++      featured: e.featured,
++      sources: [e.sourceUrl, e.linkHref, ...e.media.filter((m) => m.kind !== "image").map((m) => m.url)].filter(
++        (u): u is string => !!u
++      ),
++    })),
++  };
++}
++
++/** Synthesize and store lore for a profile.
++ *  `force=false` never overwrites a hand-edited lore (lore set, loreAt null). */
++export async function synthesizeLoreForProfile(
++  profileId: string,
++  { force = false }: { force?: boolean } = {}
++): Promise<{ ok: true; lore: string } | { ok: false; reason: string }> {
++  const current = await prisma.profile.findUnique({
++    where: { id: profileId },
++    select: { lore: true, loreAt: true },
++  });
++  if (!current) return { ok: false, reason: "not_found" };
++  if (!force && current.lore?.trim() && !current.loreAt) return { ok: false, reason: "hand_written" };
++
++  const input = await loadLoreInput(profileId);
++  if (!input) return { ok: false, reason: "not_found" };
++  if (input.events.length < 3) return { ok: false, reason: "too_few_events" };
++
++  const lore = await generateLore(input);
++  if (!lore) return { ok: false, reason: "insufficient" };
++
++  await prisma.profile.update({ where: { id: profileId }, data: { lore, loreAt: new Date() } });
++  return { ok: true, lore };
++}
+diff --git a/src/lib/mcp.ts b/src/lib/mcp.ts
+index 9b57d84..b8ae842 100644
+--- a/src/lib/mcp.ts
++++ b/src/lib/mcp.ts
+@@ -80,6 +80,7 @@ const ProfileCardSchema = z.object({
+   currently: z.string(),
+   location: z.string(),
+   about: z.string().nullable(),
++  lore: z.string().nullable().describe("AI-synthesized narrative across the person's sources; timeline entries remain the primary facts"),
+   avatarUrl: z.string().nullable(),
+   socials: z.array(z.object({ label: z.string(), href: z.string() })),
+   unverified: z.boolean().describe("true when auto-generated and not claimed by its subject"),
+@@ -161,6 +162,7 @@ function profileCard(p: ProfileDTO, origin: string) {
+     currently: p.status,
+     location: p.location,
+     about: p.about,
++    lore: p.lore,
+     avatarUrl: p.avatarUrl ? abs(p.avatarUrl) : null,
+     socials: p.socials,
+     unverified,
+@@ -547,6 +549,7 @@ function registerWriteTools(server: McpServer, ctx: McpRequestContext): void {
+           status: z.string().max(160).optional().describe('The "currently ..." line'),
+           location: z.string().max(120).optional(),
+           about: z.string().max(4000).optional().describe("Longer-form prose; empty string clears it"),
++          lore: z.string().max(6000).optional().describe("Narrative lore; empty string clears it"),
+         }),
+         annotations: { destructiveHint: false, idempotentHint: true },
+       },
+@@ -556,6 +559,7 @@ function registerWriteTools(server: McpServer, ctx: McpRequestContext): void {
+         if (input.status !== undefined) fields.status = input.status;
+         if (input.location !== undefined) fields.location = input.location;
+         if (input.about !== undefined) fields.about = input.about || null;
++        if (input.lore !== undefined) fields.lore = input.lore || null;
+         if (!Object.keys(fields).length) {
+           return textResult("Nothing to update — provide at least one field.", true);
+         }
+diff --git a/src/lib/profile.ts b/src/lib/profile.ts
+index 9a04247..279e9af 100644
+--- a/src/lib/profile.ts
++++ b/src/lib/profile.ts
+@@ -48,6 +48,7 @@ export type ProfileDTO = {
+   status: string;
+   location: string;
+   about: string | null;
++  lore: string | null; // AI-synthesized cross-source narrative
+   avatarUrl: string | null;
+   socials: Social[];
+   theme: Theme;
+@@ -98,6 +99,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
+     status: row.status,
+     location: row.location,
+     about: row.about,
++    lore: row.lore ?? null,
+     avatarUrl: row.avatarUrl,
+     socials: healSocials(parseJSON<Social[]>(row.socials, [])),
+     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
+diff --git a/tests/lore.test.ts b/tests/lore.test.ts
+new file mode 100644
+index 0000000..c33f601
+--- /dev/null
++++ b/tests/lore.test.ts
+@@ -0,0 +1,25 @@
++import { vi } from "vitest";
++vi.mock("server-only", () => ({}));
++vi.mock("@/lib/db", () => ({ prisma: {} }));
++import { describe, it, expect } from "vitest";
++import { buildLorePrompt } from "@/lib/lore";
++
++describe("buildLorePrompt", () => {
++  it("orders events oldest-first and tags source hosts", () => {
++    const p = buildLorePrompt({
++      name: "Koshik Raj",
++      bio: "Builder of logr",
++      status: "",
++      location: "",
++      about: null,
++      socials: [],
++      events: [
++        { dateOn: "2025-01-01", title: "Shipped logr", body: "b", tags: ["work"], featured: true, sources: ["https://github.com/koshikraj/logr"] },
++        { dateOn: "2021-06-01", title: "First talk", body: "b", tags: ["talk"], featured: false, sources: [] },
++      ],
++    });
++    expect(p.indexOf("First talk")).toBeLessThan(p.indexOf("Shipped logr"));
++    expect(p).toContain("(via github.com)");
++    expect(p).toContain("Shipped logr ★");
++  });
++});
+diff --git a/tests/mcp.test.ts b/tests/mcp.test.ts
+index 9bc5d46..2762230 100644
+--- a/tests/mcp.test.ts
++++ b/tests/mcp.test.ts
+@@ -52,6 +52,7 @@ function profileRow(overrides: Record<string, unknown> = {}) {
+     status: "building logr",
+     location: "Bengaluru",
+     about: "Longer form about.",
++    lore: null,
+     avatarUrl: "/uploads/avatar.png",
+     socials: JSON.stringify([{ label: "GitHub", href: "https://github.com/koshikraj" }]),
+     theme: "{}",

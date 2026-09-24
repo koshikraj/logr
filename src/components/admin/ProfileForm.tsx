@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
-import { updateProfileAction, checkHandleAction } from "@/lib/actions";
+import { updateProfileAction, checkHandleAction, regenerateLoreAction } from "@/lib/actions";
 import { uploadImage } from "@/lib/upload";
 import type { ProfileDTO } from "@/lib/profile";
 import { serializeSocials, parseSocials } from "@/lib/socials";
@@ -57,9 +57,26 @@ export function ProfileForm({
     const s = (k: string) => String(fd.get(k) ?? "");
     onDraftChange({
       name: s("name"), username: s("handle").trim().toLowerCase().replace(/^@/, "") || profile.username, bio: s("bio"),
-      status: s("status"), location: s("location"), about: s("about"),
+      status: s("status"), location: s("location"), about: s("about"), lore: s("lore") || null,
       socials: parseSocials(s("socials")), avatarUrl: avatar,
     });
+  }
+
+  const loreRef = useRef<HTMLTextAreaElement>(null);
+  const [loreBusy, setLoreBusy] = useState(false);
+  async function regenerateLore() {
+    setLoreBusy(true);
+    try {
+      const r = await regenerateLoreAction();
+      if (!r.ok) return toast(r.error, "error");
+      if (loreRef.current) loreRef.current.value = r.lore;
+      report();
+      toast("Lore regenerated", "success");
+    } catch {
+      toast("Could not generate lore", "error");
+    } finally {
+      setLoreBusy(false);
+    }
   }
 
   async function pickAvatar(file: File | undefined) {
@@ -171,6 +188,17 @@ export function ProfileForm({
           <label className="field__label" htmlFor="f-about">about</label>
           <textarea id="f-about" name="about" rows={6} defaultValue={profile.about ?? ""} />
           <span className="field__hint">use a blank line between paragraphs.</span>
+        </div>
+
+        <div className="field">
+          <label className="field__label" htmlFor="f-lore">lore</label>
+          <textarea id="f-lore" name="lore" rows={8} ref={loreRef} defaultValue={profile.lore ?? ""} />
+          <span className="field__hint">
+            your story, synthesized from everything in your log. edit freely — your edits are kept.{" "}
+            <button type="button" className="btn btn--ghost" onClick={regenerateLore} disabled={loreBusy}>
+              {loreBusy ? "writing…" : "regenerate from log"}
+            </button>
+          </span>
         </div>
 
         <div className="field">
