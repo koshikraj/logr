@@ -6,6 +6,7 @@ import { generateText } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { prisma } from "@/lib/db";
 import { CHAT_MODEL } from "@/lib/chat";
+import { synthesizeLoreForProfile } from "@/lib/lore";
 import { extractEvents, extractProfileFacts, EXTRACT_HINTS, type ProfileFacts } from "@/lib/extract";
 import { insertEventsForProfile } from "@/lib/events";
 import { crawlSite } from "@/lib/import-crawl";
@@ -238,6 +239,7 @@ async function autoPublish(
       socials: JSON.stringify(socials),
     },
   });
+  await synthesizeLoreForProfile(profile.id).catch(() => {});
   return true;
 }
 

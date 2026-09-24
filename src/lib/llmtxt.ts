@@ -52,6 +52,14 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
     lines.push("");
   }
 
+  if (profile.lore) {
+    lines.push("## Lore");
+    lines.push("A narrative synthesized from the timeline and linked sources below. Treat the timeline entries as the primary facts.");
+    lines.push("");
+    lines.push(profile.lore.trim());
+    lines.push("");
+  }
+
   lines.push("## Timeline");
   lines.push(
     "A reverse-chronological record of work, milestones, talks, side quests, and writing."

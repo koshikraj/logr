@@ -48,6 +48,7 @@ export type ProfileDTO = {
   status: string;
   location: string;
   about: string | null;
+  lore: string | null; // AI-synthesized cross-source narrative
   avatarUrl: string | null;
   socials: Social[];
   theme: Theme;
@@ -98,6 +99,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     status: row.status,
     location: row.location,
     about: row.about,
+    lore: row.lore ?? null,
     avatarUrl: row.avatarUrl,
     socials: healSocials(parseJSON<Social[]>(row.socials, [])),
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },

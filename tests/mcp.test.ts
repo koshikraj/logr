@@ -52,6 +52,7 @@ function profileRow(overrides: Record<string, unknown> = {}) {
     status: "building logr",
     location: "Bengaluru",
     about: "Longer form about.",
+    lore: null,
     avatarUrl: "/uploads/avatar.png",
     socials: JSON.stringify([{ label: "GitHub", href: "https://github.com/koshikraj" }]),
     theme: "{}",
