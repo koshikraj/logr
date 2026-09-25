@@ -97,7 +97,12 @@ export function AddEventsDialog({
         fd.append("file", file);
         events = await importFileAction(fd);
       } else {
-        events = await importUrlAction(url.trim());
+        const result = await importUrlAction(url.trim());
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        events = result.events;
       }
       if (!events.length) {
         setError(mode === "narrate" ? "No events found — try adding more detail or dates." : "No events found — try a different file or URL.");

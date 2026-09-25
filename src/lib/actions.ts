@@ -127,8 +127,10 @@ export async function updateProfileAction(
   formData: FormData
 ): Promise<{ ok: true; username: string } | { ok: false; error: string }> {
   const profileId = await requireProfileId();
-  const current = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true } });
+  const current = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true, lore: true } });
   if (!current) return { ok: false, error: "Profile not found" };
+  const lore = formData.has("lore") ? String(formData.get("lore") ?? "").trim() || null : current.lore;
+  const loreEdited = lore !== current.lore;
 
   // the "handle" field edits the username (= the public URL slug)
   const username = String(formData.get("handle") ?? "").trim().toLowerCase().replace(/^@/, "");
@@ -150,6 +152,7 @@ export async function updateProfileAction(
       status: String(formData.get("status") ?? ""),
       location: String(formData.get("location") ?? ""),
       about: String(formData.get("about") ?? "") || null,
+      ...(loreEdited ? { lore, loreAt: null } : {}),
       avatarUrl: String(formData.get("avatarUrl") ?? "") || null,
       socials: JSON.stringify(socials),
     },
@@ -157,6 +160,22 @@ export async function updateProfileAction(
   if (username !== current.username) revalidatePath(`/${current.username}`); // old URL
   await revalidateForProfile(profileId);
   return { ok: true, username };
+}
+
+export async function regenerateLoreAction(): Promise<{ ok: true; lore: string } | { ok: false; error: string }> {
+  const profileId = await requireProfileId();
+  const { synthesizeLoreForProfile } = await import("@/lib/lore");
+  const res = await synthesizeLoreForProfile(profileId, { force: true });
+  if (!res.ok) {
+    const msg: Record<string, string> = {
+      too_few_events: "Add at least 3 events first",
+      insufficient: "Not enough in your log to write lore yet",
+      not_found: "Profile not found",
+    };
+    return { ok: false, error: msg[res.reason] ?? "Could not generate lore" };
+  }
+  await revalidateForProfile(profileId);
+  return { ok: true, lore: res.lore };
 }
 
 export async function updateThemeAction(theme: Partial<Theme>) {
@@ -296,12 +315,11 @@ export async function importFileAction(formData: FormData): Promise<ReviewEvent[
 }
 
 /** Extract events from a public portfolio or LinkedIn URL. */
-export async function importUrlAction(url: string): Promise<ReviewEvent[]> {
+export async function importUrlAction(url: string) {
   await requireSignedIn();
-  if (!url.trim()) return [];
-  const { fetchUrlText } = await import("@/lib/import");
-  const text = await fetchUrlText(url.trim());
-  return extractEvents(text, EXTRACT_HINTS.site);
+  if (!url.trim()) return { ok: true as const, events: [] };
+  const { importUrl } = await import("@/lib/import-url");
+  return importUrl(url.trim());
 }
 
 /** Bulk-insert events extracted from a narrative (newest get the top slots). */

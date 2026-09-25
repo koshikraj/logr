@@ -859,6 +859,13 @@ export default function Portfolio({ profile, chatEnabled, loggedIn, previewMode,
             </div>
           )}
 
+          {profile.lore && (
+            <section className="colophon lore" id="lore">
+              <h2>lore<span className="colon">.</span></h2>
+              {profile.lore.split("\n\n").map((p, i) => <p key={i}>{p}</p>)}
+            </section>
+          )}
+
           {/* timeline */}
           <main className="timeline" id="log">
             {rows.map((row) =>

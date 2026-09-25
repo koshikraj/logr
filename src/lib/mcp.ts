@@ -80,6 +80,7 @@ const ProfileCardSchema = z.object({
   currently: z.string(),
   location: z.string(),
   about: z.string().nullable(),
+  lore: z.string().nullable().describe("AI-synthesized narrative across the person's sources; timeline entries remain the primary facts"),
   avatarUrl: z.string().nullable(),
   socials: z.array(z.object({ label: z.string(), href: z.string() })),
   unverified: z.boolean().describe("true when auto-generated and not claimed by its subject"),
@@ -161,6 +162,7 @@ function profileCard(p: ProfileDTO, origin: string) {
     currently: p.status,
     location: p.location,
     about: p.about,
+    lore: p.lore,
     avatarUrl: p.avatarUrl ? abs(p.avatarUrl) : null,
     socials: p.socials,
     unverified,
@@ -547,6 +549,7 @@ function registerWriteTools(server: McpServer, ctx: McpRequestContext): void {
           status: z.string().max(160).optional().describe('The "currently ..." line'),
           location: z.string().max(120).optional(),
           about: z.string().max(4000).optional().describe("Longer-form prose; empty string clears it"),
+          lore: z.string().max(6000).optional().describe("Narrative lore; empty string clears it"),
         }),
         annotations: { destructiveHint: false, idempotentHint: true },
       },
@@ -556,6 +559,7 @@ function registerWriteTools(server: McpServer, ctx: McpRequestContext): void {
         if (input.status !== undefined) fields.status = input.status;
         if (input.location !== undefined) fields.location = input.location;
         if (input.about !== undefined) fields.about = input.about || null;
+        if (input.lore !== undefined) fields.lore = input.lore || null;
         if (!Object.keys(fields).length) {
           return textResult("Nothing to update — provide at least one field.", true);
         }
