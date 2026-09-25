@@ -315,12 +315,11 @@ export async function importFileAction(formData: FormData): Promise<ReviewEvent[
 }
 
 /** Extract events from a public portfolio or LinkedIn URL. */
-export async function importUrlAction(url: string): Promise<ReviewEvent[]> {
+export async function importUrlAction(url: string) {
   await requireSignedIn();
-  if (!url.trim()) return [];
-  const { fetchUrlText } = await import("@/lib/import");
-  const text = await fetchUrlText(url.trim());
-  return extractEvents(text, EXTRACT_HINTS.site);
+  if (!url.trim()) return { ok: true as const, events: [] };
+  const { importUrl } = await import("@/lib/import-url");
+  return importUrl(url.trim());
 }
 
 /** Bulk-insert events extracted from a narrative (newest get the top slots). */
