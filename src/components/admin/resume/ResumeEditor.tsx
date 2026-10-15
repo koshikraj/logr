@@ -305,6 +305,9 @@ export function ResumeEditor({
   const pending = useRef<ResumeEditorState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(state);
+  // signature of the last snapshot the server accepted — set synchronously,
+  // before React re-renders with the adopted document
+  const lastSavedInput = useRef(state ? sig(state) : "");
   // Saves run one at a time, in order, so an older snapshot can never land
   // after a newer one. Resolves to whether the most recent save succeeded.
   const saveChain = useRef<Promise<boolean>>(Promise.resolve(true));
@@ -320,6 +323,7 @@ export function ResumeEditor({
       toast(res?.error ?? "Couldn't save the resume", "error");
       return false;
     }
+    lastSavedInput.current = sig(s);
     const stored = { doc: res.data.document, template: res.data.template, pageSize: res.data.pageSize };
     setState((cur) => {
       if (!cur) return cur;
@@ -356,15 +360,25 @@ export function ResumeEditor({
   /** Persist the latest state (retrying a failed save) and wait for every
    *  queued save. False means the server doesn't have the current content. */
   const flush = useCallback(async (): Promise<boolean> => {
-    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    const cur = latest.current;
-    if (cur && sig(cur) !== savedSig.current) return save(cur);
-    return saveChain.current;
-  }, [save]);
+    // keep going until the newest state is stored: the owner can still type
+    // while a save is in flight (bounded, so constant typing can't spin forever)
+    for (let round = 0; round < 5; round++) {
+      if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+      const cur = latest.current;
+      const dirty = cur && sig(cur) !== savedSig.current && sig(cur) !== lastSavedInput.current;
+      const ok = dirty && cur ? await save(cur) : await saveChain.current;
+      if (!ok) return false;
+      const now = latest.current ? sig(latest.current) : null;
+      if (now === null || now === savedSig.current || now === lastSavedInput.current) return true;
+    }
+    toast("Still saving your latest edits — try again in a moment.", "error");
+    return false;
+  }, [save, toast]);
 
   const adopt = useCallback((view: ResumeView) => {
     const s = { doc: view.document, template: view.template, pageSize: view.pageSize };
     savedSig.current = sig(s);
+    lastSavedInput.current = savedSig.current;
     pending.current = null;
     setState(s);
     setPublished(view.published);
@@ -378,6 +392,9 @@ export function ResumeEditor({
       if (!res?.ok) { toast(res?.error ?? "Couldn't generate the resume", "error"); return; }
       adopt(res.data);
       toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
+      if (res.data.skipped > 0) {
+        toast(`${res.data.skipped} older event${res.data.skipped === 1 ? "" : "s"} didn't fit (${RESUME_LIMITS.itemsPerSection} items max per section) — remove some items to make room.`, "error");
+      }
     });
   }
 

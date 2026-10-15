@@ -9,6 +9,7 @@ import {
   parseResumeDocument,
   reconcileExclusions,
   RESUME_LIMITS,
+  resumeOverflow,
   safeHref,
   sectionTypeForTags,
   suggestTemplate,
@@ -359,5 +360,32 @@ describe("review fixes", () => {
       Array.from({ length: 6 }, (_, i) => event(`m${i}`, "2025-01-01", ["milestone"], { media: [img] }))
     );
     expect(suggestTemplate(generateResumeDocument(visual))).toBe("creative");
+  });
+});
+
+describe("section overflow", () => {
+  const cap = RESUME_LIMITS.itemsPerSection;
+  const old = Array.from({ length: cap + 5 }, (_, i) =>
+    event(`o${i}`, `20${String(10 + Math.floor(i / 12)).padStart(2, "0")}-${String((i % 12) + 1).padStart(2, "0")}-01`, ["work"])
+  );
+
+  it("reports events that don't fit on generate", () => {
+    const p = profile(old);
+    expect(resumeOverflow(generateResumeDocument(p), p)).toBe(5);
+  });
+
+  it("sync lets a new recent event in by evicting the oldest log item, never free-form ones", () => {
+    const base = generateResumeDocument(profile(old));
+    const exp = base.sections.find((s) => s.type === "experience")!;
+    const freeform = { ...exp.items[0], id: "free1", eventId: null, title: "Free", dateFrom: "2000-01" };
+    exp.items = [...exp.items.slice(0, cap - 1), freeform];
+    const fresh = event("new", "2031-01-01", ["work"]);
+    const p = profile([fresh, ...old]);
+    const merged = mergeResumeDocument(base, p);
+    const items = merged.sections.find((s) => s.type === "experience")!.items;
+    expect(items).toHaveLength(cap);
+    expect(items[0].eventId).toBe("new");
+    expect(items.some((i) => i.id === "free1")).toBe(true);
+    expect(resumeOverflow(merged, p)).toBe(old.length + 1 - (cap - 1));
   });
 });

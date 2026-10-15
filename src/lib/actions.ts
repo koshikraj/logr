@@ -20,6 +20,7 @@ import {
   isResumeTemplate,
   mergeResumeDocument,
   reconcileExclusions,
+  resumeOverflow,
   suggestTemplate,
   validateResumeDocument,
   type ResumePageSize,
@@ -557,7 +558,9 @@ export async function getResumeAction(): Promise<ResumeView | null> {
  * and drops deleted ones while keeping every edit; `replace` starts over
  * (keeping template, page size, and publish state).
  */
-export async function generateResumeAction(mode: "merge" | "replace" = "merge"): Promise<ResumeResult> {
+export async function generateResumeAction(
+  mode: "merge" | "replace" = "merge"
+): Promise<ResumeResult<ResumeView & { skipped: number }>> {
   const profile = await ownerProfile();
   if (!profile) return fail("Sign in to edit your resume.");
   const row = await prisma.resume.findUnique({ where: { profileId: profile.id }, select: { id: true } });
@@ -569,8 +572,10 @@ export async function generateResumeAction(mode: "merge" | "replace" = "merge"):
   const document =
     existing && mode === "merge" ? mergeResumeDocument(existing.document, profile) : generateResumeDocument(profile);
   const res = await writeResume(profile.id, document, { generatedAt: new Date() });
-  if (res.ok) revalidatePath(`/${profile.username}/resume`);
-  return res;
+  if (!res.ok) return res;
+  revalidatePath(`/${profile.username}/resume`);
+  // events that didn't fit a full section — the editor tells the owner
+  return { ok: true, data: { ...res.data, skipped: resumeOverflow(res.data.document, profile) } };
 }
 
 export type SaveResumeInput = {

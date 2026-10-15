@@ -392,10 +392,15 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
     if (target) {
       // keep reverse-chron: new items slot in ahead of the first older one
       for (const item of additions) {
-        if (target.items.length >= RESUME_LIMITS.itemsPerSection) break;
         const at = target.items.findIndex((i) => (i.dateFrom ?? "") < (item.dateFrom ?? ""));
         target.items.splice(at < 0 ? target.items.length : at, 0, item);
       }
+      // over the cap: newer events win; the oldest log-derived items make room
+      // (free-form items are never evicted). See resumeOverflow().
+      for (let i = target.items.length - 1; target.items.length > RESUME_LIMITS.itemsPerSection && i >= 0; i--) {
+        if (target.items[i].eventId) target.items.splice(i, 1);
+      }
+      target.items = target.items.slice(0, RESUME_LIMITS.itemsPerSection);
       if (fs.type === "summary" && !target.text && fs.text) target.text = fs.text;
     } else if (additions.length && sections.length < RESUME_LIMITS.sections) {
       // a removed summary stays removed; new categories go at the end
@@ -408,6 +413,17 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
     sections,
     excludedEventIds: current.excludedEventIds.filter((id) => liveIds.has(id)),
   };
+}
+
+/** Log events that belong on the resume (not deleted, not excluded by the
+ *  owner) but aren't on it because their section is at the item cap. */
+export function resumeOverflow(doc: ResumeDocument, profile: ProfileDTO): number {
+  const excluded = new Set(doc.excludedEventIds);
+  const present = new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)));
+  const sectionOf = new Set(doc.sections.map((s) => s.type));
+  return profile.events.filter(
+    (e) => !excluded.has(e.id) && !present.has(e.id) && sectionOf.has(sectionTypeForTags(e.tags))
+  ).length;
 }
 
 /**
