@@ -56,7 +56,7 @@ export function ResumePolishDialog({
       <div className="emodal__head">
         <div>
           <h2 className="modal__title">polish<span className="colon">.</span></h2>
-          <p className="emodal__sub">rewritten from your log only — nothing invented. untick anything you&apos;d rather keep as is.</p>
+          <p className="emodal__sub">reworded from your log and your own edits — no new facts added. untick anything you&apos;d rather keep as is.</p>
         </div>
         <button type="button" className="emodal__close" onClick={onClose} aria-label="close">×</button>
       </div>

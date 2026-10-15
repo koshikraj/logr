@@ -2,14 +2,18 @@ import { describe, it, expect } from "vitest";
 import type { EventDTO, ProfileDTO } from "@/lib/profile";
 import {
   applyPolish,
+  decodeEntities,
   generateResumeDocument,
+  linkLabel,
   mergeResumeDocument,
   parseResumeDocument,
   reconcileExclusions,
+  RESUME_LIMITS,
   safeHref,
   sectionTypeForTags,
   suggestTemplate,
   toBullets,
+  validateResumeDocument,
   type ResumeDocument,
 } from "@/lib/resume";
 import { parsePolish } from "@/lib/resume-ai";
@@ -259,5 +263,101 @@ describe("llms.txt resume link", () => {
       { resumePublished: true }
     );
     expect(generatePrimaryLlmsTxt(big, "https://logr.it")).toContain("[Resume](https://logr.it/koshik/resume)");
+  });
+});
+
+describe("review fixes", () => {
+  it("clamps huge categories to the item cap and stays valid", () => {
+    const many = Array.from({ length: 250 }, (_, i) =>
+      event(`w${i}`, `20${String(10 + (i % 15)).padStart(2, "0")}-01-01`, ["work"])
+    );
+    const doc = generateResumeDocument(profile(many));
+    expect(doc.sections.find((s) => s.type === "experience")!.items).toHaveLength(RESUME_LIMITS.itemsPerSection);
+    expect(parseResumeDocument(JSON.parse(JSON.stringify(doc)))).not.toBeNull();
+    // merge into a full section never exceeds the cap either
+    const merged = mergeResumeDocument(doc, profile([event("new", "2030-01-01", ["work"]), ...many]));
+    expect(merged.sections.find((s) => s.type === "experience")!.items.length).toBeLessThanOrEqual(
+      RESUME_LIMITS.itemsPerSection
+    );
+    expect(parseResumeDocument(merged)).not.toBeNull();
+  });
+
+  it("orders items newest first regardless of timeline position", () => {
+    const doc = generateResumeDocument(
+      profile([
+        event("a", "2026-02-01", ["work"]),
+        event("b", "2026-04-01", ["work"]),
+        event("c", "2025-01-01", ["work"]),
+      ])
+    );
+    expect(ids(doc, "experience")).toEqual(["b", "a", "c"]);
+  });
+
+  it("drops a first bullet that just repeats the title", () => {
+    const doc = generateResumeDocument(
+      profile([event("a", "2026-02-01", ["work"], { title: "Built Zhentan", body: "Built Zhentan. Won the hackathon." })])
+    );
+    expect(doc.sections.find((s) => s.type === "experience")!.items[0].bullets).toEqual(["Won the hackathon."]);
+  });
+
+  it("decodes entities and shortens page-title link labels", () => {
+    expect(decodeEntities("Bengaluru&#x27;s &amp; co &#39;x&#39;")).toBe("Bengaluru's & co 'x'");
+    expect(linkLabel("repo", "https://github.com/x/y")).toBe("repo");
+    expect(linkLabel("#blockchain | Koshik Raj | 12 comments", "https://www.linkedin.com/posts/x")).toBe("linkedin.com");
+    const doc = generateResumeDocument(
+      profile([
+        event("a", "2026-02-01", ["work"], {
+          media: [{ kind: "link", url: "https://a.io/p", poster: null, provider: null, title: "Bengaluru&#x27;s best" }],
+        }),
+      ])
+    );
+    expect(doc.sections.find((s) => s.type === "experience")!.items[0].link).toEqual({
+      label: "Bengaluru's best",
+      href: "https://a.io/p",
+    });
+  });
+
+  it("does not repeat a bare-email social as a header link", () => {
+    const doc = generateResumeDocument(
+      profile([], { socials: [{ label: "Email", href: "me@x.io" }, { label: "GitHub", href: "https://github.com/me" }] })
+    );
+    expect(doc.header.email).toBe("me@x.io");
+    expect(doc.header.links.map((l) => l.href)).toEqual(["https://github.com/me"]);
+  });
+
+  it("validates real dates and reports where a document is invalid", () => {
+    const doc = generateResumeDocument(profile(EVENTS));
+    const item = doc.sections[1].items[0];
+    item.dateFrom = "2024-13-45";
+    const bad = validateResumeDocument(doc);
+    expect(bad).toMatchObject({ ok: false });
+    expect(!bad.ok && bad.error).toContain("sections.1.items.0.dateFrom");
+    item.dateFrom = "present";
+    expect(parseResumeDocument(doc)).toBeNull();
+    item.dateFrom = "2024-02";
+    item.dateTo = "present";
+    expect(parseResumeDocument(doc)).not.toBeNull();
+  });
+
+  it("rejects overlong URLs instead of truncating them", () => {
+    expect(safeHref(`https://a.io/${"x".repeat(600)}`)).toBeNull();
+  });
+
+  it("reconciles exclusions without a previous document", () => {
+    const next = generateResumeDocument(profile(EVENTS));
+    next.excludedEventIds = ["e1", "gone"];
+    expect(reconcileExclusions(null, next).excludedEventIds).toEqual(["gone"]);
+  });
+
+  it("only suggests creative for visual-first logs", () => {
+    const img = { kind: "image" as const, url: "/u/a.png", poster: null, provider: null, title: null };
+    const workHeavy = profile(
+      Array.from({ length: 10 }, (_, i) => event(`w${i}`, "2025-01-01", ["work"], { media: [img] }))
+    );
+    expect(suggestTemplate(generateResumeDocument(workHeavy))).toBe("modern");
+    const visual = profile(
+      Array.from({ length: 6 }, (_, i) => event(`m${i}`, "2025-01-01", ["milestone"], { media: [img] }))
+    );
+    expect(suggestTemplate(generateResumeDocument(visual))).toBe("creative");
   });
 });

@@ -55,24 +55,46 @@ const SECTION_ORDER: SectionType[] = [
 
 // ---------- schema ----------
 
+/** Document limits — the generator clamps to these so generated documents
+ *  always validate; the editor surfaces them before the server rejects. */
+export const RESUME_LIMITS = {
+  sections: 30,
+  itemsPerSection: 200,
+  bulletsPerItem: 10,
+  headerLinks: 12,
+  excludedEventIds: 5000,
+  url: 500,
+} as const;
+
+const MAX_URL = RESUME_LIMITS.url;
+
 /** Only web and mail links are ever rendered — no javascript:, data:, etc. */
 export function safeHref(href: string | null | undefined): string | null {
   const h = (href ?? "").trim();
   if (!h) return null;
-  if (/^https?:\/\//i.test(h) || /^mailto:/i.test(h)) return h.slice(0, 500);
-  if (/^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(h)) return `mailto:${h}`;
+  if (h.length > MAX_URL) return null; // a truncated URL is a broken URL
+  if (/^https?:\/\//i.test(h) || /^mailto:/i.test(h)) return h;
+  if (EMAIL_RE.test(h)) return `mailto:${h}`;
   return null;
 }
 
-/** "YYYY", "YYYY-MM", "YYYY-MM-DD", or "present" (dateTo only). */
-const dateField = z
-  .string()
-  .regex(/^(\d{4}(-\d{2}(-\d{2})?)?|present)$/)
-  .nullable();
+const EMAIL_RE = /^[^\s@/:]+@[^\s@/]+\.[^\s@/]+$/;
+
+/** Image/thumbnail URLs: absolute http(s) or site-relative, within length. */
+export function safeImageUrl(url: string | null | undefined): string | null {
+  const u = (url ?? "").trim();
+  return u && u.length <= MAX_URL && /^(https?:\/\/|\/(?!\/))/i.test(u) ? u : null;
+}
+
+/** "YYYY", "YYYY-MM", or "YYYY-MM-DD" with a real month/day. */
+const DATE_RE = /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$/;
+const dateFrom = z.string().regex(DATE_RE).nullable();
+/** dateTo additionally allows "present". */
+const dateTo = z.union([z.string().regex(DATE_RE), z.literal("present")]).nullable();
 
 const linkSchema = z.object({
   label: z.string().max(80),
-  href: z.string().max(500),
+  href: z.string().max(MAX_URL),
 });
 
 /** Emoji/glyph, a Lucide icon key ("lucide:rocket"), or an image URL. */
@@ -84,12 +106,12 @@ export const resumeItemSchema = z.object({
   title: z.string().max(200),
   subtitle: z.string().max(200).nullable(), // company / venue / degree
   location: z.string().max(120).nullable(),
-  dateFrom: dateField,
-  dateTo: dateField,
-  bullets: z.array(z.string().max(400)).max(10),
+  dateFrom,
+  dateTo,
+  bullets: z.array(z.string().max(400)).max(RESUME_LIMITS.bulletsPerItem),
   link: linkSchema.nullable(),
   icon: iconField,
-  image: z.string().max(500).nullable(), // thumbnail (creative template)
+  image: z.string().max(MAX_URL).nullable(), // thumbnail (creative template)
 });
 export type ResumeItem = z.infer<typeof resumeItemSchema>;
 
@@ -100,7 +122,7 @@ export const resumeSectionSchema = z.object({
   icon: iconField,
   hidden: z.boolean(),
   text: z.string().max(2000).nullable(), // summary / free text sections
-  items: z.array(resumeItemSchema).max(60),
+  items: z.array(resumeItemSchema).max(RESUME_LIMITS.itemsPerSection),
 });
 export type ResumeSection = z.infer<typeof resumeSectionSchema>;
 
@@ -109,22 +131,22 @@ export const resumeHeaderSchema = z.object({
   headline: z.string().max(200),
   location: z.string().max(120),
   email: z.string().max(200).nullable(),
-  avatarUrl: z.string().max(500).nullable(),
+  avatarUrl: z.string().max(MAX_URL).nullable(),
   showAvatar: z.boolean(),
-  links: z.array(linkSchema.extend({ icon: iconField })).max(12),
+  links: z.array(linkSchema.extend({ icon: iconField })).max(RESUME_LIMITS.headerLinks),
 });
 export type ResumeHeader = z.infer<typeof resumeHeaderSchema>;
 
 export const resumeDocumentSchema = z.object({
   version: z.literal(1),
   header: resumeHeaderSchema,
-  sections: z.array(resumeSectionSchema).max(20),
+  sections: z.array(resumeSectionSchema).max(RESUME_LIMITS.sections),
   accent: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable(), // overrides the profile palette accent
   // Events the owner removed from the resume — regenerate never re-adds them.
-  excludedEventIds: z.array(z.string().max(40)).max(1000),
+  excludedEventIds: z.array(z.string().max(40)).max(RESUME_LIMITS.excludedEventIds),
 });
 export type ResumeDocument = z.infer<typeof resumeDocumentSchema>;
 
@@ -136,9 +158,19 @@ export type ResumeSettings = {
 
 /** Validate an untrusted document (editor save, DB read) and scrub hrefs. */
 export function parseResumeDocument(value: unknown): ResumeDocument | null {
+  const res = validateResumeDocument(value);
+  return res.ok ? res.document : null;
+}
+
+/** Like parseResumeDocument, but says what's wrong (for editor errors). */
+export function validateResumeDocument(
+  value: unknown
+): { ok: true; document: ResumeDocument } | { ok: false; error: string } {
   const parsed = resumeDocumentSchema.safeParse(value);
-  if (!parsed.success) return null;
-  return sanitizeDocument(parsed.data);
+  if (parsed.success) return { ok: true, document: sanitizeDocument(parsed.data) };
+  const issue = parsed.error.issues[0];
+  const where = issue?.path.length ? issue.path.join(".") : "document";
+  return { ok: false, error: `Invalid resume (${where}): ${issue?.message ?? "unknown error"}` };
 }
 
 function sanitizeDocument(doc: ResumeDocument): ResumeDocument {
@@ -146,17 +178,16 @@ function sanitizeDocument(doc: ResumeDocument): ResumeDocument {
     const href = safeHref(l?.href);
     return l && href ? { ...l, href } : null;
   };
-  const cleanUrl = (u: string | null) => (u && /^(https?:\/\/|\/)/.test(u) ? u : null);
   return {
     ...doc,
     header: {
       ...doc.header,
-      avatarUrl: cleanUrl(doc.header.avatarUrl),
+      avatarUrl: safeImageUrl(doc.header.avatarUrl),
       links: doc.header.links.map(cleanLink).filter((l): l is NonNullable<typeof l> => !!l),
     },
     sections: doc.sections.map((s) => ({
       ...s,
-      items: s.items.map((i) => ({ ...i, link: cleanLink(i.link), image: cleanUrl(i.image) })),
+      items: s.items.map((i) => ({ ...i, link: cleanLink(i.link), image: safeImageUrl(i.image) })),
     })),
     excludedEventIds: Array.from(new Set(doc.excludedEventIds)),
   };
@@ -189,44 +220,86 @@ export function toBullets(body: string, max = 3): string[] {
   const text = body.replace(/\s+/g, " ").trim();
   if (!text) return [];
   const sentences = text
-    .split(/(?<=[.!?])\s+(?=[A-Z0-9"“(])/)
+    .replace(/([.!?])\s+(?=[A-Z0-9"“(])/g, "$1\u0000")
+    .split("\u0000")
     .map((s) => s.trim())
     .filter(Boolean);
   return sentences.slice(0, max).map((s) => (s.length > 400 ? `${s.slice(0, 397)}…` : s));
 }
 
-/** Month precision unless the event records the exact day. */
-function eventDate(e: EventDTO): string {
-  return e.fullDate ? e.dateOn : e.dateOn.slice(0, 7);
+/** Month precision unless the event records the exact day; null if malformed. */
+function eventDate(e: EventDTO): string | null {
+  const d = e.fullDate ? e.dateOn : e.dateOn.slice(0, 7);
+  if (DATE_RE.test(d)) return d;
+  const year = e.dateOn.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : null;
+}
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+/** Decode the HTML entities unfurled page titles carry ("Bengaluru&#x27;s"). */
+export function decodeEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, code: string) => {
+    if (code[0] === "#") {
+      const n = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+      return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m;
+    }
+    return ENTITIES[code.toLowerCase()] ?? m;
+  });
+}
+
+/** A short link label: the given text when it reads like a label, else the
+ *  hostname (unfurled page titles are often "post | Name | 12 comments"). */
+export function linkLabel(text: string | null | undefined, href: string): string {
+  const t = decodeEntities(text ?? "").replace(/\s+/g, " ").trim();
+  if (t && t.length <= 40 && !t.includes(" | ")) return t;
+  if (/^mailto:/i.test(href)) return href.slice(7, 87);
+  try {
+    return new URL(href).hostname.replace(/^www\./, "").slice(0, 80);
+  } catch {
+    return t.slice(0, 80) || "Link";
+  }
 }
 
 function eventLink(e: EventDTO): ResumeItem["link"] {
   const href = safeHref(e.link?.href);
-  if (e.link && href) return { label: e.link.label.slice(0, 80), href };
-  const media = e.media.find((m) => m.kind === "link" && safeHref(m.url));
-  return media ? { label: (media.title ?? media.provider ?? "Link").slice(0, 80), href: media.url } : null;
+  if (e.link && href) return { label: linkLabel(e.link.label, href), href };
+  for (const m of e.media) {
+    const mediaHref = m.kind === "link" ? safeHref(m.url) : null;
+    if (mediaHref) return { label: linkLabel(m.title ?? m.provider, mediaHref), href: mediaHref };
+  }
+  return null;
 }
 
 function eventImage(e: EventDTO): string | null {
   const m = e.media.find((x) => x.kind === "image") ?? e.media.find((x) => x.poster);
-  const url = m ? (m.kind === "image" ? m.url : m.poster) : null;
-  return url && /^(https?:\/\/|\/)/.test(url) ? url : null;
+  return safeImageUrl(m ? (m.kind === "image" ? m.url : m.poster) : null);
 }
 
+const norm = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+
 export function itemFromEvent(e: EventDTO): ResumeItem {
+  const title = decodeEntities(e.title).slice(0, 200);
+  // bodies often open by restating the title — don't print it twice
+  const bullets = toBullets(e.body, 4).filter((b) => norm(b) !== norm(title)).slice(0, 3);
   return {
     id: `ev_${e.id}`.slice(0, 40),
     eventId: e.id,
-    title: e.title.slice(0, 200),
+    title,
     subtitle: null,
     location: null,
     dateFrom: eventDate(e),
     dateTo: null,
-    bullets: toBullets(e.body),
+    bullets,
     link: eventLink(e),
     icon: e.icon ? e.icon.slice(0, 300) : null,
     image: eventImage(e),
   };
+}
+
+/** Newest first; undated items sink to the end. Stable for equal dates. */
+export function byDateDesc(a: ResumeItem, b: ResumeItem): number {
+  return (b.dateFrom ?? "").localeCompare(a.dateFrom ?? "");
 }
 
 function emptySection(type: SectionType): ResumeSection {
@@ -242,28 +315,32 @@ function emptySection(type: SectionType): ResumeSection {
 }
 
 function headerFromProfile(p: ProfileDTO): ResumeHeader {
-  const email = p.socials.map((s) => s.href).find((h) => /^mailto:/i.test(h) || /^[^\s@/]+@[^\s@/]+\.[^\s@/]+$/.test(h));
+  const isMail = (h: string) => /^mailto:/i.test(h) || EMAIL_RE.test(h);
+  const email = p.socials.map((s) => s.href.trim()).find(isMail);
   return {
     name: p.name.slice(0, 120),
     headline: (p.status || p.bio).slice(0, 200),
     location: p.location.slice(0, 120),
     email: email ? email.replace(/^mailto:/i, "").slice(0, 200) : null,
-    avatarUrl: p.avatarUrl,
+    avatarUrl: safeImageUrl(p.avatarUrl),
     showAvatar: false,
     links: p.socials
-      .filter((s) => !/^mailto:/i.test(s.href) && safeHref(s.href))
-      .slice(0, 12)
-      .map((s) => ({ label: s.label.slice(0, 80), href: s.href, icon: null })),
+      .filter((s) => !isMail(s.href.trim()))
+      .map((s) => ({ label: s.label, href: safeHref(s.href) }))
+      .filter((s): s is { label: string; href: string } => !!s.href)
+      .slice(0, RESUME_LIMITS.headerLinks)
+      .map((s) => ({ label: (s.label || linkLabel(null, s.href)).slice(0, 80), href: s.href, icon: null })),
   };
 }
 
 /**
  * Build a complete resume from the log: header from the profile, a summary
- * from bio/about, and one section per event category. Events are already
- * reverse-chronological (position order), which is what resumes want too.
+ * from bio/about, and one section per event category, newest first. Clamped
+ * to RESUME_LIMITS so the result always validates.
  */
 export function generateResumeDocument(profile: ProfileDTO, excludedEventIds: string[] = []): ResumeDocument {
-  const excluded = new Set(excludedEventIds);
+  const liveIds = new Set(profile.events.map((e) => e.id));
+  const excluded = new Set(excludedEventIds.filter((id) => liveIds.has(id)));
   const byType = new Map<SectionType, ResumeSection>();
   const section = (type: SectionType) => {
     let s = byType.get(type);
@@ -278,13 +355,16 @@ export function generateResumeDocument(profile: ProfileDTO, excludedEventIds: st
     if (excluded.has(e.id)) continue;
     section(sectionTypeForTags(e.tags)).items.push(itemFromEvent(e));
   }
+  for (const s of byType.values()) {
+    s.items = s.items.sort(byDateDesc).slice(0, RESUME_LIMITS.itemsPerSection);
+  }
 
   return {
     version: 1,
     header: headerFromProfile(profile),
     sections: SECTION_ORDER.filter((t) => byType.has(t)).map((t) => byType.get(t)!),
     accent: null,
-    excludedEventIds: Array.from(excluded),
+    excludedEventIds: Array.from(excluded).slice(0, RESUME_LIMITS.excludedEventIds),
   };
 }
 
@@ -312,11 +392,12 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
     if (target) {
       // keep reverse-chron: new items slot in ahead of the first older one
       for (const item of additions) {
+        if (target.items.length >= RESUME_LIMITS.itemsPerSection) break;
         const at = target.items.findIndex((i) => (i.dateFrom ?? "") < (item.dateFrom ?? ""));
         target.items.splice(at < 0 ? target.items.length : at, 0, item);
       }
       if (fs.type === "summary" && !target.text && fs.text) target.text = fs.text;
-    } else if (additions.length) {
+    } else if (additions.length && sections.length < RESUME_LIMITS.sections) {
       // a removed summary stays removed; new categories go at the end
       sections.push({ ...fs, items: additions });
     }
@@ -339,15 +420,18 @@ export function reconcileExclusions(previous: ResumeDocument | null, next: Resum
   const now = ids(next);
   const excluded = new Set(next.excludedEventIds.filter((id) => !now.has(id)));
   if (previous) for (const id of ids(previous)) if (!now.has(id)) excluded.add(id);
-  return { ...next, excludedEventIds: Array.from(excluded) };
+  // newest exclusions win if the cap is ever hit
+  return { ...next, excludedEventIds: Array.from(excluded).slice(-RESUME_LIMITS.excludedEventIds) };
 }
 
 /** Pick a template from the shape of the log (used when AI is unavailable). */
 export function suggestTemplate(doc: ResumeDocument): ResumeTemplate {
   const count = (t: SectionType) => doc.sections.find((s) => s.type === t)?.items.length ?? 0;
-  const imageItems = doc.sections.flatMap((s) => s.items).filter((i) => i.image).length;
+  const items = doc.sections.flatMap((s) => s.items);
+  const imageItems = items.filter((i) => i.image).length;
   if (count("talks") + count("writing") > count("experience") + count("projects")) return "academic";
-  if (imageItems >= 4) return "creative";
+  // visual-first logs only: most items have images and work history doesn't dominate
+  if (imageItems >= 4 && imageItems >= items.length * 0.6 && count("experience") * 2 < items.length) return "creative";
   if (count("projects") > count("experience")) return "founder";
   return DEFAULT_RESUME_TEMPLATE;
 }

@@ -21,10 +21,19 @@ const MAX_ITEMS = 40;
 export function buildPolishPrompt(profile: ProfileDTO, doc: ResumeDocument, origin: string): string {
   const items = doc.sections
     .filter((s) => !s.hidden)
-    .flatMap((s) => s.items.map((i) => ({ id: i.id, section: s.type, title: i.title, bullets: i.bullets })))
+    .flatMap((s) =>
+      s.items.map((i) => ({
+        id: i.id,
+        section: s.type,
+        source: i.eventId ? "log" : "owner-written",
+        title: i.title,
+        bullets: i.bullets,
+      }))
+    )
     .slice(0, MAX_ITEMS);
   return [
-    `Rewrite ${profile.name}'s resume content. Use ONLY facts present in THE LOG below or in the items themselves — never invent employers, numbers, titles, or outcomes.`,
+    `Rewrite ${profile.name}'s resume content. Never invent employers, numbers, titles, dates, or outcomes.`,
+    "Grounding: an item's bullets may use only facts from that item's own title and bullets, plus — for source \"log\" items — the matching entry in THE LOG. Never move facts between items. The summary uses only THE LOG.",
     "",
     "Return:",
     "- summary: 2–3 sentences, third-person-free resume voice (no \"I\", no name), what they do and their strongest recorded work. null if the log is too thin.",

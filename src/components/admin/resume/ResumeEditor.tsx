@@ -295,29 +295,44 @@ export function ResumeEditor({
   const savedSig = useRef(state ? sig(state) : "");
   const pending = useRef<ResumeEditorState | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest = useRef(state);
+  // Saves run one at a time, in order, so an older snapshot can never land
+  // after a newer one. Resolves to whether the most recent save succeeded.
+  const saveChain = useRef<Promise<boolean>>(Promise.resolve(true));
 
   // feed the live preview
-  useEffect(() => { onStateChange(state); }, [state, onStateChange]);
+  useEffect(() => { latest.current = state; onStateChange(state); }, [state, onStateChange]);
 
-  const save = useCallback(async (s: ResumeEditorState) => {
-    pending.current = null;
+  const runSave = useCallback(async (s: ResumeEditorState): Promise<boolean> => {
     setStatus("saving");
-    try {
-      const res = await saveResumeAction({ document: s.doc, template: s.template, pageSize: s.pageSize });
-      savedSig.current = sig(s);
-      // adopt server-side exclusion reconciliation without re-triggering a save
-      setState((cur) => {
-        if (!cur) return cur;
-        const next = { ...cur, doc: { ...cur.doc, excludedEventIds: res.document.excludedEventIds } };
-        if (sig(cur) === savedSig.current) savedSig.current = sig(next);
-        return next;
-      });
-      setStatus("saved");
-    } catch (e) {
+    const res = await saveResumeAction({ document: s.doc, template: s.template, pageSize: s.pageSize }).catch(() => null);
+    if (!res?.ok) {
       setStatus("error");
-      toast(e instanceof Error ? e.message : "Couldn't save the resume", "error");
+      toast(res?.error ?? "Couldn't save the resume", "error");
+      return false;
     }
+    const stored = { doc: res.data.document, template: res.data.template, pageSize: res.data.pageSize };
+    setState((cur) => {
+      if (!cur) return cur;
+      if (sig(cur) === sig(s)) {
+        // no edits since this snapshot: adopt exactly what the server stored
+        // (scrubbed links, reconciled exclusions)
+        savedSig.current = sig(stored);
+        return stored;
+      }
+      // newer edits are queued; only carry over the exclusions
+      savedSig.current = sig(s);
+      return { ...cur, doc: { ...cur.doc, excludedEventIds: res.data.document.excludedEventIds } };
+    });
+    setStatus((st) => (st === "saving" ? "saved" : st));
+    return true;
   }, [toast]);
+
+  const save = useCallback((s: ResumeEditorState): Promise<boolean> => {
+    pending.current = null;
+    saveChain.current = saveChain.current.then(() => runSave(s));
+    return saveChain.current;
+  }, [runSave]);
 
   // autosave — debounced on every change
   useEffect(() => {
@@ -329,9 +344,13 @@ export function ResumeEditor({
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [state, save]);
 
-  const flush = useCallback(async () => {
+  /** Persist the latest state (retrying a failed save) and wait for every
+   *  queued save. False means the server doesn't have the current content. */
+  const flush = useCallback(async (): Promise<boolean> => {
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }
-    if (pending.current) await save(pending.current);
+    const cur = latest.current;
+    if (cur && sig(cur) !== savedSig.current) return save(cur);
+    return saveChain.current;
   }, [save]);
 
   const adopt = useCallback((view: ResumeView) => {
@@ -345,44 +364,40 @@ export function ResumeEditor({
 
   function generate(mode: "merge" | "replace") {
     start(async () => {
-      try {
-        await flush();
-        adopt(await generateResumeAction(mode));
-        toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
-      } catch (e) {
-        toast(e instanceof Error ? e.message : "Couldn't generate the resume", "error");
-      }
+      if (!(await flush())) return;
+      const res = await generateResumeAction(mode).catch(() => null);
+      if (!res?.ok) { toast(res?.error ?? "Couldn't generate the resume", "error"); return; }
+      adopt(res.data);
+      toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
     });
   }
 
   function runPolish() {
     if (!state) return;
     start(async () => {
-      try {
-        await flush();
-        setPolish(await polishResumeAction(state.doc));
-      } catch (e) {
-        toast(e instanceof Error ? e.message : "Polish failed", "error");
-      }
+      if (!(await flush())) return;
+      const res = await polishResumeAction(latest.current?.doc ?? state.doc).catch(() => null);
+      if (!res?.ok) { toast(res?.error ?? "Polish failed", "error"); return; }
+      setPolish(res.data);
     });
   }
 
   function togglePublish(next: boolean) {
     start(async () => {
-      try {
-        await flush();
-        const view = await setResumePublishedAction(next);
-        setPublished(view.published);
-        toast(view.published ? "Resume published" : "Resume unpublished");
-      } catch (e) {
-        toast(e instanceof Error ? e.message : "Couldn't update", "error");
-      }
+      if (!(await flush())) return; // never publish content the server doesn't have
+      const res = await setResumePublishedAction(next).catch(() => null);
+      if (!res?.ok) { toast(res?.error ?? "Couldn't update", "error"); return; }
+      setPublished(res.data.published);
+      toast(res.data.published ? "Resume published" : "Resume unpublished");
     });
   }
 
   async function download() {
-    await flush();
-    window.open("/dashboard/resume/print", "_blank", "noopener");
+    // open synchronously (inside the click) so popup blockers allow it
+    const win = window.open("", "_blank");
+    if (!(await flush())) { win?.close(); return; }
+    if (win) { win.opener = null; win.location.href = "/dashboard/resume/print"; }
+    else window.location.href = "/dashboard/resume/print";
   }
 
   const publicUrl = `${SITE_URL}/${username}/resume`;
