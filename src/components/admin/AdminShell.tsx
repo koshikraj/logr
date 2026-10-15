@@ -8,6 +8,9 @@ import { ProfileForm } from "./ProfileForm";
 import { ThemeEditor } from "./ThemeEditor";
 import { EventsManager, type EditableEvent } from "./EventsManager";
 import { ConnectedAgents } from "./ConnectedAgents";
+import { ResumeEditor, type ResumeEditorState } from "./resume/ResumeEditor";
+import { ResumePreview } from "./resume/ResumePreview";
+import type { ResumeView } from "@/lib/resume-data";
 import { logoutAction } from "@/lib/actions";
 import { themeCssVars, type Theme } from "@/lib/theme";
 import { Mark } from "@/components/Mark";
@@ -19,6 +22,7 @@ const TABS = [
   { value: "events", glyph: "02", label: "events" },
   { value: "appearance", glyph: "03", label: "appearance" },
   { value: "agents", glyph: "04", label: "agents" },
+  { value: "resume", glyph: "05", label: "resume" },
 ];
 
 function initial(name: string) {
@@ -49,9 +53,15 @@ export function AdminShell({
   events,
   xConnected = null,
   banner,
+  resume = null,
+  chatEnabled = false,
 }: {
   profile: ProfileDTO;
   events: EditableEvent[];
+  /** the owner's resume draft, null before the first generate (#66) */
+  resume?: ResumeView | null;
+  /** AI polish is offered only when chat (OpenRouter) is configured */
+  chatEnabled?: boolean;
   /** true = linked, false = offer connect, null = X auth not configured */
   xConnected?: boolean | null;
   /** optional notice rendered above the tabs (e.g. pending import pickup) */
@@ -68,6 +78,10 @@ export function AdminShell({
     location: profile.location, about: profile.about, socials: profile.socials, avatarUrl: profile.avatarUrl,
   });
   const [items, setItems] = useState<EditableEvent[]>(events);
+  // resume tab: the editor's live state drives the preview pane instead of the timeline
+  const [resumeState, setResumeState] = useState<ResumeEditorState | null>(
+    resume ? { doc: resume.document, template: resume.template, pageSize: resume.pageSize } : null
+  );
 
   // compose the draft into a ProfileDTO the (preview-mode) timeline can render
   const previewProfile = useMemo<ProfileDTO>(() => ({
@@ -139,6 +153,15 @@ export function AdminShell({
                 {tab === "appearance" && <ThemeEditor theme={theme} onChange={setTheme} />}
                 {tab === "events" && <EventsManager events={events} username={profile.username} pinnedIds={profile.pinnedIds} onItemsChange={setItems} />}
                 {tab === "agents" && <ConnectedAgents />}
+                {tab === "resume" && (
+                  <ResumeEditor
+                    initial={resume}
+                    events={previewProfile.events}
+                    username={profile.username}
+                    chatEnabled={chatEnabled}
+                    onStateChange={setResumeState}
+                  />
+                )}
               </div>
             </div>
 
@@ -146,14 +169,21 @@ export function AdminShell({
 
             <aside className="dash-preview" aria-label="live preview of your page">
               <div className="dash-preview__bar">
-                <span className="dash-preview__url">logr.it<span className="accent">/</span>{previewProfile.username}</span>
+                <span className="dash-preview__url">
+                  logr.it<span className="accent">/</span>{previewProfile.username}
+                  {tab === "resume" && resumeState && <><span className="accent">/</span>resume</>}
+                </span>
                 <span className="dash-preview__live"><span className="dash-preview__live__dot" />live</span>
               </div>
-              <div className="dash-preview__frame">
-                <div className="preview-zoom">
-                  <Portfolio profile={previewProfile} previewMode chatEnabled={false} loggedIn={false} />
+              {tab === "resume" && resumeState ? (
+                <ResumePreview doc={resumeState.doc} template={resumeState.template} pageSize={resumeState.pageSize} theme={theme} />
+              ) : (
+                <div className="dash-preview__frame">
+                  <div className="preview-zoom">
+                    <Portfolio profile={previewProfile} previewMode chatEnabled={false} loggedIn={false} />
+                  </div>
                 </div>
-              </div>
+              )}
             </aside>
           </div>
         </div>
