@@ -11,12 +11,33 @@ export type PullResult = { item: ResumeItem; sectionType: SectionType }[];
 
 /** "Pull from timeline": every log event not already on the resume, with the
  *  section it would land in. Picked events become items (and un-exclude). */
-export function ResumePullDialog({ events, doc, onClose, onAdd }: { events: EventDTO[]; doc: ResumeDocument; onClose: () => void; onAdd: (picked: PullResult) => void }) {
+export function ResumePullDialog({
+  events,
+  doc,
+  capacity,
+  onClose,
+  onAdd,
+}: {
+  events: EventDTO[];
+  doc: ResumeDocument;
+  /** room left per target section type (RESUME_LIMITS); 0 = that section is full */
+  capacity: Record<SectionType, number>;
+  onClose: () => void;
+  onAdd: (picked: PullResult) => void;
+}) {
   const onResume = useMemo(() => new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)).filter(Boolean)), [doc]);
   const candidates = useMemo(() => events.filter((e) => !onResume.has(e.id)), [events, onResume]);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const shown = candidates.filter((e) => !q.trim() || `${e.title} ${e.body} ${e.tags.join(" ")}`.toLowerCase().includes(q.toLowerCase()));
+
+  // picks already counted against each section's remaining room
+  const used = useMemo(() => {
+    const u: Partial<Record<SectionType, number>> = {};
+    for (const e of candidates) if (picked.has(e.id)) { const t = sectionTypeForTags(e.tags); u[t] = (u[t] ?? 0) + 1; }
+    return u;
+  }, [candidates, picked]);
+  const roomFor = (e: EventDTO) => capacity[sectionTypeForTags(e.tags)] - (used[sectionTypeForTags(e.tags)] ?? 0);
 
   function toggle(id: string) {
     setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -45,8 +66,10 @@ export function ResumePullDialog({ events, doc, onClose, onAdd }: { events: Even
         )}
         <div className="rsb-dialog__list" role="listbox" aria-multiselectable="true">
           {shown.length === 0 && <p className="rsb-dialog__empty">{candidates.length === 0 ? "every event is already on the resume." : "nothing matches."}</p>}
-          {shown.map((e) => (
-            <button key={e.id} type="button" role="option" aria-selected={picked.has(e.id)} className="rsb-pick" onClick={() => toggle(e.id)}>
+          {shown.map((e) => {
+            const full = !picked.has(e.id) && roomFor(e) <= 0;
+            return (
+            <button key={e.id} type="button" role="option" aria-selected={picked.has(e.id)} aria-disabled={full} className="rsb-pick" onClick={() => !full && toggle(e.id)} disabled={full} title={full ? "that section is full" : undefined}>
               <span className="rsb-pick__box" aria-hidden="true">
                 {picked.has(e.id) && (
                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M2.5 6.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -62,10 +85,12 @@ export function ResumePullDialog({ events, doc, onClose, onAdd }: { events: Even
                 <span className="rsb-pick__title">{e.title}</span>
                 <span className="rsb-pick__meta">
                   {e.date} · {e.tags.map((t) => TAG_META[t]?.label ?? t).join(", ") || "untagged"} → {SECTION_TITLES[sectionTypeForTags(e.tags)].toLowerCase()}
+                  {full ? " · full" : ""}
                 </span>
               </span>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 

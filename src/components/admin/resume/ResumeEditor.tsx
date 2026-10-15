@@ -14,7 +14,9 @@ import {
   setResumePublishedAction,
 } from "@/lib/actions";
 import {
+  sectionTypeForTags,
   applyPolish,
+  RESUME_LIMITS,
   RESUME_PAGE_SIZES,
   RESUME_TEMPLATES,
   SECTION_TITLES,
@@ -42,7 +44,8 @@ type SaveStatus = "saved" | "dirty" | "saving" | "error";
 
 const sig = (s: ResumeEditorState) => JSON.stringify([s.doc, s.template, s.pageSize]);
 
-const DATE_RE = /^(\d{4}(-\d{2}(-\d{2})?)?)$/;
+// same rule as the server: YYYY, YYYY-MM or YYYY-MM-DD with a real month/day
+const DATE_RE = /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$/;
 
 function DragHandle({ onStart, className }: { onStart: (e: React.PointerEvent) => void; className: string }) {
   return (
@@ -159,12 +162,15 @@ function ItemCard({ item, onChange, onRemove, showImage }: { item: ResumeItem; o
             </div>
           </div>
           <div className="rsb-f">
-            <label>bullets · one per line</label>
+            <label>bullets · one per line · {item.bullets.length}/{RESUME_LIMITS.bulletsPerItem}</label>
             <textarea
               value={item.bullets.join("\n")}
-              onChange={(e) => onChange({ bullets: e.target.value.split("\n").slice(0, 10).map((b) => b.slice(0, 400)) })}
+              onChange={(e) => onChange({ bullets: e.target.value.split("\n").slice(0, RESUME_LIMITS.bulletsPerItem).map((b) => b.slice(0, 400)) })}
               placeholder="Led the thing. Shipped the other thing."
             />
+            {item.bullets.length >= RESUME_LIMITS.bulletsPerItem && (
+              <span className="rsb-f__hint">{RESUME_LIMITS.bulletsPerItem} bullets max — extra lines are dropped</span>
+            )}
           </div>
           <div className="rsb-grid">
             <div className="rsb-f">
@@ -260,7 +266,10 @@ function SectionCard({
           </Reorder.Group>
         )}
         <div className="rsb-sec__foot">
-          <button type="button" className="btn btn--ghost btn--small" onClick={onAddItem}>+ add item</button>
+          <button type="button" className="btn btn--ghost btn--small" onClick={onAddItem} disabled={section.items.length >= RESUME_LIMITS.itemsPerSection}>+ add item</button>
+          {section.items.length >= RESUME_LIMITS.itemsPerSection && (
+            <span className="rsb-f__hint">{RESUME_LIMITS.itemsPerSection} items max per section</span>
+          )}
         </div>
       </div>
     </Reorder.Item>
@@ -429,20 +438,31 @@ export function ResumeEditor({
 
   const pullIn = (picked: PullResult) => {
     if (!picked.length) return;
-    setDoc((d) => {
+    // computed outside the updater: strict mode runs updaters twice, which
+    // would double-count `added`
+    const d = latest.current?.doc;
+    if (!d) return;
+    let added = 0;
+    const next = (() => {
       const sections = d.sections.map((s) => ({ ...s, items: [...s.items] }));
+      const pulled = new Set<string>();
       for (const { item, sectionType } of picked) {
         let target = sections.find((s) => s.type === sectionType);
         if (!target) {
+          if (sections.length >= RESUME_LIMITS.sections) continue; // can't open a new section
           target = { id: newResumeId("sec"), type: sectionType, title: SECTION_TITLES[sectionType], icon: SECTION_DEFAULT_ICON[sectionType] ?? null, hidden: false, text: null, items: [] };
           sections.push(target);
         }
+        if (target.items.length >= RESUME_LIMITS.itemsPerSection) continue; // section full
         target.items.push(item);
+        if (item.eventId) pulled.add(item.eventId);
+        added += 1;
       }
-      const pulled = new Set(picked.map((p) => p.item.eventId));
       return { ...d, sections, excludedEventIds: d.excludedEventIds.filter((id) => !pulled.has(id)) };
-    });
-    toast(`Added ${picked.length} ${picked.length === 1 ? "event" : "events"}`);
+    })();
+    setDoc(() => next);
+    const skipped = picked.length - added;
+    toast(skipped ? `Added ${added}, skipped ${skipped} (section full)` : `Added ${added} ${added === 1 ? "event" : "events"}`, skipped ? "error" : "success");
   };
 
   const applyPolishReviewed = (accepted: ResumePolish, template: ResumeTemplate | null) => {
@@ -452,6 +472,22 @@ export function ResumeEditor({
 
   const sections = useMemo(() => state?.doc.sections ?? [], [state]);
   const availableTypes = useMemo(() => SECTION_TYPES.filter((t) => t === "custom" || !sections.some((s) => s.type === t)), [sections]);
+  const sectionsFull = sections.length >= RESUME_LIMITS.sections;
+  // room left for pulled events, per target section type (a missing section
+  // can still be created unless the section cap is hit)
+  const pullCapacity = useMemo(() => {
+    const cap: Partial<Record<SectionType, number>> = {};
+    for (const t of SECTION_TYPES) {
+      const existing = sections.find((s) => s.type === t);
+      cap[t] = existing ? RESUME_LIMITS.itemsPerSection - existing.items.length : sectionsFull ? 0 : RESUME_LIMITS.itemsPerSection;
+    }
+    return cap as Record<SectionType, number>;
+  }, [sections, sectionsFull]);
+  const onResume = useMemo(() => new Set(sections.flatMap((s) => s.items.map((i) => i.eventId))), [sections]);
+  const pullFull = useMemo(
+    () => events.filter((e) => !onResume.has(e.id)).every((e) => (pullCapacity[sectionTypeForTags(e.tags)] ?? 0) <= 0),
+    [events, onResume, pullCapacity]
+  );
 
   // ---- empty state ----
   if (!state) {
@@ -595,13 +631,13 @@ export function ResumeEditor({
                   <button type="button" className="rsb-ibtn rsb-ibtn--danger" aria-label="remove link" onClick={() => patchHeader({ links: doc.header.links.filter((_, j) => j !== i) })}>×</button>
                 </div>
               ))}
-              {doc.header.links.length < 12 && (
-                <div>
-                  <button type="button" className="btn btn--ghost btn--small" onClick={() => patchHeader({ links: [...doc.header.links, { label: "", href: "", icon: "lucide:link" }] })}>+ add link</button>
-                </div>
-              )}
+              <div>
+                <button type="button" className="btn btn--ghost btn--small" disabled={doc.header.links.length >= RESUME_LIMITS.headerLinks} onClick={() => patchHeader({ links: [...doc.header.links, { label: "", href: "", icon: "lucide:link" }] })}>+ add link</button>
+              </div>
             </div>
-            <span className="rsb-f__hint">only http(s) and mailto links are kept</span>
+            <span className="rsb-f__hint">
+              {doc.header.links.length >= RESUME_LIMITS.headerLinks ? `${RESUME_LIMITS.headerLinks} links max · ` : ""}only http(s) and mailto links are kept
+            </span>
           </div>
         </div>
       </div>
@@ -627,7 +663,7 @@ export function ResumeEditor({
 
         <div className="rsb-toolbar" style={{ marginTop: 14, marginBottom: 0 }}>
           <div className="rsb-add">
-            <button type="button" className="btn" onClick={() => setAddOpen((o) => !o)} aria-expanded={addOpen}>+ add section</button>
+            <button type="button" className="btn" onClick={() => setAddOpen((o) => !o)} aria-expanded={addOpen} disabled={sectionsFull}>+ add section</button>
             {addOpen && (
               <div className="rsb-menu" role="menu">
                 {availableTypes.map((t) => (
@@ -639,11 +675,18 @@ export function ResumeEditor({
               </div>
             )}
           </div>
-          <button type="button" className="btn" onClick={() => setPull(true)}>⤓ pull from timeline</button>
+          <button type="button" className="btn" onClick={() => setPull(true)} disabled={pullFull}>⤓ pull from timeline</button>
+          {(sectionsFull || pullFull) && (
+            <span className="rsb-f__hint">
+              {sectionsFull ? `${RESUME_LIMITS.sections} sections max` : ""}
+              {sectionsFull && pullFull ? " · " : ""}
+              {pullFull ? "every section an event could land in is full" : ""}
+            </span>
+          )}
         </div>
       </div>
 
-      {pull && <ResumePullDialog events={events} doc={doc} onClose={() => setPull(false)} onAdd={pullIn} />}
+      {pull && <ResumePullDialog events={events} doc={doc} capacity={pullCapacity} onClose={() => setPull(false)} onAdd={pullIn} />}
       {polish && <ResumePolishDialog doc={doc} polish={polish} currentTemplate={template} onClose={() => setPolish(null)} onApply={applyPolishReviewed} />}
       {confirmReset && (
         <Dialog onClose={() => setConfirmReset(false)} label="start over">

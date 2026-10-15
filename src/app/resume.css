@@ -359,6 +359,8 @@
 .rsb-pick { display: grid; grid-template-columns: 20px 36px 1fr; gap: 10px; align-items: center; padding: 9px 12px; border-bottom: 0.5px solid var(--rule); cursor: pointer; text-align: left; }
 .rsb-pick:last-child { border-bottom: 0; }
 .rsb-pick:hover { background: var(--inset); }
+.rsb-pick:disabled { opacity: 0.45; cursor: not-allowed; }
+.rsb-pick:disabled:hover { background: transparent; }
 .rsb-pick__box { width: 15px; height: 15px; border: 0.5px solid var(--rule-strong); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; color: var(--paper); background: transparent; }
 .rsb-pick[aria-checked="true"] .rsb-pick__box, .rsb-pick[aria-selected="true"] .rsb-pick__box { background: var(--user-accent); border-color: var(--user-accent); }
 .rsb-pick__thumb { width: 36px; height: 36px; border-radius: 6px; border: 0.5px solid var(--rule); display: inline-flex; align-items: center; justify-content: center; font-size: 16px; overflow: hidden; background: var(--inset); }
