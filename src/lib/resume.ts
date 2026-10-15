@@ -390,17 +390,16 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
     const additions = fs.items.filter((i) => i.eventId && !present.has(i.eventId));
     const target = sections.find((s) => s.type === fs.type);
     if (target) {
-      // keep reverse-chron: new items slot in ahead of the first older one
+      // keep reverse-chron: new items slot in ahead of the first older one.
+      // Additions arrive newest first, so a nearly full section takes the most
+      // recent events. Sync never removes what's already on the resume (it may
+      // carry the owner's edits); what doesn't fit is reported via
+      // resumeOverflow() so the owner can make room and pull events in.
       for (const item of additions) {
+        if (target.items.length >= RESUME_LIMITS.itemsPerSection) break;
         const at = target.items.findIndex((i) => (i.dateFrom ?? "") < (item.dateFrom ?? ""));
         target.items.splice(at < 0 ? target.items.length : at, 0, item);
       }
-      // over the cap: newer events win; the oldest log-derived items make room
-      // (free-form items are never evicted). See resumeOverflow().
-      for (let i = target.items.length - 1; target.items.length > RESUME_LIMITS.itemsPerSection && i >= 0; i--) {
-        if (target.items[i].eventId) target.items.splice(i, 1);
-      }
-      target.items = target.items.slice(0, RESUME_LIMITS.itemsPerSection);
       if (fs.type === "summary" && !target.text && fs.text) target.text = fs.text;
     } else if (additions.length && sections.length < RESUME_LIMITS.sections) {
       // a removed summary stays removed; new categories go at the end

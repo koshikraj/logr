@@ -374,18 +374,23 @@ describe("section overflow", () => {
     expect(resumeOverflow(generateResumeDocument(p), p)).toBe(5);
   });
 
-  it("sync lets a new recent event in by evicting the oldest log item, never free-form ones", () => {
+  it("sync never removes existing items from a full section and reports what didn't fit", () => {
     const base = generateResumeDocument(profile(old));
     const exp = base.sections.find((s) => s.type === "experience")!;
-    const freeform = { ...exp.items[0], id: "free1", eventId: null, title: "Free", dateFrom: "2000-01" };
-    exp.items = [...exp.items.slice(0, cap - 1), freeform];
-    const fresh = event("new", "2031-01-01", ["work"]);
-    const p = profile([fresh, ...old]);
+    exp.items[exp.items.length - 1] = { ...exp.items[exp.items.length - 1], title: "Owner-edited oldest item" };
+    const before = exp.items.map((i) => i.id);
+    const p = profile([event("new", "2031-01-01", ["work"]), ...old]);
     const merged = mergeResumeDocument(base, p);
     const items = merged.sections.find((s) => s.type === "experience")!.items;
-    expect(items).toHaveLength(cap);
-    expect(items[0].eventId).toBe("new");
-    expect(items.some((i) => i.id === "free1")).toBe(true);
-    expect(resumeOverflow(merged, p)).toBe(old.length + 1 - (cap - 1));
+    expect(items.map((i) => i.id)).toEqual(before); // nothing evicted, edit kept
+    expect(items.at(-1)!.title).toBe("Owner-edited oldest item");
+    expect(resumeOverflow(merged, p)).toBe(6); // 5 older + the new one
+
+    // with one free slot, the newest addition takes it
+    const roomy = structuredClone(base);
+    roomy.sections.find((s) => s.type === "experience")!.items.pop();
+    const synced = mergeResumeDocument(roomy, p).sections.find((s) => s.type === "experience")!.items;
+    expect(synced[0].eventId).toBe("new");
+    expect(synced).toHaveLength(cap);
   });
 });

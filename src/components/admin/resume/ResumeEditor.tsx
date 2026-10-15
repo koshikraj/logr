@@ -393,7 +393,7 @@ export function ResumeEditor({
       adopt(res.data);
       toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
       if (res.data.skipped > 0) {
-        toast(`${res.data.skipped} older event${res.data.skipped === 1 ? "" : "s"} didn't fit (${RESUME_LIMITS.itemsPerSection} items max per section) — remove some items to make room.`, "error");
+        toast(`${res.data.skipped} event${res.data.skipped === 1 ? "" : "s"} didn't fit (${RESUME_LIMITS.itemsPerSection} items max per section) — remove some items, then pull them in from the timeline.`, "error");
       }
     });
   }
