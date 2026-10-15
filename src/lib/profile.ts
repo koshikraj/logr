@@ -54,6 +54,7 @@ export type ProfileDTO = {
   pinnedIds: string[]; // owner-pinned event ids (healed on read: existing events only, max 7)
   events: EventDTO[];
   updatedAt: string; // ISO timestamp of the last profile edit (SEO dateModified)
+  resumePublished?: boolean; // owner published /[username]/resume (#66)
 };
 
 function parseJSON<T>(value: string, fallback: T): T {
@@ -72,6 +73,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
         orderBy: { position: "asc" },
         include: { media: { orderBy: { position: "asc" } } },
       },
+      resume: { select: { published: true } },
     },
   });
   if (!row) return null;
@@ -103,6 +105,7 @@ export async function getProfile(username: string): Promise<ProfileDTO | null> {
     theme: { ...DEFAULT_THEME, ...parseJSON<Partial<Theme>>(row.theme, {}) },
     pinnedIds,
     updatedAt: row.updatedAt.toISOString(),
+    resumePublished: row.resume?.published ?? false,
     events: row.events.map((e) => ({
       id: e.id,
       dateOn: e.dateOn,

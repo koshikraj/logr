@@ -11,6 +11,22 @@ import type { MediaInput, ReviewEvent, SourceChip, SourceKind, SourceStatus } fr
 import { parseSocials } from "@/lib/socials";
 import { requireProfileId, requireSignedIn, getUserId } from "@/lib/session";
 import { signIn, signOut } from "@/auth";
+import { getProfile, type ProfileDTO } from "@/lib/profile";
+import { rateLimited } from "@/lib/ratelimit";
+import { SITE_URL } from "@/lib/site";
+import {
+  generateResumeDocument,
+  isResumePageSize,
+  isResumeTemplate,
+  mergeResumeDocument,
+  parseResumeDocument,
+  reconcileExclusions,
+  suggestTemplate,
+  type ResumePageSize,
+  type ResumePolish,
+  type ResumeTemplate,
+} from "@/lib/resume";
+import { getResumeForProfile, type ResumeView } from "@/lib/resume-data";
 import {
   validateAuthorizeRequest,
   issueAuthorizationCode,
@@ -488,4 +504,107 @@ export async function revokeAgentAction(tokenId: string): Promise<GrantView[]> {
   const profileId = await requireProfileId();
   await revokeGrantForProfile(profileId, tokenId);
   return listGrantsForProfile(profileId);
+}
+
+// ---------- RESUME BUILDER (issue #66) ----------
+
+/** The signed-in owner's profile as a DTO (the resume is a projection of it). */
+async function ownerProfile(): Promise<ProfileDTO> {
+  const profileId = await requireProfileId();
+  const row = await prisma.profile.findUnique({ where: { id: profileId }, select: { username: true } });
+  const profile = row ? await getProfile(row.username) : null;
+  if (!profile) throw new Error("Profile not found");
+  return profile;
+}
+
+function revalidateResume(username: string) {
+  revalidatePath("/dashboard");
+  revalidatePath(`/${username}/resume`);
+}
+
+/** The owner's resume, or null before the first generate. */
+export async function getResumeAction(): Promise<ResumeView | null> {
+  const profileId = await requireProfileId();
+  return getResumeForProfile(profileId);
+}
+
+/**
+ * Build the resume from the log. With no resume yet this creates one (and
+ * picks a template from the log's shape). Otherwise `merge` adds new events
+ * and drops deleted ones while keeping every edit; `replace` starts over
+ * (keeping template, page size, and publish state).
+ */
+export async function generateResumeAction(mode: "merge" | "replace" = "merge"): Promise<ResumeView> {
+  const profile = await ownerProfile();
+  const existing = await getResumeForProfile(profile.id);
+  const document =
+    existing && mode === "merge"
+      ? mergeResumeDocument(existing.document, profile)
+      : generateResumeDocument(profile);
+  const data = { document: JSON.stringify(document), generatedAt: new Date() };
+  await prisma.resume.upsert({
+    where: { profileId: profile.id },
+    create: { profileId: profile.id, template: suggestTemplate(document), ...data },
+    update: data,
+  });
+  revalidateResume(profile.username);
+  return (await getResumeForProfile(profile.id))!;
+}
+
+export type SaveResumeInput = {
+  document: unknown;
+  template?: ResumeTemplate;
+  pageSize?: ResumePageSize;
+};
+
+/** Editor autosave. The document is validated and href-scrubbed server-side;
+ *  events removed since the last save become exclusions for regenerate. */
+export async function saveResumeAction(input: SaveResumeInput): Promise<ResumeView> {
+  const profile = await ownerProfile();
+  const next = parseResumeDocument(input.document);
+  if (!next) throw new Error("Invalid resume document");
+  if (input.template !== undefined && !isResumeTemplate(input.template)) throw new Error("Unknown template");
+  if (input.pageSize !== undefined && !isResumePageSize(input.pageSize)) throw new Error("Unknown page size");
+
+  const existing = await getResumeForProfile(profile.id);
+  const document = JSON.stringify(reconcileExclusions(existing?.document ?? null, next));
+  await prisma.resume.upsert({
+    where: { profileId: profile.id },
+    create: {
+      profileId: profile.id,
+      document,
+      ...(input.template && { template: input.template }),
+      ...(input.pageSize && { pageSize: input.pageSize }),
+    },
+    update: {
+      document,
+      ...(input.template && { template: input.template }),
+      ...(input.pageSize && { pageSize: input.pageSize }),
+    },
+  });
+  revalidateResume(profile.username);
+  return (await getResumeForProfile(profile.id))!;
+}
+
+/** Publish / unpublish /[username]/resume (and its llms.txt + MCP links). */
+export async function setResumePublishedAction(published: boolean): Promise<ResumeView> {
+  const profile = await ownerProfile();
+  const res = await prisma.resume.updateMany({ where: { profileId: profile.id }, data: { published } });
+  if (!res.count) throw new Error("Generate the resume first");
+  revalidateResume(profile.username);
+  await revalidateForProfile(profile.id);
+  return (await getResumeForProfile(profile.id))!;
+}
+
+/** AI polish proposal (bullets, summary, template) for the owner to review —
+ *  apply it client-side with applyPolish(), then save. Nothing is persisted. */
+export async function polishResumeAction(document: unknown): Promise<ResumePolish> {
+  const profile = await ownerProfile();
+  const doc = parseResumeDocument(document);
+  if (!doc) throw new Error("Invalid resume document");
+  if (await rateLimited(`resume-polish:${profile.id}`, { max: 5 })) {
+    throw new Error("Too many requests — try again in a minute.");
+  }
+  const { polishResume } = await import("@/lib/resume-ai");
+  return polishResume(profile, doc, SITE_URL);
 }

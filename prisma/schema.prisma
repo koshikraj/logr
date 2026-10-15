@@ -41,6 +41,7 @@ model Profile {
   events       Event[]
   chatMessages ChatMessage[]
   sources      ProfileSource[]
+  resume       Resume?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -185,6 +186,23 @@ enum ImportSourceStatus {
   extracting
   done
   error
+}
+
+// Resume builder (#66): one resume per profile, generated from the log and
+// then owner-edited. `document` is a JSON ResumeDocument (see lib/resume.ts) —
+// same JSON-as-string convention as theme/socials/pinned. Items keep their
+// source eventId so "regenerate" merges instead of overwriting edits.
+model Resume {
+  id          String    @id @default(cuid())
+  profileId   String    @unique
+  profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  template    String    @default("modern") // classic | modern | founder | academic | creative
+  pageSize    String    @default("A4") // A4 | Letter
+  published   Boolean   @default(false) // private until the owner publishes /[username]/resume
+  document    String // JSON ResumeDocument
+  generatedAt DateTime? // last generate/regenerate from the log
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model ImportJob {

@@ -87,7 +87,7 @@ const ProfileCardSchema = z.object({
   eventCount: z.number(),
   years: z.object({ first: z.number(), last: z.number() }).nullable(),
   updatedAt: z.string(),
-  urls: z.object({ profile: z.string(), context: z.string() }),
+  urls: z.object({ profile: z.string(), context: z.string(), resume: z.string().nullable().optional() }),
 });
 
 const TimelineResultSchema = z.object({
@@ -173,6 +173,7 @@ function profileCard(p: ProfileDTO, origin: string) {
     urls: {
       profile: `${origin}/${p.username}`,
       context: `${origin}/${p.username}/llms-full.txt`,
+      resume: p.resumePublished ? `${origin}/${p.username}/resume` : null,
     },
   };
 }
