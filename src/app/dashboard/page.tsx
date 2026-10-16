@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { isXAuthEnabled } from "@/auth";
 import { currentProfileId, getUserId } from "@/lib/session";
 import { getProfile } from "@/lib/profile";
-import { getImportJobAction } from "@/lib/actions";
+import { getImportJobAction, getResumeAction } from "@/lib/actions";
+import { isChatEnabled } from "@/lib/chat";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { ImportPendingBanner } from "@/components/admin/ImportPendingBanner";
 
@@ -48,11 +49,16 @@ export default async function AdminPage() {
   const importJob = await getImportJobAction();
   const waiting = importJob?.status === "running";
 
+  // resume builder (#66): the saved draft, if any, plus whether AI polish is available
+  const resume = await getResumeAction();
+
   return (
     <AdminShell
       profile={profile}
       events={events}
       xConnected={xConnected}
+      resume={resume}
+      chatEnabled={isChatEnabled()}
       banner={waiting ? <ImportPendingBanner initial={importJob} /> : undefined}
     />
   );
