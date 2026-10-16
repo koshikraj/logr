@@ -1,7 +1,10 @@
 // Dev-only: render every resume template to static HTML for a visual check.
 // Usage: npx tsx scripts/resume-fixture.tsx /tmp/resume-fixtures [pages=1,2,3]
+// LOCAL_FONTS=1 swaps the web fonts for DejaVu so a headless screen measurement
+// and a headless --print-to-pdf run share identical metrics (PDF page-count checks).
 // The fit-to-pages pass runs client-side (ResumeSheet), so each fixture
 // carries a tiny inline script that replays the same FIT_STEPS ladder.
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RESUME_TEMPLATES, type ResumeDocument } from "../src/lib/resume";
@@ -72,22 +75,48 @@ const doc: ResumeDocument = {
 
 // BIG=1 triples every section's items to exercise the fit ladder + overflow warning
 if (process.env.BIG) for (const s of doc.sections) s.items = [0, 1, 2].flatMap((k) => s.items.map((i) => ({ ...i, id: `${i.id}_${k}`, eventId: null })));
+// PAGEY=n builds n sections of ~0.4–0.6 page each (7 items × 3 long bullets), the
+// worst case for fragmentation: a continuous measure says "fits", print pushes
+// whole items past the page edge and the gaps add up.
+if (process.env.PAGEY) {
+  const n = Number(process.env.PAGEY) || 4;
+  const long = (k: number) =>
+    `Shipped a ${k % 2 ? "production" : "research"} system end to end: scoped the problem with partners, wrote the design doc, built the service, and ran it for a year with weekly releases and on-call rotation.`;
+  doc.sections = [
+    doc.sections[0],
+    ...Array.from({ length: n }, (_, si) => ({
+      id: `sec_p${si}`,
+      type: (["experience", "projects", "talks", "writing", "achievements", "custom"] as const)[si % 6],
+      title: `Section ${si + 1}`,
+      icon: "lucide:briefcase",
+      hidden: false,
+      text: null,
+      items: Array.from({ length: 7 }, (_, k) => ({
+        id: `p${si}_${k}`, eventId: null, title: `Role ${k + 1} in section ${si + 1}`, subtitle: `Company ${k + 1}`, location: "Remote",
+        dateFrom: `${2026 - k}-0${(k % 9) + 1}`, dateTo: k === 0 ? "present" : `${2027 - k}-01`,
+        bullets: [long(k), long(k + 1), long(k + 2)], link: null, icon: null, image: null,
+      })),
+    })),
+  ];
+}
 const out = process.argv[2] ?? "/tmp/resume-fixtures";
 const pageCounts = (process.argv[3] ?? "2").split(",").map(Number) as (1 | 2 | 3 | 4)[];
 mkdirSync(out, { recursive: true });
 const css = readFileSync(new URL("../src/app/resume.css", import.meta.url), "utf8");
 const pageH = PAGE_DIMENSIONS.A4.px.height;
-// same loop as ResumeSheet.run(), in plain JS, plus a page-break overlay + label
-const fitScript = `
-const el = document.querySelector('.resume'); const pages = Number(el.dataset.pages); const budget = pages * ${pageH} + 2;
+// the real pagination + fit code (components/resume/paginate.ts), bundled as an IIFE
+const paginateJs = execFileSync(
+  "node_modules/.bin/esbuild",
+  [new URL("../src/components/resume/paginate.ts", import.meta.url).pathname, "--bundle", "--format=iife", "--global-name=paginate", "--log-level=silent"],
+  { encoding: "utf8" }
+);
+const fitScript = `${paginateJs}
+const el = document.querySelector('.resume'); const pages = Number(el.dataset.pages);
 function fit() {
-  let step = 0, h = 0;
-  for (step = 0; step < ${FIT_STEPS.length}; step++) { el.dataset.fit = String(step); h = el.offsetHeight; if (h <= budget) break; }
-  if (step === ${FIT_STEPS.length}) step = ${FIT_STEPS.length - 1};
-  const used = Math.max(1, Math.ceil((h - 2) / ${pageH}));
-  document.getElementById('label').textContent = used + ' of ' + pages + ' pages · fit step ' + step + (h <= budget ? '' : ' · OVER');
+  const out = paginate.runFit(el, ${pageH}, pages, ${FIT_STEPS.length});
+  document.getElementById('label').textContent = out.pagination.pages + ' of ' + pages + ' pages · fit step ' + out.step + (out.fits ? '' : ' · OVER');
   document.querySelectorAll('.brk').forEach((b) => b.remove());
-  for (let i = 1; i < used; i++) { const b = document.createElement('div'); b.className = 'brk'; b.style.top = (i * ${pageH}) + 'px'; b.textContent = 'page ' + (i + 1); el.appendChild(b); }
+  for (const b of out.pagination.breaks) { const d = document.createElement('div'); d.className = 'brk'; d.style.top = b.at + 'px'; d.textContent = 'page ' + b.page; el.appendChild(d); }
 }
 fit(); document.fonts.ready.then(fit);`;
 for (const template of RESUME_TEMPLATES) {
@@ -97,10 +126,10 @@ for (const template of RESUME_TEMPLATES) {
     writeFileSync(
       `${out}/${name}.html`,
       `<!doctype html><html><head><meta charset="utf-8"><title>${template} · ${pages} pages</title>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>body{margin:0;background:#e9e7e2;padding:24px}${css}
+${process.env.LOCAL_FONTS ? "" : '<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">'}
+<style>${process.env.LOCAL_FONTS ? '.resume{--sans:"DejaVu Sans",sans-serif;--serif:"DejaVu Serif",serif;--mono:"DejaVu Sans Mono",monospace}' : ""}@page{size:${PAGE_DIMENSIONS.A4.width} ${PAGE_DIMENSIONS.A4.height};margin:0}body{margin:0;background:#e9e7e2;padding:24px}${css}
 #label{font:12px ui-monospace,monospace;color:#444;text-align:center;margin:0 0 10px}
-.resume{position:relative}.brk{position:absolute;left:0;right:0;border-top:1px dashed #d85a30;font:9px ui-monospace,monospace;color:#d85a30;text-align:right;padding:2px 8px}</style></head>
+@media screen{.resume{position:relative}}@media print{.brk{display:none}}.brk{position:absolute;left:0;right:0;border-top:1px dashed #d85a30;font:9px ui-monospace,monospace;color:#d85a30;text-align:right;padding:2px 8px}</style></head>
 <body><p id="label"></p>${html}<script>${fitScript}</script></body></html>`
     );
     console.log("wrote", name);

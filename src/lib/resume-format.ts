@@ -77,7 +77,9 @@ export const FIT_STEPS = [
 export const FIT_FLOOR_TYPE = FIT_STEPS[FIT_STEPS.length - 1].type;
 
 export const PAGE_DIMENSIONS = {
-  A4: { width: "210mm", height: "297mm", px: { width: 794, height: 1123 } },
+  // px at 96dpi, exact: print paginates at 297mm = 1122.52px, so 1123 would
+  // let a sheet that is 1px too tall read as "fits" and print a blank page
+  A4: { width: "210mm", height: "297mm", px: { width: 793.7, height: 1122.52 } },
   Letter: { width: "8.5in", height: "11in", px: { width: 816, height: 1056 } },
 } as const;
 

@@ -56,7 +56,8 @@ export function ResumePreview({
   const used = fit?.usedPages ?? Math.max(1, Math.ceil((height - 2) / dim.height));
   const over = fit ? !fit.fits : used > pages;
   const tightened = (fit?.step ?? 0) > 0;
-  const breaks = Array.from({ length: used - 1 }, (_, i) => (i + 1) * dim.height);
+  // markers sit where print starts each page (simulated), not at fixed multiples
+  const breaks = fit ? fit.breaks : Array.from({ length: used - 1 }, (_, i) => ({ page: i + 2, at: (i + 1) * dim.height }));
 
   return (
     <div className="rsb-preview" ref={wrapRef}>
@@ -78,8 +79,8 @@ export function ResumePreview({
         <div className="rsb-preview__sheet" ref={sheetRef} style={{ width: dim.width }}>
           <ResumeSheet doc={doc} template={template} pageSize={pageSize} pages={pages} theme={theme} onFit={onFit} />
           <div className="rsb-preview__breaks" aria-hidden="true">
-            {breaks.map((y, i) => (
-              <span key={y} className={`rsb-preview__break${i + 2 > pages ? " rsb-preview__break--over" : ""}`} style={{ top: y }} data-label={i + 2 > pages ? `page ${i + 2} · over` : `page ${i + 2}`} />
+            {breaks.map((b) => (
+              <span key={b.page} className={`rsb-preview__break${b.page > pages ? " rsb-preview__break--over" : ""}`} style={{ top: b.at }} data-label={b.page > pages ? `page ${b.page} · over` : `page ${b.page}`} />
             ))}
           </div>
         </div>

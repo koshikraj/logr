@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ResumeDocument, ResumePageCount, ResumePageSize, ResumeTemplate } from "@/lib/resume";
 import type { Theme } from "@/lib/theme";
-import { ResumeSheet } from "./ResumeSheet";
+import { ResumeSheet, type ResumeFit } from "./ResumeSheet";
 
 /** "Download PDF" = the browser's print-to-PDF. The print stylesheet hides
  *  everything but the sheet and sizes the page, so the text stays selectable. */
@@ -19,8 +19,9 @@ export function PrintButton({ className = "btn-print btn-print--primary", label 
   );
 }
 
-/** Owner print route: renders the sheet and opens the print dialog once the
- *  fit pass has settled (after web fonts), so the PDF paginates like the preview. */
+/** Owner print route: renders the sheet and opens the print dialog only
+ *  after a fit that ran with web fonts loaded (`document.fonts.ready`), so a
+ *  late font can't change the wrapping — and the page count — under the PDF. */
 export function ResumePrintView({
   doc,
   template,
@@ -36,14 +37,11 @@ export function ResumePrintView({
 }) {
   const printed = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onFit = useCallback(() => {
-    // the sheet re-fits once fonts are ready; print after the last call settles
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      if (printed.current) return;
-      printed.current = true;
-      window.print();
-    }, 400);
+  const onFit = useCallback((fit: ResumeFit) => {
+    if (!fit.fontsReady || printed.current) return; // wait for the fonts-ready pass
+    printed.current = true;
+    // one frame so the chosen data-fit step is painted before the dialog snapshots it
+    timer.current = setTimeout(() => window.print(), 50);
   }, []);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   return <ResumeSheet doc={doc} template={template} pageSize={pageSize} pages={pages} theme={theme} id="resume" onFit={onFit} />;

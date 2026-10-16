@@ -9,6 +9,7 @@ import { useCallback, useLayoutEffect, useRef, type CSSProperties } from "react"
 import type { ResumeDocument, ResumePageCount, ResumePageSize, ResumeTemplate } from "@/lib/resume";
 import { resolvePalette, themeCssVars, type Theme } from "@/lib/theme";
 import { FIT_STEPS, PAGE_DIMENSIONS } from "@/lib/resume-format";
+import { runFit, type PageBreak } from "./paginate";
 import { ClassicTemplate } from "./templates/classic";
 import { ModernTemplate } from "./templates/modern";
 import { FounderTemplate } from "./templates/founder";
@@ -41,16 +42,29 @@ export function resumeSheetVars(theme: Theme, accent: string | null): CSSPropert
 
 /** What the fit pass found: pages the content occupies after tightening,
  *  whether that is within the target, and which step of the ladder it took. */
-export type ResumeFit = { usedPages: number; target: number; fits: boolean; step: number; heightPx: number };
+export type ResumeFit = {
+  usedPages: number;
+  target: number;
+  fits: boolean;
+  step: number;
+  heightPx: number;
+  /** where each printed page starts, in sheet px (page ≥ 2) */
+  breaks: PageBreak[];
+  /** true once web fonts were loaded when this fit ran — print only then */
+  fontsReady: boolean;
+};
 
 /**
  * Fit-to-target. Runs synchronously in a layout effect so there is no
- * flicker: the sheet is measured at each step of FIT_STEPS (spacing first,
- * then margins, then type — see resume-format.ts) and stops at the first
- * step whose height is within `pages × page height`. If none fits, the
- * last step (the readability floor) stays applied and `fits` is false.
- * The step is written straight to the DOM (`data-fit`) rather than React
- * state, so SSR markup is step 0 and the client settles in one paint.
+ * flicker: at each step of FIT_STEPS (spacing first, then margins, then
+ * type — see resume-format.ts) the sheet is paginated the way print does
+ * (paginate.ts: unbreakable blocks pushed to the next page, headings kept
+ * with the block after them) and the ladder stops at the first step whose
+ * simulated page count is within `pages`. If none fits, the last step (the
+ * readability floor) stays applied and `fits` is false. The step is
+ * written straight to the DOM (`data-fit`) rather than React state, so SSR
+ * markup is step 0 and the client settles in one paint. It runs again once
+ * web fonts are ready, since font metrics change wrapping.
  */
 export function ResumeSheet({
   doc,
@@ -72,33 +86,32 @@ export function ResumeSheet({
   const Template = TEMPLATES[template] ?? ModernTemplate;
   const ref = useRef<HTMLElement>(null);
   const onFitRef = useRef(onFit);
-  onFitRef.current = onFit;
+  useLayoutEffect(() => { onFitRef.current = onFit; }, [onFit]);
 
-  const run = useCallback(() => {
+  const run = useCallback((fontsReady: boolean) => {
     const el = ref.current;
     if (!el) return;
     const pageH = PAGE_DIMENSIONS[pageSize].px.height;
-    const budget = pages * pageH + 2; // tolerance for sub-pixel rounding
-    let step = 0;
-    let height = 0;
-    for (step = 0; step < FIT_STEPS.length; step++) {
-      el.dataset.fit = String(step);
-      height = el.offsetHeight; // forces layout at this step; offsetHeight ignores ancestor transforms
-      if (height <= budget) break;
-    }
-    if (step === FIT_STEPS.length) step = FIT_STEPS.length - 1; // floor reached
-    const usedPages = Math.max(1, Math.ceil((height - 2) / pageH));
-    onFitRef.current?.({ usedPages, target: pages, fits: height <= budget, step, heightPx: height });
+    const { step, fits, pagination } = runFit(el, pageH, pages, FIT_STEPS.length);
+    onFitRef.current?.({
+      usedPages: pagination.pages,
+      target: pages,
+      fits,
+      step,
+      heightPx: pagination.height,
+      breaks: pagination.breaks,
+      fontsReady,
+    });
   }, [pageSize, pages]);
 
   // re-fit on every content/setting change, and again once web fonts land
-  // (metrics change line wrapping, which changes the height)
+  // (metrics change line wrapping, which changes the pagination)
   useLayoutEffect(() => {
-    run();
+    const fonts = typeof document !== "undefined" && "fonts" in document ? document.fonts : null;
+    const ready = !fonts || fonts.status === "loaded";
+    run(ready);
     let cancelled = false;
-    if (typeof document !== "undefined" && "fonts" in document) {
-      document.fonts.ready.then(() => { if (!cancelled) run(); });
-    }
+    if (fonts && !ready) fonts.ready.then(() => { if (!cancelled) run(true); });
     return () => { cancelled = true; };
   }, [run, doc, template]);
 

@@ -80,7 +80,7 @@ export function ModernTemplate({ doc }: TemplateProps) {
 
   return (
     <div className="r-modern">
-      <aside className="r-modern__side">
+      <aside className="r-modern__side" data-flow="side">
         <Avatar doc={doc} className="r-modern__avatar" />
         <div className="r-modern__ident">
           <h1 className="r-modern__name">{h.name}</h1>
@@ -106,7 +106,7 @@ export function ModernTemplate({ doc }: TemplateProps) {
           <SideSection key={s.id} s={s} />
         ))}
       </aside>
-      <main className="r-modern__main">
+      <main className="r-modern__main" data-flow="main">
         {main.map((s) => (
           <MainSection key={s.id} s={s} />
         ))}
