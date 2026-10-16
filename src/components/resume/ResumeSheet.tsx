@@ -18,6 +18,7 @@ import { CreativeTemplate } from "./templates/creative";
 
 export const TEMPLATE_META: Record<ResumeTemplate, { name: string; note: string }> = {
   classic: { name: "classic", note: "ATS-safe · one column, no icons" },
+  margin: { name: "margin", note: "ATS-safe · one column, dates in the margin" },
   modern: { name: "modern", note: "two columns · accent sidebar" },
   founder: { name: "founder", note: "projects first · card grid" },
   academic: { name: "academic", note: "dense · numbered entries" },
@@ -26,6 +27,7 @@ export const TEMPLATE_META: Record<ResumeTemplate, { name: string; note: string 
 
 const TEMPLATES: Record<ResumeTemplate, (p: { doc: ResumeDocument }) => React.ReactElement> = {
   classic: ClassicTemplate,
+  margin: ClassicTemplate, // placeholder until the margin template lands (#69)
   modern: ModernTemplate,
   founder: FounderTemplate,
   academic: AcademicTemplate,

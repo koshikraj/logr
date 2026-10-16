@@ -6,7 +6,7 @@
 import { z } from "zod";
 import type { EventDTO, ProfileDTO } from "@/lib/profile";
 
-export const RESUME_TEMPLATES = ["classic", "modern", "founder", "academic", "creative"] as const;
+export const RESUME_TEMPLATES = ["classic", "margin", "modern", "founder", "academic", "creative"] as const;
 export type ResumeTemplate = (typeof RESUME_TEMPLATES)[number];
 export const DEFAULT_RESUME_TEMPLATE: ResumeTemplate = "modern";
 
@@ -120,12 +120,17 @@ export const resumeItemSchema = z.object({
 });
 export type ResumeItem = z.infer<typeof resumeItemSchema>;
 
+export const SECTION_PLACEMENTS = ["main", "side"] as const;
+export type SectionPlacement = (typeof SECTION_PLACEMENTS)[number];
+
 export const resumeSectionSchema = z.object({
   id: z.string().min(1).max(40),
   type: z.enum(SECTION_TYPES),
   title: z.string().max(80),
   icon: iconField,
   hidden: z.boolean(),
+  // two-column templates (#69): main column or sidebar; unset = by type
+  placement: z.enum(SECTION_PLACEMENTS).optional(),
   text: z.string().max(2000).nullable(), // summary / free text sections
   items: z.array(resumeItemSchema).max(RESUME_LIMITS.itemsPerSection),
 });
@@ -150,6 +155,8 @@ export const resumeDocumentSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .nullable(), // overrides the profile palette accent
+  // which side the sidebar sits on in two-column templates (#69); unset = left
+  sidebar: z.enum(["left", "right"]).optional(),
   // Events the owner removed from the resume — regenerate never re-adds them.
   excludedEventIds: z.array(z.string().max(40)).max(RESUME_LIMITS.excludedEventIds),
 });
@@ -197,6 +204,49 @@ function sanitizeDocument(doc: ResumeDocument): ResumeDocument {
     })),
     excludedEventIds: Array.from(new Set(doc.excludedEventIds)),
   };
+}
+
+/** How each template lays out (#69): shown as chips in the template gallery. */
+export const TEMPLATE_TRAITS: Record<ResumeTemplate, { columns: 1 | 2; ats: boolean; label: string }> = {
+  classic: { columns: 1, ats: true, label: "classic" },
+  margin: { columns: 1, ats: true, label: "margin" },
+  modern: { columns: 2, ats: false, label: "modern" },
+  founder: { columns: 1, ats: false, label: "founder" },
+  academic: { columns: 1, ats: false, label: "academic" },
+  creative: { columns: 1, ats: false, label: "creative" },
+};
+
+/** Sections that go to the sidebar when the owner hasn't placed them. */
+const DEFAULT_SIDE_TYPES = new Set<SectionType>(["skills", "links"]);
+
+/** Where a section renders in a two-column template. */
+export function sectionPlacement(section: Pick<ResumeSection, "type" | "placement">): SectionPlacement {
+  return section.placement ?? (DEFAULT_SIDE_TYPES.has(section.type) ? "side" : "main");
+}
+
+/**
+ * Offer (never apply automatically) a role / organisation split for titles
+ * like "Founder at Consenso Labs", "Engineer @ RSA" or "CTO | Acme".
+ * Null when the title has no clear separator or either side is empty.
+ */
+export function suggestTitleSplit(title: string): { role: string; organisation: string } | null {
+  const m = title.match(/^(.{2,120}?)\s+(?:at|@|\|)\s+(.{2,120})$/i) ?? title.match(/^(.{2,120}?)\s*@\s*(.{2,120})$/);
+  if (!m) return null;
+  const role = m[1].trim();
+  const organisation = m[2].trim();
+  return role && organisation ? { role, organisation } : null;
+}
+
+// "I" is case-sensitive (a lone lowercase "i" isn't a pronoun); me/my aren't
+const FIRST_PERSON_I = /(^|[^\p{L}'])I('m|'ve|'d|'ll)?(?=$|[^\p{L}'])/u;
+const FIRST_PERSON_ME = /\b(me|my|mine|myself)\b/i;
+const SUMMARY_MAX = 500;
+
+/** A profile text usable verbatim as a resume summary: short, and not
+ *  written in the first person (resumes don't say "I"). */
+export function isResumeSummary(text: string | null | undefined): text is string {
+  const t = (text ?? "").trim();
+  return !!t && t.length <= SUMMARY_MAX && !FIRST_PERSON_I.test(t) && !FIRST_PERSON_ME.test(t);
 }
 
 export function isResumeTemplate(v: unknown): v is ResumeTemplate {
@@ -416,10 +466,20 @@ export function generateResumeDocument(
     return s;
   };
 
-  const summary = [profile.about, profile.bio].map((v) => v?.trim()).find(Boolean);
-  if (summary) section("summary").text = summary.slice(0, 2000);
+  // only a short, third-person text; a first-person "about" stays on the
+  // profile (AI polish can draft a summary from the log)
+  const summary = [profile.about, profile.bio].map((v) => v?.trim()).find(isResumeSummary);
+  if (summary) section("summary").text = summary;
 
-  const candidates = profile.events.filter((e) => !excluded.has(e.id));
+  // Achievements are what the owner marked notable (featured or pinned);
+  // other milestone-style events ("Got married") stay on the timeline and
+  // remain pullable — left out, not excluded.
+  const pinned = new Set(profile.pinnedIds);
+  const candidates = profile.events.filter(
+    (e) =>
+      !excluded.has(e.id) &&
+      (sectionTypeForTags(e.tags) !== "achievements" || e.featured || pinned.has(e.id))
+  );
   if (options.pages) {
     // spend the budget in owner-priority order; a section's heading is paid
     // for by its first item

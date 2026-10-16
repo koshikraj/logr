@@ -6,6 +6,8 @@ import {
   estimateDocumentLines,
   generateResumeDocument,
   isResumePageCount,
+  isResumeSummary,
+  isResumeTemplate,
   LINES_PER_PAGE,
   linkLabel,
   mergeResumeDocument,
@@ -15,6 +17,9 @@ import {
   resumeNotIncluded,
   resumeOverflow,
   safeHref,
+  sectionPlacement,
+  suggestTitleSplit,
+  TEMPLATE_TRAITS,
   sectionTypeForTags,
   suggestTemplate,
   toBullets,
@@ -74,7 +79,7 @@ const EVENTS = [
   }),
   event("e3", "2025-06-01", ["talk"]),
   event("e2", "2024-02-01", ["writing"]),
-  event("e1", "2023-01-01", ["milestone"]),
+  event("e1", "2023-01-01", ["milestone"], { featured: true }),
 ];
 
 const ids = (doc: ResumeDocument, type: string) =>
@@ -361,7 +366,7 @@ describe("review fixes", () => {
     );
     expect(suggestTemplate(generateResumeDocument(workHeavy))).toBe("modern");
     const visual = profile(
-      Array.from({ length: 6 }, (_, i) => event(`m${i}`, "2025-01-01", ["milestone"], { media: [img] }))
+      Array.from({ length: 6 }, (_, i) => event(`m${i}`, "2025-01-01", ["milestone"], { media: [img], featured: true }))
     );
     expect(suggestTemplate(generateResumeDocument(visual))).toBe("creative");
   });
@@ -440,5 +445,72 @@ describe("page budget (#68)", () => {
   it("validates page counts", () => {
     expect([1, 2, 3, 4].every(isResumePageCount)).toBe(true);
     expect([0, 5, 2.5, "2", null].some(isResumePageCount)).toBe(false);
+  });
+});
+
+describe("template refinements (#69)", () => {
+  it("leaves unfeatured, unpinned milestones on the timeline", () => {
+    const p = profile(
+      [
+        event("win", "2025-03-01", ["milestone"], { featured: true }),
+        event("pin", "2025-02-01", ["milestone"]),
+        event("life", "2025-01-01", ["milestone"], { title: "Got married" }),
+        event("job", "2024-01-01", ["work"]),
+      ],
+      { pinnedIds: ["pin"] }
+    );
+    for (const doc of [generateResumeDocument(p), generateResumeDocument(p, [], { pages: 2 })]) {
+      expect(ids(doc, "achievements").sort()).toEqual(["pin", "win"]);
+      expect(doc.excludedEventIds).toEqual([]); // left out, still pullable
+      expect(resumeNotIncluded(doc, p)).toBe(1);
+    }
+    // sync doesn't add it either
+    expect(ids(mergeResumeDocument(generateResumeDocument(p), p), "achievements")).not.toContain("life");
+  });
+
+  it("uses only a short, third-person profile text as the summary", () => {
+    expect(isResumeSummary("Builds agentic payment rails.")).toBe(true);
+    expect(isResumeSummary("I have been building in crypto since 2018.")).toBe(false);
+    expect(isResumeSummary("Builder. My focus is wallets.")).toBe(false);
+    expect(isResumeSummary("x".repeat(501))).toBe(false);
+    expect(isResumeSummary("Covers iOS and API design")).toBe(true); // no false "I"
+    expect(isResumeSummary("Section i of the paper")).toBe(true);
+    expect(isResumeSummary("Building wallets, and I'm hiring.")).toBe(false);
+    const firstPerson = profile(EVENTS, { about: "I build wallets.", bio: "Builder of logr" });
+    expect(generateResumeDocument(firstPerson).sections[0]).toMatchObject({ type: "summary", text: "Builder of logr" });
+    const none = profile(EVENTS, { about: "I build wallets.", bio: "My log." });
+    expect(generateResumeDocument(none).sections.some((s) => s.type === "summary")).toBe(false);
+  });
+
+  it("places skills and links in the sidebar by default, and respects owner placement", () => {
+    expect(sectionPlacement({ type: "skills" })).toBe("side");
+    expect(sectionPlacement({ type: "links" })).toBe("side");
+    expect(sectionPlacement({ type: "achievements" })).toBe("main");
+    expect(sectionPlacement({ type: "education" })).toBe("main");
+    expect(sectionPlacement({ type: "education", placement: "side" })).toBe("side");
+    expect(sectionPlacement({ type: "skills", placement: "main" })).toBe("main");
+  });
+
+  it("accepts placement and sidebar side, and old documents without them", () => {
+    const doc = generateResumeDocument(profile(EVENTS));
+    expect(parseResumeDocument(doc)).not.toBeNull(); // no new fields = still valid
+    const placed = { ...doc, sidebar: "right", sections: doc.sections.map((s) => ({ ...s, placement: "side" })) };
+    expect(parseResumeDocument(placed)).toMatchObject({ sidebar: "right" });
+    expect(parseResumeDocument({ ...doc, sidebar: "top" })).toBeNull();
+    expect(isResumeTemplate("margin")).toBe(true);
+    expect(TEMPLATE_TRAITS.margin).toMatchObject({ columns: 1, ats: true });
+  });
+
+  it("offers a role / organisation split only for clear separators", () => {
+    expect(suggestTitleSplit("Founder at Consenso Labs")).toEqual({ role: "Founder", organisation: "Consenso Labs" });
+    expect(suggestTitleSplit("Engineer @ RSA")).toEqual({ role: "Engineer", organisation: "RSA" });
+    expect(suggestTitleSplit("Engineer@RSA")).toEqual({ role: "Engineer", organisation: "RSA" });
+    expect(suggestTitleSplit("CTO | Acme")).toEqual({ role: "CTO", organisation: "Acme" });
+    expect(suggestTitleSplit("Presented agentic payments at Devconnect")).toEqual({
+      role: "Presented agentic payments",
+      organisation: "Devconnect",
+    });
+    expect(suggestTitleSplit("Built Zhentan")).toBeNull();
+    expect(suggestTitleSplit("Looking at data")).toEqual({ role: "Looking", organisation: "data" });
   });
 });
