@@ -198,6 +198,7 @@ model Resume {
   profile     Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
   template    String    @default("modern") // classic | modern | founder | academic | creative
   pageSize    String    @default("A4") // A4 | Letter
+  pages       Int       @default(2) // target page count, 1–4 (#68)
   published   Boolean   @default(false) // private until the owner publishes /[username]/resume
   document    String // JSON ResumeDocument
   generatedAt DateTime? // last generate/regenerate from the log

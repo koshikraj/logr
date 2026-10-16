@@ -3,12 +3,16 @@ import type { EventDTO, ProfileDTO } from "@/lib/profile";
 import {
   applyPolish,
   decodeEntities,
+  estimateDocumentLines,
   generateResumeDocument,
+  isResumePageCount,
+  LINES_PER_PAGE,
   linkLabel,
   mergeResumeDocument,
   parseResumeDocument,
   reconcileExclusions,
   RESUME_LIMITS,
+  resumeNotIncluded,
   resumeOverflow,
   safeHref,
   sectionTypeForTags,
@@ -392,5 +396,49 @@ describe("section overflow", () => {
     const synced = mergeResumeDocument(roomy, p).sections.find((s) => s.type === "experience")!.items;
     expect(synced[0].eventId).toBe("new");
     expect(synced).toHaveLength(cap);
+  });
+});
+
+describe("page budget (#68)", () => {
+  const many = Array.from({ length: 60 }, (_, i) =>
+    event(`b${i}`, `20${String(10 + Math.floor(i / 12)).padStart(2, "0")}-${String((i % 12) + 1).padStart(2, "0")}-01`, [
+      i % 3 ? "work" : "side_quest",
+    ])
+  );
+
+  it("fits the draft to the target and leaves the rest pullable", () => {
+    const p = profile(many);
+    for (const pages of [1, 2, 3] as const) {
+      const doc = generateResumeDocument(p, [], { pages });
+      expect(estimateDocumentLines(doc)).toBeLessThanOrEqual(pages * LINES_PER_PAGE);
+      expect(doc.excludedEventIds).toEqual([]); // left out ≠ excluded
+      expect(resumeNotIncluded(doc, p)).toBe(60 - doc.sections.reduce((n, s) => n + s.items.length, 0));
+      expect(resumeOverflow(doc, p)).toBe(0); // budget, not a full section
+    }
+    const one = generateResumeDocument(p, [], { pages: 1 });
+    const three = generateResumeDocument(p, [], { pages: 3 });
+    const count = (d: ResumeDocument) => d.sections.reduce((n, s) => n + s.items.length, 0);
+    expect(count(one)).toBeLessThan(count(three));
+    expect(count(generateResumeDocument(p))).toBe(60); // no budget = everything
+  });
+
+  it("spends the budget on pinned, then featured, then newest events", () => {
+    const oldPinned = event("pin", "2001-01-01", ["work"]);
+    const oldFeatured = event("feat", "2002-01-01", ["work"], { featured: true });
+    const p = profile([...many, oldPinned, oldFeatured], { pinnedIds: ["pin"] });
+    const doc = generateResumeDocument(p, [], { pages: 1 });
+    const placed = doc.sections.flatMap((s) => s.items.map((i) => i.eventId));
+    expect(placed).toContain("pin");
+    expect(placed).toContain("feat");
+    expect(placed).toContain("b59"); // newest
+    expect(placed).not.toContain("b0"); // oldest unpinned, unfeatured
+    // still date-ordered within the section
+    const exp = doc.sections.find((s) => s.type === "experience")!.items.map((i) => i.dateFrom ?? "");
+    expect([...exp].sort().reverse()).toEqual(exp);
+  });
+
+  it("validates page counts", () => {
+    expect([1, 2, 3, 4].every(isResumePageCount)).toBe(true);
+    expect([0, 5, 2.5, "2", null].some(isResumePageCount)).toBe(false);
   });
 });

@@ -5,7 +5,9 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { getProfile, type ProfileDTO } from "@/lib/profile";
 import {
+  DEFAULT_RESUME_PAGES,
   DEFAULT_RESUME_TEMPLATE,
+  isResumePageCount,
   isResumePageSize,
   isResumeTemplate,
   parseResumeDocument,
@@ -22,6 +24,7 @@ export type ResumeView = ResumeSettings & {
 type ResumeRow = {
   template: string;
   pageSize: string;
+  pages: number;
   published: boolean;
   document: string;
   generatedAt: Date | null;
@@ -43,6 +46,7 @@ export function toResumeView(row: ResumeRow): ResumeView | null {
   return {
     template: isResumeTemplate(row.template) ? row.template : DEFAULT_RESUME_TEMPLATE,
     pageSize: isResumePageSize(row.pageSize) ? row.pageSize : "A4",
+    pages: isResumePageCount(row.pages) ? row.pages : DEFAULT_RESUME_PAGES,
     published: row.published,
     document,
     generatedAt: row.generatedAt?.toISOString() ?? null,

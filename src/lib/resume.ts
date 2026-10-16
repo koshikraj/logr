@@ -13,6 +13,11 @@ export const DEFAULT_RESUME_TEMPLATE: ResumeTemplate = "modern";
 export const RESUME_PAGE_SIZES = ["A4", "Letter"] as const;
 export type ResumePageSize = (typeof RESUME_PAGE_SIZES)[number];
 
+/** Target page count (#68): the draft is fitted to it; the sheet tightens to it. */
+export const RESUME_PAGE_COUNTS = [1, 2, 3, 4] as const;
+export type ResumePageCount = (typeof RESUME_PAGE_COUNTS)[number];
+export const DEFAULT_RESUME_PAGES: ResumePageCount = 2;
+
 export const SECTION_TYPES = [
   "summary",
   "experience",
@@ -153,6 +158,7 @@ export type ResumeDocument = z.infer<typeof resumeDocumentSchema>;
 export type ResumeSettings = {
   template: ResumeTemplate;
   pageSize: ResumePageSize;
+  pages: ResumePageCount;
   published: boolean;
 };
 
@@ -195,6 +201,10 @@ function sanitizeDocument(doc: ResumeDocument): ResumeDocument {
 
 export function isResumeTemplate(v: unknown): v is ResumeTemplate {
   return typeof v === "string" && (RESUME_TEMPLATES as readonly string[]).includes(v);
+}
+
+export function isResumePageCount(v: unknown): v is ResumePageCount {
+  return typeof v === "number" && (RESUME_PAGE_COUNTS as readonly number[]).includes(v);
 }
 
 export function isResumePageSize(v: unknown): v is ResumePageSize {
@@ -338,7 +348,65 @@ function headerFromProfile(p: ProfileDTO): ResumeHeader {
  * from bio/about, and one section per event category, newest first. Clamped
  * to RESUME_LIMITS so the result always validates.
  */
-export function generateResumeDocument(profile: ProfileDTO, excludedEventIds: string[] = []): ResumeDocument {
+// ---------- page budget (#68) ----------
+// A rough line model of a single-column sheet at resume type sizes. It only
+// has to pick a sensible first draft — the rendered sheet then tightens type
+// and spacing to land on the target exactly (or tells the owner it can't).
+export const LINES_PER_PAGE = 52;
+const CHARS_PER_LINE = 95;
+const HEADER_LINES = 7;
+const SECTION_HEAD_LINES = 2.5;
+
+const textLines = (t: string) => Math.max(1, Math.ceil(t.length / CHARS_PER_LINE));
+
+export function estimateItemLines(item: ResumeItem): number {
+  const bullets = item.bullets.reduce((n, b) => n + textLines(b), 0);
+  return 1.6 + bullets + (item.link ? 0.6 : 0);
+}
+
+/** Estimated line count of a whole document (visible sections only). */
+export function estimateDocumentLines(doc: ResumeDocument): number {
+  let lines = HEADER_LINES;
+  for (const s of doc.sections) {
+    if (s.hidden || (!s.items.length && !s.text?.trim())) continue;
+    lines += SECTION_HEAD_LINES + (s.text?.trim() ? textLines(s.text) + 0.5 : 0);
+    lines += s.items.reduce((n, i) => n + estimateItemLines(i), 0);
+  }
+  return lines;
+}
+
+/** Owner priority for the page budget: pinned (in pin order), then
+ *  featured, then everything else — newest first within each group. */
+function budgetRank(profile: ProfileDTO): Map<string, number> {
+  const pinned = new Map(profile.pinnedIds.map((id, i) => [id, i]));
+  const ordered = [...profile.events].sort((a, b) => {
+    const tier = (e: EventDTO) => (pinned.has(e.id) ? 0 : e.featured ? 1 : 2);
+    return (
+      tier(a) - tier(b) ||
+      (pinned.get(a.id) ?? 0) - (pinned.get(b.id) ?? 0) ||
+      b.dateOn.localeCompare(a.dateOn)
+    );
+  });
+  return new Map(ordered.map((e, i) => [e.id, i]));
+}
+
+export type GenerateOptions = {
+  /** Fit the draft to this many pages (omit for "everything", used by merge). */
+  pages?: ResumePageCount;
+};
+
+/**
+ * Build a complete resume from the log: header from the profile, a summary
+ * from bio/about, and one section per event category, newest first. With
+ * `pages`, only the highest-priority events that fit the budget are placed;
+ * the rest stay available via "pull from timeline". Clamped to RESUME_LIMITS
+ * so the result always validates.
+ */
+export function generateResumeDocument(
+  profile: ProfileDTO,
+  excludedEventIds: string[] = [],
+  options: GenerateOptions = {}
+): ResumeDocument {
   const liveIds = new Set(profile.events.map((e) => e.id));
   const excluded = new Set(excludedEventIds.filter((id) => liveIds.has(id)));
   const byType = new Map<SectionType, ResumeSection>();
@@ -351,9 +419,28 @@ export function generateResumeDocument(profile: ProfileDTO, excludedEventIds: st
   const summary = [profile.about, profile.bio].map((v) => v?.trim()).find(Boolean);
   if (summary) section("summary").text = summary.slice(0, 2000);
 
-  for (const e of profile.events) {
-    if (excluded.has(e.id)) continue;
-    section(sectionTypeForTags(e.tags)).items.push(itemFromEvent(e));
+  const candidates = profile.events.filter((e) => !excluded.has(e.id));
+  if (options.pages) {
+    // spend the budget in owner-priority order; a section's heading is paid
+    // for by its first item
+    const rank = budgetRank(profile);
+    let budget = options.pages * LINES_PER_PAGE - HEADER_LINES;
+    if (summary) budget -= SECTION_HEAD_LINES + textLines(summary) + 0.5;
+    const opened = new Set<SectionType>();
+    const counts = new Map<SectionType, number>();
+    for (const e of [...candidates].sort((a, b) => rank.get(a.id)! - rank.get(b.id)!)) {
+      const type = sectionTypeForTags(e.tags);
+      if ((counts.get(type) ?? 0) >= RESUME_LIMITS.itemsPerSection) continue;
+      const item = itemFromEvent(e);
+      const cost = estimateItemLines(item) + (opened.has(type) ? 0 : SECTION_HEAD_LINES);
+      if (cost > budget) continue; // a smaller, lower-priority item may still fit
+      budget -= cost;
+      opened.add(type);
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+      section(type).items.push(item);
+    }
+  } else {
+    for (const e of candidates) section(sectionTypeForTags(e.tags)).items.push(itemFromEvent(e));
   }
   for (const s of byType.values()) {
     s.items = s.items.sort(byDateDesc).slice(0, RESUME_LIMITS.itemsPerSection);
@@ -419,10 +506,20 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
 export function resumeOverflow(doc: ResumeDocument, profile: ProfileDTO): number {
   const excluded = new Set(doc.excludedEventIds);
   const present = new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)));
-  const sectionOf = new Set(doc.sections.map((s) => s.type));
+  const full = new Set(
+    doc.sections.filter((s) => s.items.length >= RESUME_LIMITS.itemsPerSection).map((s) => s.type)
+  );
   return profile.events.filter(
-    (e) => !excluded.has(e.id) && !present.has(e.id) && sectionOf.has(sectionTypeForTags(e.tags))
+    (e) => !excluded.has(e.id) && !present.has(e.id) && full.has(sectionTypeForTags(e.tags))
   ).length;
+}
+
+/** Log events that aren't on the resume and weren't removed by the owner —
+ *  left out by the page budget (or a full section); pullable from the timeline. */
+export function resumeNotIncluded(doc: ResumeDocument, profile: ProfileDTO): number {
+  const excluded = new Set(doc.excludedEventIds);
+  const present = new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)));
+  return profile.events.filter((e) => !excluded.has(e.id) && !present.has(e.id)).length;
 }
 
 /**

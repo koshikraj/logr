@@ -15,14 +15,18 @@ import { getProfile, type ProfileDTO } from "@/lib/profile";
 import { rateLimited } from "@/lib/ratelimit";
 import { SITE_URL } from "@/lib/site";
 import {
+  DEFAULT_RESUME_PAGES,
   generateResumeDocument,
+  isResumePageCount,
   isResumePageSize,
   isResumeTemplate,
   mergeResumeDocument,
   reconcileExclusions,
+  resumeNotIncluded,
   resumeOverflow,
   suggestTemplate,
   validateResumeDocument,
+  type ResumePageCount,
   type ResumePageSize,
   type ResumePolish,
   type ResumeTemplate,
@@ -532,7 +536,7 @@ async function ownerProfile(): Promise<ProfileDTO | null> {
 async function writeResume(
   profileId: string,
   document: unknown,
-  extra: { template?: ResumeTemplate; pageSize?: ResumePageSize; generatedAt?: Date } = {}
+  extra: { template?: ResumeTemplate; pageSize?: ResumePageSize; pages?: ResumePageCount; generatedAt?: Date } = {}
 ): Promise<ResumeResult> {
   const valid = validateResumeDocument(document);
   if (!valid.ok) return fail(valid.error);
@@ -560,7 +564,7 @@ export async function getResumeAction(): Promise<ResumeView | null> {
  */
 export async function generateResumeAction(
   mode: "merge" | "replace" = "merge"
-): Promise<ResumeResult<ResumeView & { skipped: number }>> {
+): Promise<ResumeResult<ResumeView & { skipped: number; notIncluded: number }>> {
   const profile = await ownerProfile();
   if (!profile) return fail("Sign in to edit your resume.");
   const row = await prisma.resume.findUnique({ where: { profileId: profile.id }, select: { id: true } });
@@ -569,19 +573,31 @@ export async function generateResumeAction(
   if (row && !existing && mode === "merge") {
     return fail("Your saved resume couldn't be read. Use “start over” to rebuild it from your log.");
   }
+  // fresh drafts are fitted to the target page count; merge never trims
+  const pages = existing?.pages ?? DEFAULT_RESUME_PAGES;
   const document =
-    existing && mode === "merge" ? mergeResumeDocument(existing.document, profile) : generateResumeDocument(profile);
+    existing && mode === "merge"
+      ? mergeResumeDocument(existing.document, profile)
+      : generateResumeDocument(profile, [], { pages });
   const res = await writeResume(profile.id, document, { generatedAt: new Date() });
   if (!res.ok) return res;
   revalidatePath(`/${profile.username}/resume`);
   // events that didn't fit a full section — the editor tells the owner
-  return { ok: true, data: { ...res.data, skipped: resumeOverflow(res.data.document, profile) } };
+  return {
+    ok: true,
+    data: {
+      ...res.data,
+      skipped: resumeOverflow(res.data.document, profile),
+      notIncluded: resumeNotIncluded(res.data.document, profile),
+    },
+  };
 }
 
 export type SaveResumeInput = {
   document: unknown;
   template?: ResumeTemplate;
   pageSize?: ResumePageSize;
+  pages?: ResumePageCount;
 };
 
 /** Editor autosave. The document is validated and href-scrubbed server-side
@@ -592,6 +608,7 @@ export async function saveResumeAction(input: SaveResumeInput): Promise<ResumeRe
   if (!ref) return fail("Sign in to edit your resume.");
   if (input.template !== undefined && !isResumeTemplate(input.template)) return fail("Unknown template.");
   if (input.pageSize !== undefined && !isResumePageSize(input.pageSize)) return fail("Unknown page size.");
+  if (input.pages !== undefined && !isResumePageCount(input.pages)) return fail("Pages must be 1–4.");
   const next = validateResumeDocument(input.document);
   if (!next.ok) return fail(next.error);
 
@@ -599,6 +616,7 @@ export async function saveResumeAction(input: SaveResumeInput): Promise<ResumeRe
   const res = await writeResume(ref.id, reconcileExclusions(existing?.document ?? null, next.document), {
     ...(input.template && { template: input.template }),
     ...(input.pageSize && { pageSize: input.pageSize }),
+    ...(input.pages && { pages: input.pages }),
   });
   if (res.ok && res.data.published) revalidatePath(`/${ref.username}/resume`);
   return res;
