@@ -6,6 +6,8 @@ import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
 import { ResumeIcon } from "@/components/resume/ResumeIcon";
 import { TEMPLATE_META } from "@/components/resume/ResumeSheet";
+import { ResumeThumb } from "@/components/resume/ResumeThumb";
+import type { Theme } from "@/lib/theme";
 import { SECTION_DEFAULT_ICON } from "@/components/resume/icons";
 import {
   generateResumeAction,
@@ -15,6 +17,9 @@ import {
 } from "@/lib/actions";
 import {
   sectionTypeForTags,
+  sectionPlacement,
+  suggestTitleSplit,
+  TEMPLATE_TRAITS,
   applyPolish,
   RESUME_LIMITS,
   RESUME_PAGE_COUNTS,
@@ -103,10 +108,12 @@ function DateInput({ value, onChange, placeholder, allowPresent }: { value: stri
 }
 
 // ---------- item ----------
-function ItemCard({ item, onChange, onRemove, showImage }: { item: ResumeItem; onChange: (patch: Partial<ResumeItem>) => void; onRemove: () => void; showImage: boolean }) {
+function ItemCard({ item, onChange, onRemove, showImage, offerSplit }: { item: ResumeItem; onChange: (patch: Partial<ResumeItem>) => void; onRemove: () => void; showImage: boolean; offerSplit: boolean }) {
   const controls = useDragControls();
   const [open, setOpen] = useState(false);
   const range = formatResumeRange(item);
+  // "Founder at Consenso Labs" → role · organisation, offered, never applied on its own (#69)
+  const split = offerSplit && !item.subtitle ? suggestTitleSplit(item.title) : null;
   return (
     <Reorder.Item
       value={item}
@@ -129,6 +136,11 @@ function ItemCard({ item, onChange, onRemove, showImage }: { item: ResumeItem; o
             {item.bullets.length ? `${item.bullets.length} bullet${item.bullets.length > 1 ? "s" : ""}` : ""}
             {item.eventId ? "" : " · free-form"}
           </span>
+          {split && (
+            <button type="button" className="rsb-split" onClick={(e) => { e.stopPropagation(); onChange({ title: split.role, subtitle: split.organisation }); }} title="fill role and organisation from the title">
+              split into role · organisation? <span className="rsb-split__preview">{split.role} · {split.organisation}</span>
+            </button>
+          )}
         </div>
         <div className="rsb-item__actions">
           <button type="button" className="rsb-ibtn" onClick={() => setOpen((o) => !o)} aria-label={open ? "collapse" : "edit"} aria-pressed={open}>
@@ -203,12 +215,15 @@ function SectionCard({
   onRemove,
   onAddItem,
   showImage,
+  twoColumn,
 }: {
   section: ResumeSection;
   onChange: (patch: Partial<ResumeSection>) => void;
   onRemove: () => void;
   onAddItem: () => void;
   showImage: boolean;
+  /** the active template has a sidebar: show the main/side placement toggle */
+  twoColumn: boolean;
 }) {
   const controls = useDragControls();
   const [collapsed, setCollapsed] = useState(false);
@@ -237,6 +252,15 @@ function SectionCard({
           </div>
         </div>
         <div className="rsb-sec__actions">
+          {twoColumn && (
+            <span className="rsb-place" role="radiogroup" aria-label="column">
+              {(["main", "side"] as const).map((pl) => (
+                <button key={pl} type="button" role="radio" aria-checked={sectionPlacement(section) === pl} aria-current={sectionPlacement(section) === pl} onClick={() => onChange({ placement: pl })} title={pl === "side" ? "move to the sidebar" : "move to the main column"}>
+                  {pl}
+                </button>
+              ))}
+            </span>
+          )}
           <button type="button" className="rsb-ibtn" onClick={() => onChange({ hidden: !section.hidden })} aria-label={section.hidden ? "show section" : "hide section"} aria-pressed={section.hidden} title={section.hidden ? "show on resume" : "hide from resume"}>
             {section.hidden ? (
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4Z" /><circle cx="8" cy="8" r="1.8" /><path d="M3 13L13 3" strokeLinecap="round" /></svg>
@@ -263,7 +287,7 @@ function SectionCard({
         {(!textual || section.items.length > 0) && (
           <Reorder.Group as="div" axis="y" values={section.items} onReorder={setItems} className="rsb-items">
             {section.items.map((it) => (
-              <ItemCard key={it.id} item={it} showImage={showImage} onChange={(p) => patchItem(it.id, p)} onRemove={() => setItems(section.items.filter((i) => i.id !== it.id))} />
+              <ItemCard key={it.id} item={it} showImage={showImage} offerSplit={section.type === "experience"} onChange={(p) => patchItem(it.id, p)} onRemove={() => setItems(section.items.filter((i) => i.id !== it.id))} />
             ))}
           </Reorder.Group>
         )}
@@ -284,12 +308,15 @@ export function ResumeEditor({
   events,
   username,
   chatEnabled,
+  theme,
   onStateChange,
 }: {
   initial: ResumeView | null;
   events: EventDTO[];
   username: string;
   chatEnabled: boolean;
+  /** the owner's theme — thumbnails and the preview wear it */
+  theme: Theme;
   onStateChange: (s: ResumeEditorState | null) => void;
 }) {
   const toast = useToast();
@@ -302,6 +329,8 @@ export function ResumeEditor({
   const [confirmReset, setConfirmReset] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  // gallery hover: previews a template in the main pane without applying it
+  const [hoverTemplate, setHoverTemplate] = useState<ResumeTemplate | null>(null);
 
   const savedSig = useRef(state ? sig(state) : "");
   const pending = useRef<ResumeEditorState | null>(null);
@@ -315,7 +344,10 @@ export function ResumeEditor({
   const saveChain = useRef<Promise<boolean>>(Promise.resolve(true));
 
   // feed the live preview
-  useEffect(() => { latest.current = state; onStateChange(state); }, [state, onStateChange]);
+  useEffect(() => {
+    latest.current = state;
+    onStateChange(state && hoverTemplate ? { ...state, template: hoverTemplate } : state);
+  }, [state, hoverTemplate, onStateChange]);
 
   const runSave = useCallback(async (s: ResumeEditorState): Promise<boolean> => {
     setStatus("saving");
@@ -587,17 +619,30 @@ export function ResumeEditor({
         {/* template */}
         <div className="field">
           <span className="field__label">template</span>
-          <div className="rsb-templates">
+          <div className="rsb-templates" onMouseLeave={() => setHoverTemplate(null)}>
             {RESUME_TEMPLATES.map((t) => (
-              <button key={t} type="button" className="rsb-tpl" aria-current={template === t} onClick={() => setState((s) => (s ? { ...s, template: t } : s))}>
-                <span className="rsb-tpl__thumb" data-t={t} aria-hidden="true">
-                  <i className="a" /><i /><i className="w" /><i /><i className="w" />
-                </span>
+              <button
+                key={t}
+                type="button"
+                className="rsb-tpl"
+                aria-current={template === t}
+                onClick={() => { setHoverTemplate(null); setState((s) => (s ? { ...s, template: t } : s)); }}
+                onMouseEnter={() => setHoverTemplate(t)}
+                onFocus={() => setHoverTemplate(t)}
+                onBlur={() => setHoverTemplate(null)}
+                title="hover to preview · click to apply"
+              >
+                <ResumeThumb doc={doc} template={t} pageSize={pageSize} pages={pages} theme={theme} />
                 <span className="rsb-tpl__name">{TEMPLATE_META[t].name}</span>
+                <span className="rsb-tpl__chips">
+                  <span className="rsb-chip">{TEMPLATE_TRAITS[t].columns === 2 ? "two columns" : "one column"}</span>
+                  {TEMPLATE_TRAITS[t].ats && <span className="rsb-chip rsb-chip--ats">ATS-safe</span>}
+                </span>
                 <span className="rsb-tpl__note">{TEMPLATE_META[t].note}</span>
               </button>
             ))}
           </div>
+          <span className="rsb-tpl__hint">drawn from your own resume · hover to preview, click to apply</span>
         </div>
 
         <div className="field-row rsb-pagerow">
@@ -622,6 +667,19 @@ export function ResumeEditor({
               ))}
             </div>
           </div>
+          {TEMPLATE_TRAITS[template].columns === 2 && (
+            <div className="field">
+              <span className="field__label">sidebar</span>
+              <div className="rsb-seg" role="radiogroup" aria-label="sidebar side">
+                {(["left", "right"] as const).map((side) => (
+                  <button key={side} type="button" role="radio" aria-checked={(doc.sidebar ?? "left") === side} aria-current={(doc.sidebar ?? "left") === side} onClick={() => setDoc((d) => ({ ...d, sidebar: side }))}>
+                    {side}
+                  </button>
+                ))}
+              </div>
+              <span className="field__hint">each section has a main / side switch</span>
+            </div>
+          )}
           <div className="field">
             <span className="field__label">photo</span>
             <Switch on={doc.header.showAvatar} onChange={(v) => patchHeader({ showAvatar: v })} label={doc.header.avatarUrl ? (doc.header.showAvatar ? "shown (not on classic)" : "hidden") : "no avatar on your profile"} disabled={!doc.header.avatarUrl} />
@@ -689,6 +747,7 @@ export function ResumeEditor({
               key={s.id}
               section={s}
               showImage={template === "creative"}
+              twoColumn={TEMPLATE_TRAITS[template].columns === 2}
               onChange={(p) => patchSection(s.id, p)}
               onRemove={() => removeSection(s.id)}
               onAddItem={() => addItem(s.id)}

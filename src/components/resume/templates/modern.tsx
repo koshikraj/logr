@@ -2,12 +2,10 @@
 // column for the story (summary, experience, projects…) and a narrow
 // sidebar for contact, links, skills and the short lists.
 
-import type { ResumeSection } from "@/lib/resume";
+import { sectionPlacement, type ResumeSection } from "@/lib/resume";
 import { linkDisplay, visibleSections } from "@/lib/resume-format";
 import { ResumeIcon } from "../ResumeIcon";
 import { Avatar, Bullets, DateRange, ItemLink, SectionHeading, SectionText, type TemplateProps } from "./shared";
-
-const SIDEBAR_TYPES = new Set(["skills", "links", "achievements", "education"]);
 
 function MainSection({ s }: { s: ResumeSection }) {
   return (
@@ -70,8 +68,9 @@ function SideSection({ s }: { s: ResumeSection }) {
 export function ModernTemplate({ doc }: TemplateProps) {
   const h = doc.header;
   const all = visibleSections(doc);
-  const main = all.filter((s) => !SIDEBAR_TYPES.has(s.type));
-  const side = all.filter((s) => SIDEBAR_TYPES.has(s.type));
+  // owner placement first, then the defaults (skills + links in the sidebar)
+  const main = all.filter((s) => sectionPlacement(s) === "main");
+  const side = all.filter((s) => sectionPlacement(s) === "side");
   const contact = [
     h.location ? { icon: "lucide:map-pin", label: h.location, href: null } : null,
     h.email ? { icon: "lucide:mail", label: h.email, href: `mailto:${h.email}` } : null,
@@ -79,7 +78,7 @@ export function ModernTemplate({ doc }: TemplateProps) {
   ].filter((x): x is { icon: string; label: string; href: string | null } => !!x);
 
   return (
-    <div className="r-modern">
+    <div className="r-modern" data-sidebar={doc.sidebar ?? "left"}>
       <aside className="r-modern__side" data-flow="side">
         <Avatar doc={doc} className="r-modern__avatar" />
         <div className="r-modern__ident">

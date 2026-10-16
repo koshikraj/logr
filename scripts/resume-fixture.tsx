@@ -99,6 +99,8 @@ if (process.env.PAGEY) {
     })),
   ];
 }
+// SIDEBAR=right puts modern's sidebar on the right
+if (process.env.SIDEBAR === "right") doc.sidebar = "right";
 const out = process.argv[2] ?? "/tmp/resume-fixtures";
 const pageCounts = (process.argv[3] ?? "2").split(",").map(Number) as (1 | 2 | 3 | 4)[];
 mkdirSync(out, { recursive: true });

@@ -11,6 +11,7 @@ import { resolvePalette, themeCssVars, type Theme } from "@/lib/theme";
 import { FIT_STEPS, PAGE_DIMENSIONS } from "@/lib/resume-format";
 import { runFit, type PageBreak } from "./paginate";
 import { ClassicTemplate } from "./templates/classic";
+import { MarginTemplate } from "./templates/margin";
 import { ModernTemplate } from "./templates/modern";
 import { FounderTemplate } from "./templates/founder";
 import { AcademicTemplate } from "./templates/academic";
@@ -27,7 +28,7 @@ export const TEMPLATE_META: Record<ResumeTemplate, { name: string; note: string 
 
 const TEMPLATES: Record<ResumeTemplate, (p: { doc: ResumeDocument }) => React.ReactElement> = {
   classic: ClassicTemplate,
-  margin: ClassicTemplate, // placeholder until the margin template lands (#69)
+  margin: MarginTemplate,
   modern: ModernTemplate,
   founder: FounderTemplate,
   academic: AcademicTemplate,

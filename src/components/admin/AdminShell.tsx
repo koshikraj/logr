@@ -159,6 +159,7 @@ export function AdminShell({
                     events={previewProfile.events}
                     username={profile.username}
                     chatEnabled={chatEnabled}
+                    theme={theme}
                     onStateChange={setResumeState}
                   />
                 )}

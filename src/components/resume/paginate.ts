@@ -18,6 +18,7 @@ export const PB_BLOCK_SELECTOR = [
   ".r-modern__ident",
   ".r-modern__contact",
   ".r-classic__head",
+  ".r-margin__head",
   ".r-founder__head",
   ".r-academic__head",
   ".r-creative__band",
@@ -25,7 +26,7 @@ export const PB_BLOCK_SELECTOR = [
   ".r-text",
 ].join(", ");
 /** Headings: kept with the next block. */
-export const PB_HEAD_SELECTOR = ".r-h, .r-classic__h, .r-academic__h";
+export const PB_HEAD_SELECTOR = ".r-h, .r-classic__h, .r-academic__h, .r-margin__h";
 /** Independent fragmentation flows (columns); everything else is the root flow. */
 export const PB_FLOW_SELECTOR = "[data-flow]";
 
@@ -76,20 +77,28 @@ export function simulatePagination(sheet: HTMLElement, pageH: number): Paginatio
   // (which includes the empty rest of a short sheet).
   const cs = getComputedStyle(sheet);
   const mm = parseFloat(cs.getPropertyValue("--r-pad")) || 0; // "10mm" → 10
-  const padBottom = Math.max(parseFloat(cs.paddingBottom) || 0, mm * 3.7795);
+  // plus a few px of slack: print snaps line boxes to whole layout units, so
+  // a two-page sheet comes out a handful of px taller than the screen says.
+  // Erring long only costs one more tightening step; erring short prints a
+  // blank page.
+  const PRINT_SLACK = 12;
+  const padBottom = Math.max(parseFloat(cs.paddingBottom) || 0, mm * 3.7795) + PRINT_SLACK;
   let maxBottom = 0;
   let maxShift = 0;
   const breaks: PageBreak[] = [];
   let maxPages = 1;
   flows.forEach((atoms) => {
     atoms.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+    // the sheet's bottom margin has no break opportunity inside it, so the
+    // printer keeps it with the last block: that block needs room for both
+    const flowEnd = atoms.reduce((m, a) => Math.max(m, a.bottom), 0);
     let shift = 0;
     for (let i = 0; i < atoms.length; i++) {
       const a = atoms[i];
       // a heading travels with the block after it
       const next = a.head ? atoms[i + 1] : undefined;
       const extentBottom = next && next.top >= a.top ? Math.max(a.bottom, next.bottom) : a.bottom;
-      const size = extentBottom - a.top;
+      const size = extentBottom - a.top + (extentBottom >= flowEnd - 0.5 ? padBottom : 0);
       const t = a.top + shift;
       const page = Math.floor(t / pageH);
       const pageEnd = (page + 1) * pageH;
@@ -101,12 +110,11 @@ export function simulatePagination(sheet: HTMLElement, pageH: number): Paginatio
     }
     for (const a of atoms) maxBottom = Math.max(maxBottom, a.bottom + shift);
     maxShift = Math.max(maxShift, shift);
-    maxPages = Math.max(maxPages, Math.ceil((maxBottom + padBottom - 0.5) / pageH));
+    maxPages = Math.max(maxPages, Math.ceil((maxBottom + padBottom - 0.01) / pageH));
   });
 
   const height = atoms_total(flows) ? maxBottom + padBottom : unscaled;
-  // 0.5px slack for sub-pixel layout; anything past that is a real extra page
-  const pages = Math.max(1, Math.ceil((height - 0.5) / pageH), maxPages);
+  const pages = Math.max(1, Math.ceil((height - 0.01) / pageH), maxPages);
   // de-duplicate breaks that land at the same page from different flows:
   // keep the earliest start of each page for the markers
   const byPage = new Map<number, number>();
