@@ -33,6 +33,41 @@
   overflow-wrap: anywhere;
 }
 .resume[data-page="Letter"] { width: 8.5in; min-height: 11in; }
+
+/* ---------- fit to target page count (#68) ----------
+   Mirrors FIT_STEPS in lib/resume-format.ts. ResumeSheet writes data-fit on
+   the sheet after measuring each step; spacing tightens first, then the
+   margins, then the type via a zoom on the body (floor 0.9 ≈ 9.5pt). */
+.resume__body { --fit-type: 1; zoom: var(--fit-type); width: calc(100% / var(--fit-type)); min-height: inherit; }
+.resume[data-fit="2"] { --r-pad: 12mm; }
+.resume[data-fit="3"] { --r-pad: 12mm; } .resume[data-fit="3"] .resume__body { --fit-type: 0.96; }
+.resume[data-fit="4"] { --r-pad: 11mm; } .resume[data-fit="4"] .resume__body { --fit-type: 0.93; }
+.resume[data-fit="5"] { --r-pad: 10mm; } .resume[data-fit="5"] .resume__body { --fit-type: 0.9; }
+/* "tight" density: every step past 0 */
+.resume[data-fit]:not([data-fit="0"]) { line-height: 1.34; }
+.resume[data-fit]:not([data-fit="0"]) .r-bullets li { margin: 0.5px 0; }
+.resume[data-fit]:not([data-fit="0"]) .r-classic__head { padding-bottom: 7px; margin-bottom: 9px; }
+.resume[data-fit]:not([data-fit="0"]) .r-classic__sec { margin-bottom: 8px; }
+.resume[data-fit]:not([data-fit="0"]) .r-classic__h { margin-bottom: 4px; }
+.resume[data-fit]:not([data-fit="0"]) .r-classic__item { margin-bottom: 5px; }
+.resume[data-fit]:not([data-fit="0"]) .r-modern__side { gap: 12px; }
+.resume[data-fit]:not([data-fit="0"]) .r-modern__main { gap: 10px; }
+.resume[data-fit]:not([data-fit="0"]) .r-modern__sec { gap: 5px; }
+.resume[data-fit]:not([data-fit="0"]) .r-modern__items { gap: 6px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder { gap: 10px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder__head { padding-bottom: 9px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder__sec { gap: 6px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder__grid { gap: 6px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder__card { padding: 7px 9px 8px; }
+.resume[data-fit]:not([data-fit="0"]) .r-founder__list { gap: 4px; }
+.resume[data-fit]:not([data-fit="0"]) .r-academic { gap: 6px; }
+.resume[data-fit]:not([data-fit="0"]) .r-academic__sec { gap: 2px; }
+.resume[data-fit]:not([data-fit="0"]) .r-academic__list { gap: 1px; }
+.resume[data-fit]:not([data-fit="0"]) .r-creative { gap: 12px; }
+.resume[data-fit]:not([data-fit="0"]) .r-creative__band { padding-bottom: 9mm; }
+.resume[data-fit]:not([data-fit="0"]) .r-creative__summary { font-size: 11.5pt; }
+.resume[data-fit]:not([data-fit="0"]) .r-creative__sec { gap: 6px; }
+.resume[data-fit]:not([data-fit="0"]) .r-creative__items { gap: 8px; }
 .resume *, .resume *::before, .resume *::after { box-sizing: border-box; }
 .resume h1, .resume h2, .resume h3, .resume p, .resume ul, .resume ol { margin: 0; }
 .resume ul, .resume ol { padding: 0; list-style: none; }
@@ -384,8 +419,12 @@
 .rsb-preview__breaks { position: absolute; inset: 0; pointer-events: none; }
 .rsb-preview__break { position: absolute; left: 0; right: 0; border-top: 1px dashed color-mix(in srgb, var(--user-accent) 60%, transparent); }
 .rsb-preview__break::after { content: attr(data-label); position: absolute; right: 8px; top: -9px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; color: var(--user-accent); background: var(--paper); padding: 2px 6px; border-radius: 99px; }
-.rsb-preview__pages { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--muted); }
+.rsb-preview__pages { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .rsb-preview__pages .accent { color: var(--user-accent); }
+.rsb-preview__pages--over .rsb-preview__count { color: #c2492e; }
+.rsb-preview__count { display: inline-flex; align-items: center; gap: 6px; }
+.rsb-preview__fit { color: var(--faint); }
+.rsb-preview__hint { color: #c2492e; letter-spacing: 0.03em; text-transform: none; }
 /* the dashboard preview keeps the sheet at natural zoom 1 and scales via transform */
 .dash-preview .rsb-preview { zoom: 1; }
 
@@ -396,6 +435,7 @@
   body * { visibility: hidden; }
   .resume, .resume * { visibility: visible; }
   .resume { position: absolute; left: 0; top: 0; margin: 0; width: 100% !important; min-height: 0; box-shadow: none; zoom: 1; }
+  .resume__body { min-height: 0; } /* keep data-fit's --fit-type zoom: the PDF paginates like the preview */
   .resume-public__sheet, .rsb-preview__stage { zoom: 1 !important; transform: none !important; box-shadow: none; }
   .rsb-preview__breaks { display: none; }
   .resume a { color: inherit; }

@@ -58,6 +58,24 @@ export function linkDisplay(href: string): string {
   }
 }
 
+/**
+ * Fit-to-target ladder (#68). Each step tightens the sheet a little more:
+ * spacing first (section/item gaps), then margins (`--r-pad`), then type
+ * (a zoom on the body; 1 = 10.5pt base). The last step is the readability
+ * floor: 0.9 keeps body text at ≈9.5pt, above the 9pt floor résumé tools
+ * use, with margins never below 10mm. Mirrored by `.resume[data-fit="n"]`
+ * rules in resume.css.
+ */
+export const FIT_STEPS = [
+  { density: "normal", pad: "14mm", type: 1 },
+  { density: "tight", pad: "14mm", type: 1 },
+  { density: "tight", pad: "12mm", type: 1 },
+  { density: "tight", pad: "12mm", type: 0.96 },
+  { density: "tight", pad: "11mm", type: 0.93 },
+  { density: "tight", pad: "10mm", type: 0.9 },
+] as const;
+export const FIT_FLOOR_TYPE = FIT_STEPS[FIT_STEPS.length - 1].type;
+
 export const PAGE_DIMENSIONS = {
   A4: { width: "210mm", height: "297mm", px: { width: 794, height: 1123 } },
   Letter: { width: "8.5in", height: "11in", px: { width: 816, height: 1056 } },

@@ -17,12 +17,14 @@ import {
   sectionTypeForTags,
   applyPolish,
   RESUME_LIMITS,
+  RESUME_PAGE_COUNTS,
   RESUME_PAGE_SIZES,
   RESUME_TEMPLATES,
   SECTION_TITLES,
   SECTION_TYPES,
   type ResumeDocument,
   type ResumeItem,
+  type ResumePageCount,
   type ResumePageSize,
   type ResumePolish,
   type ResumeSection,
@@ -38,11 +40,11 @@ import { ResumeIconPicker } from "./ResumeIconPicker";
 import { ResumePullDialog, type PullResult } from "./ResumePullDialog";
 import { ResumePolishDialog } from "./ResumePolishDialog";
 
-export type ResumeEditorState = { doc: ResumeDocument; template: ResumeTemplate; pageSize: ResumePageSize };
+export type ResumeEditorState = { doc: ResumeDocument; template: ResumeTemplate; pageSize: ResumePageSize; pages: ResumePageCount };
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
 
-const sig = (s: ResumeEditorState) => JSON.stringify([s.doc, s.template, s.pageSize]);
+const sig = (s: ResumeEditorState) => JSON.stringify([s.doc, s.template, s.pageSize, s.pages]);
 
 // same rule as the server: YYYY, YYYY-MM or YYYY-MM-DD with a real month/day
 const DATE_RE = /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$/;
@@ -291,7 +293,7 @@ export function ResumeEditor({
   onStateChange: (s: ResumeEditorState | null) => void;
 }) {
   const toast = useToast();
-  const [state, setState] = useState<ResumeEditorState | null>(initial ? { doc: initial.document, template: initial.template, pageSize: initial.pageSize } : null);
+  const [state, setState] = useState<ResumeEditorState | null>(initial ? { doc: initial.document, template: initial.template, pageSize: initial.pageSize, pages: initial.pages } : null);
   const [published, setPublished] = useState(initial?.published ?? false);
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [busy, start] = useTransition();
@@ -317,14 +319,14 @@ export function ResumeEditor({
 
   const runSave = useCallback(async (s: ResumeEditorState): Promise<boolean> => {
     setStatus("saving");
-    const res = await saveResumeAction({ document: s.doc, template: s.template, pageSize: s.pageSize }).catch(() => null);
+    const res = await saveResumeAction({ document: s.doc, template: s.template, pageSize: s.pageSize, pages: s.pages }).catch(() => null);
     if (!res?.ok) {
       setStatus("error");
       toast(res?.error ?? "Couldn't save the resume", "error");
       return false;
     }
     lastSavedInput.current = sig(s);
-    const stored = { doc: res.data.document, template: res.data.template, pageSize: res.data.pageSize };
+    const stored = { doc: res.data.document, template: res.data.template, pageSize: res.data.pageSize, pages: res.data.pages };
     setState((cur) => {
       if (!cur) return cur;
       if (sig(cur) === sig(s)) {
@@ -376,7 +378,7 @@ export function ResumeEditor({
   }, [save, toast]);
 
   const adopt = useCallback((view: ResumeView) => {
-    const s = { doc: view.document, template: view.template, pageSize: view.pageSize };
+    const s = { doc: view.document, template: view.template, pageSize: view.pageSize, pages: view.pages };
     savedSig.current = sig(s);
     lastSavedInput.current = savedSig.current;
     pending.current = null;
@@ -391,7 +393,13 @@ export function ResumeEditor({
       const res = await generateResumeAction(mode).catch(() => null);
       if (!res?.ok) { toast(res?.error ?? "Couldn't generate the resume", "error"); return; }
       adopt(res.data);
-      toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
+      const fitted = mode === "replace" || !state;
+      if (fitted && res.data.notIncluded > 0) {
+        const n = res.data.notIncluded;
+        toast(`Fitted to ${res.data.pages} ${res.data.pages === 1 ? "page" : "pages"} — ${n} event${n === 1 ? "" : "s"} left out; add ${n === 1 ? "it" : "them"} from the timeline`);
+      } else {
+        toast(mode === "replace" ? "Started over from your log" : state ? "Synced with your log" : "Resume drafted from your log");
+      }
       if (res.data.skipped > 0) {
         toast(`${res.data.skipped} event${res.data.skipped === 1 ? "" : "s"} didn't fit (${RESUME_LIMITS.itemsPerSection} items max per section) — remove some items, then pull them in from the timeline.`, "error");
       }
@@ -531,7 +539,7 @@ export function ResumeEditor({
     );
   }
 
-  const { doc, template, pageSize } = state;
+  const { doc, template, pageSize, pages } = state;
 
   return (
     <section role="tabpanel">
@@ -592,7 +600,18 @@ export function ResumeEditor({
           </div>
         </div>
 
-        <div className="field-row">
+        <div className="field-row rsb-pagerow">
+          <div className="field">
+            <span className="field__label">pages · target length</span>
+            <div className="rsb-seg" role="radiogroup" aria-label="number of pages">
+              {RESUME_PAGE_COUNTS.map((n) => (
+                <button key={n} type="button" role="radio" aria-checked={pages === n} aria-current={pages === n} onClick={() => setState((s) => (s ? { ...s, pages: n } : s))}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <span className="field__hint">the preview tightens to fit; &ldquo;start over&rdquo; re-picks events for this length</span>
+          </div>
           <div className="field">
             <span className="field__label">page size</span>
             <div className="rsb-seg" role="radiogroup" aria-label="page size">

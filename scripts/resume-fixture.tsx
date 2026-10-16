@@ -1,8 +1,11 @@
 // Dev-only: render every resume template to static HTML for a visual check.
-// Usage: npx tsx scripts/resume-fixture.tsx /tmp/resume-fixtures
+// Usage: npx tsx scripts/resume-fixture.tsx /tmp/resume-fixtures [pages=1,2,3]
+// The fit-to-pages pass runs client-side (ResumeSheet), so each fixture
+// carries a tiny inline script that replays the same FIT_STEPS ladder.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { RESUME_TEMPLATES, type ResumeDocument } from "../src/lib/resume";
+import { FIT_STEPS, PAGE_DIMENSIONS } from "../src/lib/resume-format";
 import { DEFAULT_THEME } from "../src/lib/theme";
 import { ResumeSheet } from "../src/components/resume/ResumeSheet";
 
@@ -67,16 +70,39 @@ const doc: ResumeDocument = {
   ],
 };
 
+// BIG=1 triples every section's items to exercise the fit ladder + overflow warning
+if (process.env.BIG) for (const s of doc.sections) s.items = [0, 1, 2].flatMap((k) => s.items.map((i) => ({ ...i, id: `${i.id}_${k}`, eventId: null })));
 const out = process.argv[2] ?? "/tmp/resume-fixtures";
+const pageCounts = (process.argv[3] ?? "2").split(",").map(Number) as (1 | 2 | 3 | 4)[];
 mkdirSync(out, { recursive: true });
 const css = readFileSync(new URL("../src/app/resume.css", import.meta.url), "utf8");
+const pageH = PAGE_DIMENSIONS.A4.px.height;
+// same loop as ResumeSheet.run(), in plain JS, plus a page-break overlay + label
+const fitScript = `
+const el = document.querySelector('.resume'); const pages = Number(el.dataset.pages); const budget = pages * ${pageH} + 2;
+function fit() {
+  let step = 0, h = 0;
+  for (step = 0; step < ${FIT_STEPS.length}; step++) { el.dataset.fit = String(step); h = el.offsetHeight; if (h <= budget) break; }
+  if (step === ${FIT_STEPS.length}) step = ${FIT_STEPS.length - 1};
+  const used = Math.max(1, Math.ceil((h - 2) / ${pageH}));
+  document.getElementById('label').textContent = used + ' of ' + pages + ' pages · fit step ' + step + (h <= budget ? '' : ' · OVER');
+  document.querySelectorAll('.brk').forEach((b) => b.remove());
+  for (let i = 1; i < used; i++) { const b = document.createElement('div'); b.className = 'brk'; b.style.top = (i * ${pageH}) + 'px'; b.textContent = 'page ' + (i + 1); el.appendChild(b); }
+}
+fit(); document.fonts.ready.then(fit);`;
 for (const template of RESUME_TEMPLATES) {
-  const html = renderToStaticMarkup(<ResumeSheet doc={doc} template={template} pageSize="A4" theme={DEFAULT_THEME} />);
-  writeFileSync(
-    `${out}/${template}.html`,
-    `<!doctype html><html><head><meta charset="utf-8"><title>${template}</title>
+  for (const pages of pageCounts) {
+    const html = renderToStaticMarkup(<ResumeSheet doc={doc} template={template} pageSize="A4" pages={pages} theme={DEFAULT_THEME} />);
+    const name = pageCounts.length > 1 || pages !== 2 ? `${template}-${pages}p` : template;
+    writeFileSync(
+      `${out}/${name}.html`,
+      `<!doctype html><html><head><meta charset="utf-8"><title>${template} · ${pages} pages</title>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>body{margin:0;background:#e9e7e2;padding:24px}${css}</style></head><body>${html}</body></html>`
-  );
-  console.log("wrote", template);
+<style>body{margin:0;background:#e9e7e2;padding:24px}${css}
+#label{font:12px ui-monospace,monospace;color:#444;text-align:center;margin:0 0 10px}
+.resume{position:relative}.brk{position:absolute;left:0;right:0;border-top:1px dashed #d85a30;font:9px ui-monospace,monospace;color:#d85a30;text-align:right;padding:2px 8px}</style></head>
+<body><p id="label"></p>${html}<script>${fitScript}</script></body></html>`
+    );
+    console.log("wrote", name);
+  }
 }

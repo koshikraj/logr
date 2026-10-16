@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { currentProfileId } from "@/lib/session";
 import { getProfile } from "@/lib/profile";
 import { getResumeForProfile } from "@/lib/resume-data";
-import { ResumePrintStyle, ResumeSheet } from "@/components/resume/ResumeSheet";
-import { AutoPrint } from "@/components/resume/PrintButton";
+import { ResumePrintStyle } from "@/components/resume/ResumeSheet";
+import { ResumePrintView } from "@/components/resume/PrintButton";
 
 export const metadata = { title: "print resume", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -21,8 +21,7 @@ export default async function ResumePrintPage() {
   return (
     <div style={{ background: "#e9e7e2", minHeight: "100dvh", padding: 24 }}>
       <ResumePrintStyle pageSize={resume.pageSize} />
-      <AutoPrint />
-      <ResumeSheet doc={resume.document} template={resume.template} pageSize={resume.pageSize} theme={profile.theme} id="resume" />
+      <ResumePrintView doc={resume.document} template={resume.template} pageSize={resume.pageSize} pages={resume.pages} theme={profile.theme} />
     </div>
   );
 }

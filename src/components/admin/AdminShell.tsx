@@ -80,7 +80,7 @@ export function AdminShell({
   const [items, setItems] = useState<EditableEvent[]>(events);
   // resume tab: the editor's live state drives the preview pane instead of the timeline
   const [resumeState, setResumeState] = useState<ResumeEditorState | null>(
-    resume ? { doc: resume.document, template: resume.template, pageSize: resume.pageSize } : null
+    resume ? { doc: resume.document, template: resume.template, pageSize: resume.pageSize, pages: resume.pages } : null
   );
 
   // compose the draft into a ProfileDTO the (preview-mode) timeline can render
@@ -176,7 +176,7 @@ export function AdminShell({
                 <span className="dash-preview__live"><span className="dash-preview__live__dot" />live</span>
               </div>
               {tab === "resume" && resumeState ? (
-                <ResumePreview doc={resumeState.doc} template={resumeState.template} pageSize={resumeState.pageSize} theme={theme} />
+                <ResumePreview doc={resumeState.doc} template={resumeState.template} pageSize={resumeState.pageSize} pages={resumeState.pages} theme={theme} />
               ) : (
                 <div className="dash-preview__frame">
                   <div className="preview-zoom">

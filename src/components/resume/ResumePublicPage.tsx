@@ -41,7 +41,7 @@ export function ResumePublicPage({ profile, resume }: { profile: ProfileDTO; res
           </span>
         </p>
         <div className="resume-public__sheet">
-          <ResumeSheet doc={resume.document} template={resume.template} pageSize={resume.pageSize} theme={profile.theme} id="resume" />
+          <ResumeSheet doc={resume.document} template={resume.template} pageSize={resume.pageSize} pages={resume.pages} theme={profile.theme} id="resume" />
         </div>
         <PrintButton />
       </div>
