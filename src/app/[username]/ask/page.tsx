@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ username: string }> };
 
-// Chat is gated on OPENROUTER_API_KEY in prod; available in dev for previewing.
+// Chat is gated on an AI provider key in prod; available in dev for previewing.
 function chatAvailable(): boolean {
   return isChatEnabled() || process.env.NODE_ENV !== "production";
 }

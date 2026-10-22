@@ -16,6 +16,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.135",
     "@ai-sdk/react": "^3.0.192",
     "@auth/prisma-adapter": "^2.11.2",
     "@aws-sdk/client-s3": "^3.1050.0",

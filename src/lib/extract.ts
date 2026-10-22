@@ -2,8 +2,7 @@
 // directive so it can be imported by route handlers as well as actions).
 
 import { generateText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { isChatEnabled, CHAT_MODEL } from "@/lib/chat";
+import { isChatEnabled, aiModel } from "@/lib/chat";
 import { buildNarratePrompt, parseNarrated } from "@/lib/narrate";
 import { parseVideoUrl, parseTweetUrl, parseInstagramUrl } from "@/lib/video";
 import { unfurl } from "@/lib/unfurl";
@@ -72,9 +71,8 @@ export async function extractProfileFacts(text: string): Promise<ProfileFacts> {
   const none: ProfileFacts = { bio: null, about: null, location: null, socials: [] };
   if (!isChatEnabled() || !text.trim()) return none;
   try {
-    const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
     const { text: out } = await generateText({
-      model: openrouter.chat(CHAT_MODEL),
+      model: aiModel(),
       system:
         "You output ONLY a raw JSON object — no prose, no markdown fences. " +
         'Shape: {"bio":string|null,"about":string|null,"location":string|null,"socials":[{"label":string,"href":string}]}. ' +
@@ -112,9 +110,8 @@ export async function extractProfileFacts(text: string): Promise<ProfileFacts> {
 export async function extractEvents(text: string, hint?: string): Promise<ReviewEvent[]> {
   if (!isChatEnabled()) throw new Error("Chat is not configured.");
   if (!text.trim()) return [];
-  const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
   const { text: out } = await generateText({
-    model: openrouter.chat(CHAT_MODEL),
+    model: aiModel(),
     system:
       "You output ONLY a raw JSON object — no prose, no markdown fences, no commentary. " +
       'Shape: {"events":[{"dateOn":"YYYY-MM-DD","fullDate":boolean,"title":string,"tags":string[],"featured":boolean,"body":string,"icon":string,"links":string[]}]}. ' +

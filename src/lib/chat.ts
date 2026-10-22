@@ -1,15 +1,61 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import type { LanguageModel } from "ai";
 import { generateLlmTxt } from "@/lib/llmtxt";
 import type { ProfileDTO } from "@/lib/profile";
 
-// Public chat is gated on the OpenRouter key being present.
+// AI features are gated on a provider key: the Anthropic API directly
+// (ANTHROPIC_API_KEY, preferred when set) or OpenRouter (OPENROUTER_API_KEY).
 export function isChatEnabled(): boolean {
-  return Boolean(process.env.OPENROUTER_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY);
 }
 
 // OpenRouter model slug — small, fast, cheap for a public endpoint.
 // Override via OPENROUTER_MODEL (e.g. "deepseek/deepseek-v4-flash").
 export const CHAT_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-haiku-4.5";
-export const MAX_TOKENS = 400;
+// Anthropic API model id, used when ANTHROPIC_API_KEY is set.
+export const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+
+// Per-task overrides, given as OpenRouter slugs (they predate direct Anthropic).
+const TASK_MODEL = {
+  chat: undefined,
+  resume: process.env.OPENROUTER_RESUME_MODEL,
+  merge: process.env.OPENROUTER_MERGE_MODEL,
+} as const;
+
+/** "anthropic/claude-sonnet-4.5" → "claude-sonnet-4-5"; non-Anthropic slugs → null. */
+function anthropicIdFromSlug(slug: string | undefined): string | null {
+  if (!slug?.startsWith("anthropic/")) return null;
+  return slug.slice("anthropic/".length).replace(/\./g, "-");
+}
+
+/** The language model for an AI task, on whichever provider is configured. */
+export function aiModel(task: keyof typeof TASK_MODEL = "chat"): LanguageModel {
+  const override = TASK_MODEL[task];
+  if (process.env.ANTHROPIC_API_KEY) {
+    return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(
+      anthropicIdFromSlug(override) ?? ANTHROPIC_MODEL,
+    );
+  }
+  return createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! }).chat(override || CHAT_MODEL);
+}
+
+// Anthropic prompt caching (5-min TTL) on a system message, for either
+// provider — each one reads only its own key.
+// Visitor chat is grounded Q&A over one log — low effort keeps thinking
+// short (faster first token, cheaper). Ignored by OpenRouter.
+export const CHAT_PROVIDER_OPTIONS = { anthropic: { effort: "low" } } as const;
+
+export const CACHE_SYSTEM = {
+  anthropic: { cacheControl: { type: "ephemeral" } },
+  openrouter: { cacheControl: { type: "ephemeral" } },
+} as const;
+// Safety ceiling only — answer length is set by the prompt (2–4 sentences,
+// longer on request). The cap also covers thinking tokens (Claude 5.x models
+// always think), and image/link URLs plus the `>>>` suggestions line are
+// token-heavy, so a tight cap truncated answers. Billing is per token
+// generated, so headroom costs nothing on normal replies.
+export const MAX_TOKENS = 4000;
 export const MAX_INPUT_CHARS = 1500;
 export const MAX_HISTORY = 8; // most-recent messages kept
 

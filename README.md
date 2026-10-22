@@ -58,6 +58,7 @@ npm run dev              # http://localhost:3000
 - `DATABASE_URL` / `DIRECT_URL` — Supabase Postgres; transaction pooler (`:6543`, `?pgbouncer=true`) for runtime, session (`:5432`) for `prisma migrate`.
 - `AUTH_SECRET` + `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — Google sign-in for `/dashboard` and onboarding.
 - `OPENROUTER_API_KEY` — optional; enables the visitor chat + AI import (`OPENROUTER_MODEL` to override the default model).
+- `ANTHROPIC_API_KEY` — optional alternative to OpenRouter; calls the Anthropic API directly and wins when both are set (`ANTHROPIC_MODEL`, default `claude-haiku-4-5`).
 - `AWS_*` — optional; S3 image storage (falls back to `./public/uploads`).
 
 ## Project structure
