@@ -3,9 +3,8 @@
 // durability layer), then runs a cross-source dedup/merge pass.
 
 import { generateText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { prisma } from "@/lib/db";
-import { CHAT_MODEL } from "@/lib/chat";
+import { aiModel } from "@/lib/chat";
 import { extractEvents, extractProfileFacts, EXTRACT_HINTS, type ProfileFacts } from "@/lib/extract";
 import { insertEventsForProfile } from "@/lib/events";
 import { crawlSite } from "@/lib/import-crawl";
@@ -143,9 +142,8 @@ async function mergeEvents(all: ReviewEvent[]): Promise<ReviewEvent[]> {
     const listing = all
       .map((e, i) => `${i}: ${e.dateOn} "${e.title}" — ${e.body.slice(0, 120)}`)
       .join("\n");
-    const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
     const { text } = await generateText({
-      model: openrouter.chat(process.env.OPENROUTER_MERGE_MODEL || CHAT_MODEL),
+      model: aiModel("merge"),
       system:
         "You find duplicate life/career events extracted from different sources about the same person. " +
         'Output ONLY raw JSON: {"groups":[[i,j,...],...]} where each group lists the indices of entries describing the SAME real-world event ' +

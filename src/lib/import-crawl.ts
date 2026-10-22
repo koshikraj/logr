@@ -6,10 +6,9 @@
 // External links are returned for depth-1 source discovery (github, feeds…).
 
 import { generateText, tool, stepCountIs } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import { fetchUrlPage, type PageLink } from "@/lib/import";
-import { CHAT_MODEL } from "@/lib/chat";
+import { aiModel } from "@/lib/chat";
 
 const PAGE_BUDGET = 6; // total pages fetched per site, root included
 const PAGE_SLICE = 6000; // chars of a page shown to the crawl model
@@ -66,7 +65,7 @@ export async function crawlSite(rootUrl: string): Promise<CrawlResult> {
 
     try {
       await generateText({
-        model: createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! }).chat(CHAT_MODEL),
+        model: aiModel(),
         tools: { fetchPage },
         stopWhen: stepCountIs(PAGE_BUDGET + 1),
         system:

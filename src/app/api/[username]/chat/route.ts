@@ -1,14 +1,15 @@
 import { NextRequest } from "next/server";
 import { after } from "next/server";
 import { streamText, generateText, smoothStream, type ModelMessage } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { prisma } from "@/lib/db";
 import { getProfile } from "@/lib/profile";
 import { rateLimited, visitorHash } from "@/lib/ratelimit";
 import {
   isChatEnabled,
   buildSystemPrompt,
-  CHAT_MODEL,
+  aiModel,
+  CACHE_SYSTEM,
+  CHAT_PROVIDER_OPTIONS,
   MAX_TOKENS,
   MAX_INPUT_CHARS,
   MAX_HISTORY,
@@ -74,18 +75,12 @@ async function cachedSuggestions(prompt: { system: string; profileId: string }):
   if (inflight) return inflight; // concurrent visitors share one generation
   const job = (async () => {
     try {
-      const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
       const { text } = await generateText({
-        model: openrouter.chat(CHAT_MODEL),
-        messages: [
-          {
-            role: "system",
-            content: prompt.system,
-            providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } },
-          },
-          { role: "user", content: SUGGEST_PROMPT },
-        ],
+        model: aiModel(),
+        system: { role: "system", content: prompt.system, providerOptions: CACHE_SYSTEM },
+        messages: [{ role: "user", content: SUGGEST_PROMPT }],
         maxOutputTokens: 100,
+        providerOptions: CHAT_PROVIDER_OPTIONS,
         temperature: 0.8,
       });
       const list = parseSuggestions(text);
@@ -147,7 +142,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   const incoming = Array.isArray(body.messages) ? body.messages : [];
   // keep recent turns, sanitize, cap input length
   const messages: ModelMessage[] = incoming
-    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    // empty turns (an aborted or failed reply) are rejected by the Anthropic API
+    .filter((m) => (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
     .slice(-MAX_HISTORY)
     .map((m) => ({ role: m.role, content: m.content.slice(0, MAX_INPUT_CHARS) }));
 
@@ -157,22 +153,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   const prompt = await cachedSystemPrompt(username, req.nextUrl.origin);
   if (!prompt) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const openrouter = createOpenRouter({ apiKey: process.env.OPENROUTER_API_KEY! });
-
   const result = streamText({
-    model: openrouter.chat(CHAT_MODEL),
-    messages: [
-      {
-        role: "system",
-        content: prompt.system,
-        // Anthropic prompt caching (5-min TTL) via OpenRouter: follow-up
-        // questions skip re-processing the ~6k-token log — faster first
-        // token, ~90% cheaper input.
-        providerOptions: { openrouter: { cacheControl: { type: "ephemeral" } } },
-      },
-      ...messages,
-    ],
+    model: aiModel(),
+    system: {
+      role: "system",
+      content: prompt.system,
+      // Anthropic prompt caching (5-min TTL): follow-up
+      // questions skip re-processing the ~6k-token log — faster first
+      // token, ~90% cheaper input.
+      providerOptions: CACHE_SYSTEM,
+    },
+    messages,
     maxOutputTokens: MAX_TOKENS,
+    providerOptions: CHAT_PROVIDER_OPTIONS,
     temperature: 0.3,
     // word-paced release reads smoother than raw network chunks
     experimental_transform: smoothStream(),
