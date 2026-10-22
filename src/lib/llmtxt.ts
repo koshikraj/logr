@@ -42,6 +42,7 @@ export function generateLlmTxt(profile: ProfileDTO, origin: string): string {
   if (profile.status) lines.push(`- Currently: ${profile.status}`);
   if (profile.location) lines.push(`- Location: ${profile.location}`);
   lines.push(`- Portfolio: ${url}`);
+  if (profile.resumePublished) lines.push(`- Resume: ${url}/resume`);
   if (profile.avatarUrl) lines.push(`- Avatar: ${abs(profile.avatarUrl)}`);
   for (const s of profile.socials) lines.push(`- ${s.label}: ${s.href}`);
   lines.push("");
@@ -130,6 +131,7 @@ export function generatePrimaryLlmsTxt(profile: ProfileDTO, origin: string): str
     `- [Complete profile](${profileUrl}/llms-full.txt): Unabridged Markdown context, including the full timeline and sources.`,
     `- [Markdown profile](${origin}/${profile.username}.md): Clean Markdown counterpart to the human profile.`,
     `- [Human profile](${profileUrl}): Visual portfolio.`,
+    ...(profile.resumePublished ? [`- [Resume](${profileUrl}/resume): Owner-curated resume generated from the log.`] : []),
     `- [MCP server](${origin}/mcp): Streamable HTTP endpoint with query tools over every public logr profile.`,
     ""
   );
