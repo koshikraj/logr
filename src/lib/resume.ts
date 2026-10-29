@@ -238,7 +238,8 @@ export function suggestTitleSplit(title: string): { role: string; organisation: 
 }
 
 // "I" is case-sensitive (a lone lowercase "i" isn't a pronoun); me/my aren't
-const FIRST_PERSON_I = /(^|[^\p{L}'])I('m|'ve|'d|'ll)?(?=$|[^\p{L}'])/u;
+// straight or typographic apostrophe: I'm, I’ve, …
+const FIRST_PERSON_I = /(^|[^\p{L}'’])I(['’](m|ve|d|ll))?(?=$|[^\p{L}'’])/u;
 const FIRST_PERSON_ME = /\b(me|my|mine|myself)\b/i;
 const SUMMARY_MAX = 500;
 
@@ -474,12 +475,8 @@ export function generateResumeDocument(
   // Achievements are what the owner marked notable (featured or pinned);
   // other milestone-style events ("Got married") stay on the timeline and
   // remain pullable — left out, not excluded.
-  const pinned = new Set(profile.pinnedIds);
-  const candidates = profile.events.filter(
-    (e) =>
-      !excluded.has(e.id) &&
-      (sectionTypeForTags(e.tags) !== "achievements" || e.featured || pinned.has(e.id))
-  );
+  const eligible = resumeEligibility(profile);
+  const candidates = profile.events.filter((e) => !excluded.has(e.id) && eligible(e));
   if (options.pages) {
     // spend the budget in owner-priority order; a section's heading is paid
     // for by its first item
@@ -564,22 +561,36 @@ export function mergeResumeDocument(current: ResumeDocument, profile: ProfileDTO
 /** Log events that belong on the resume (not deleted, not excluded by the
  *  owner) but aren't on it because their section is at the item cap. */
 export function resumeOverflow(doc: ResumeDocument, profile: ProfileDTO): number {
+  const eligible = resumeEligibility(profile);
   const excluded = new Set(doc.excludedEventIds);
   const present = new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)));
   const full = new Set(
     doc.sections.filter((s) => s.items.length >= RESUME_LIMITS.itemsPerSection).map((s) => s.type)
   );
   return profile.events.filter(
-    (e) => !excluded.has(e.id) && !present.has(e.id) && full.has(sectionTypeForTags(e.tags))
+    (e) => eligible(e) && !excluded.has(e.id) && !present.has(e.id) && full.has(sectionTypeForTags(e.tags))
   ).length;
 }
 
-/** Log events that aren't on the resume and weren't removed by the owner —
- *  left out by the page budget (or a full section); pullable from the timeline. */
+/** Eligible log events that aren't on the resume and weren't removed by the
+ *  owner — left out by the page budget (or a full section); pullable from the
+ *  timeline. Milestones that are deliberately off the resume (not featured or
+ *  pinned) don't count: leaving them out is the default, not a shortfall. */
 export function resumeNotIncluded(doc: ResumeDocument, profile: ProfileDTO): number {
+  const eligible = resumeEligibility(profile);
   const excluded = new Set(doc.excludedEventIds);
   const present = new Set(doc.sections.flatMap((s) => s.items.map((i) => i.eventId)));
-  return profile.events.filter((e) => !excluded.has(e.id) && !present.has(e.id)).length;
+  return profile.events.filter((e) => eligible(e) && !excluded.has(e.id) && !present.has(e.id)).length;
+}
+
+/**
+ * Which log events a generated resume draws from. Achievements are what the
+ * owner marked notable (featured or pinned); other milestone-style events
+ * ("Got married") stay on the timeline — still pullable, just not drafted.
+ */
+export function resumeEligibility(profile: ProfileDTO): (e: EventDTO) => boolean {
+  const pinned = new Set(profile.pinnedIds);
+  return (e) => sectionTypeForTags(e.tags) !== "achievements" || e.featured || pinned.has(e.id);
 }
 
 /**

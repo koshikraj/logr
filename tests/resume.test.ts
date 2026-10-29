@@ -462,7 +462,7 @@ describe("template refinements (#69)", () => {
     for (const doc of [generateResumeDocument(p), generateResumeDocument(p, [], { pages: 2 })]) {
       expect(ids(doc, "achievements").sort()).toEqual(["pin", "win"]);
       expect(doc.excludedEventIds).toEqual([]); // left out, still pullable
-      expect(resumeNotIncluded(doc, p)).toBe(1);
+      expect(resumeNotIncluded(doc, p)).toBe(0); // the life event is left out by design, not a shortfall
     }
     // sync doesn't add it either
     expect(ids(mergeResumeDocument(generateResumeDocument(p), p), "achievements")).not.toContain("life");
@@ -476,6 +476,8 @@ describe("template refinements (#69)", () => {
     expect(isResumeSummary("Covers iOS and API design")).toBe(true); // no false "I"
     expect(isResumeSummary("Section i of the paper")).toBe(true);
     expect(isResumeSummary("Building wallets, and I'm hiring.")).toBe(false);
+    expect(isResumeSummary("I’ve built teams across three continents.")).toBe(false);
+    expect(isResumeSummary("Shipped wallets; I’m now building agents.")).toBe(false);
     const firstPerson = profile(EVENTS, { about: "I build wallets.", bio: "Builder of logr" });
     expect(generateResumeDocument(firstPerson).sections[0]).toMatchObject({ type: "summary", text: "Builder of logr" });
     const none = profile(EVENTS, { about: "I build wallets.", bio: "My log." });
@@ -512,5 +514,22 @@ describe("template refinements (#69)", () => {
     });
     expect(suggestTitleSplit("Built Zhentan")).toBeNull();
     expect(suggestTitleSplit("Looking at data")).toEqual({ role: "Looking", organisation: "data" });
+  });
+});
+
+describe("eligibility-aware counts (#69 review)", () => {
+  it("doesn't report deliberately omitted milestones as overflow or left out", () => {
+    const cap = RESUME_LIMITS.itemsPerSection;
+    const life = Array.from({ length: 5 }, (_, i) => event(`life${i}`, "2020-01-01", ["milestone"]));
+    const work = Array.from({ length: cap + 3 }, (_, i) =>
+      event(`w${i}`, `20${String(10 + Math.floor(i / 12)).padStart(2, "0")}-${String((i % 12) + 1).padStart(2, "0")}-01`, ["work"])
+    );
+    const p = profile([...life, ...work]);
+    const doc = generateResumeDocument(p);
+    expect(resumeOverflow(doc, p)).toBe(3); // only the work events past the cap
+    expect(resumeNotIncluded(doc, p)).toBe(3);
+    const budgeted = generateResumeDocument(p, [], { pages: 1 });
+    const placed = budgeted.sections.reduce((n, s) => n + s.items.length, 0);
+    expect(resumeNotIncluded(budgeted, p)).toBe(work.length - placed);
   });
 });
