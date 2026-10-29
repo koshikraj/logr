@@ -1,0 +1,98 @@
+// Curated icon set for the resume builder (#66). Lucide icons are imported
+// by name so the bundle only carries what the picker offers; emoji are the
+// glyphs owners already use on timeline events.
+
+import {
+  Award,
+  BookOpen,
+  Briefcase,
+  Building,
+  CodeXml,
+  Compass,
+  Cpu,
+  FlaskConical,
+  Globe,
+  GraduationCap,
+  Hammer,
+  Heart,
+  Landmark,
+  Lightbulb,
+  Link as LinkIcon,
+  Mail,
+  AtSign,
+  Presentation,
+  Newspaper,
+  MapPin,
+  Medal,
+  Megaphone,
+  Mic,
+  Palette,
+  PenLine,
+  Rocket,
+  Sparkles,
+  Star,
+  Target,
+  Trophy,
+  Users,
+  Wrench,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+export const LUCIDE_ICONS: Record<string, LucideIcon> = {
+  briefcase: Briefcase,
+  building: Building,
+  rocket: Rocket,
+  code: CodeXml,
+  cpu: Cpu,
+  wrench: Wrench,
+  hammer: Hammer,
+  flask: FlaskConical,
+  "graduation-cap": GraduationCap,
+  "book-open": BookOpen,
+  "pen-line": PenLine,
+  mic: Mic,
+  megaphone: Megaphone,
+  trophy: Trophy,
+  medal: Medal,
+  award: Award,
+  star: Star,
+  sparkles: Sparkles,
+  zap: Zap,
+  lightbulb: Lightbulb,
+  target: Target,
+  compass: Compass,
+  palette: Palette,
+  users: Users,
+  heart: Heart,
+  landmark: Landmark,
+  globe: Globe,
+  link: LinkIcon,
+  mail: Mail,
+  "map-pin": MapPin,
+  "at-sign": AtSign,
+  presentation: Presentation,
+  newspaper: Newspaper,
+};
+
+export const LUCIDE_KEYS = Object.keys(LUCIDE_ICONS);
+
+export const EMOJI_ICONS = [
+  "💼", "🚀", "🏆", "🎤", "✍️", "📚", "🎓", "🧪", "💡", "⚡", "🛠️", "🧭",
+  "🎨", "📣", "🌍", "🤝", "❤️", "⭐", "🔥", "🧠", "📈", "🏁", "🎯", "🪄",
+  "🧩", "📝", "🎬", "📷", "🎧", "🏛️", "🪴", "🏃", "🧵", "🪙", "🔗", "✨",
+];
+
+/** Lucide key → section default, for freshly added sections. */
+export const SECTION_DEFAULT_ICON: Record<string, string> = {
+  summary: "lucide:sparkles",
+  experience: "lucide:briefcase",
+  projects: "lucide:rocket",
+  education: "lucide:graduation-cap",
+  skills: "lucide:wrench",
+  talks: "lucide:mic",
+  writing: "lucide:pen-line",
+  achievements: "lucide:trophy",
+  links: "lucide:link",
+  custom: "lucide:star",
+};
